@@ -1,0 +1,8 @@
+[general]
+name=RAncho_tools
+description=RAncho Herramientas
+version=1.0
+qgisMinimumVersion=3.0
+author=Raul Anchorena
+email=ranchorena@gmail.com
+icon=MediaLuna_2.png
