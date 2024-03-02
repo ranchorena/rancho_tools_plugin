@@ -35,7 +35,7 @@ class RAnchoTools:
         self.actionAbrirProyecto = QAction(QIcon(iconOpenFile),u"Abrir Proyecto", self.iface.mainWindow())
         self.actionAbrirProyecto.triggered.connect(self.runOpenProjectGeneralBelgrano)
         
-        iconBuscar = os.path.join(os.path.dirname(__file__), 'images\buscar_blue.png')
+        iconBuscar = os.path.join(os.path.dirname(__file__), 'images\buscar_blue_32x32.png')
         self.action = QAction(QIcon(iconBuscar),u"Buscar Dirección", self.iface.mainWindow())
         #self.action = QAction(u'Buscar Dir', self.iface.mainWindow())
         #self.action.setWhatsThis("Buscar Dirección en el mapa")
