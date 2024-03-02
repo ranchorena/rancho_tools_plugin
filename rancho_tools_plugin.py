@@ -31,30 +31,30 @@ class RAnchoTools:
     def initGui(self):
         self.toolbar = self.iface.addToolBar("RAncho")
         
-        iconOpenFile = os.path.join(os.path.dirname(__file__), 'open-file-folder.png')
+        iconOpenFile = os.path.join(os.path.dirname(__file__), 'images\open-file-folder_blue.png')
         self.actionAbrirProyecto = QAction(QIcon(iconOpenFile),u"Abrir Proyecto", self.iface.mainWindow())
         self.actionAbrirProyecto.triggered.connect(self.runOpenProjectGeneralBelgrano)
         
-        icon = os.path.join(os.path.dirname(__file__), 'buscar.png')
-        self.action = QAction(QIcon(icon),u"Buscar Dirección", self.iface.mainWindow())
+        iconBuscar = os.path.join(os.path.dirname(__file__), 'images\buscar_blue.png')
+        self.action = QAction(QIcon(iconBuscar),u"Buscar Dirección", self.iface.mainWindow())
         #self.action = QAction(u'Buscar Dir', self.iface.mainWindow())
         #self.action.setWhatsThis("Buscar Dirección en el mapa")
         self.action.setStatusTip("Buscar Dirección tip")        
         self.action.triggered.connect(self.runBuscarDireccion)
         
-        iconCliente = os.path.join(os.path.dirname(__file__), 'punto.png')
+        iconCliente = os.path.join(os.path.dirname(__file__), 'images\punto_blue.png')
         self.actionCliente = QAction(QIcon(iconCliente),u"Buscar Cliente", self.iface.mainWindow())
         self.actionCliente.triggered.connect(self.runBuscarCliente)
         
-        iconPedidos = os.path.join(os.path.dirname(__file__), 'list.png')
+        iconPedidos = os.path.join(os.path.dirname(__file__), 'images\list_blue.png')
         self.actionPedidos = QAction(QIcon(iconPedidos),u"Pedidos", self.iface.mainWindow())
         self.actionPedidos.triggered.connect(self.runPedidos)
         
-        iconExport = os.path.join(os.path.dirname(__file__), 'download.png')
+        iconExport = os.path.join(os.path.dirname(__file__), 'images\download_blue.png')
         self.actionExport = QAction(QIcon(iconExport),u"Exportar KML", self.iface.mainWindow())
         self.actionExport.triggered.connect(self.runExportarKML)
         
-        iconPedidosFiltro = os.path.join(os.path.dirname(__file__), 'filter_512x512.png')
+        iconPedidosFiltro = os.path.join(os.path.dirname(__file__), 'images\filter_512x512_blue.png')
         self.actionPedidosFiltro = QAction(QIcon(iconPedidosFiltro),u"Pedidos Filtro", self.iface.mainWindow())
         self.actionPedidosFiltro.triggered.connect(self.runPedidosFiltro)
         
