@@ -195,3 +195,203 @@ if __name__ == '__main__':
     handler = logging.StreamHandler() # Log to stderr
     app.logger.addHandler(handler)
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+
+# --- Nuevos Endpoints para Clientes ---
+from raapi.API import API_Web # Importar la clase/módulo con la lógica de BD
+
+@app.route("/api/clientes/buscar", methods=["POST"])
+# @jwt_required() # Descomentar si se necesita protección JWT
+def buscar_clientes_api():
+    """
+    Busca clientes por nombre, dirección, o calle/altura.
+    ---
+    tags:
+      - Clientes
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              criterio:
+                type: string
+                description: "Criterio de búsqueda: 'nombre', 'direccion', o 'calle_altura'"
+                example: "nombre"
+              nombre_cliente:
+                type: string
+                description: "Nombre del cliente a buscar (si criterio es 'nombre')"
+                example: "Juan Perez"
+              direccion:
+                type: string
+                description: "Dirección a buscar (si criterio es 'direccion')"
+                example: "Av. Siempreviva 742"
+              calle:
+                type: string
+                description: "Nombre de la calle (si criterio es 'calle_altura')"
+                example: "SARMIENTO"
+              altura:
+                type: string # Se recibe como string, API.py lo convierte a int si es necesario
+                description: "Altura de la calle (opcional, si criterio es 'calle_altura')"
+                example: "550"
+    responses:
+      200:
+        description: Lista de clientes encontrados.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  nombre:
+                    type: string
+                  direccion:
+                    type: string
+                  calle:
+                    type: string
+                  altura:
+                    type: integer
+      400:
+        description: Parámetros inválidos o faltantes.
+      500:
+        description: Error interno del servidor.
+    """
+    data = request.get_json()
+    if not data or "criterio" not in data:
+        return jsonify({"error": "El campo 'criterio' es requerido"}), 400
+
+    criterio = data.get("criterio")
+    session = Session()
+    try:
+        clientes_encontrados = []
+        if criterio == "nombre":
+            nombre = data.get("nombre_cliente")
+            if not nombre:
+                return jsonify({"error": "El campo 'nombre_cliente' es requerido para el criterio 'nombre'"}), 400
+            clientes_encontrados = API_Web.buscar_cliente_por_nombre(session, nombre)
+        elif criterio == "direccion":
+            direccion_b = data.get("direccion")
+            if not direccion_b:
+                return jsonify({"error": "El campo 'direccion' es requerido para el criterio 'direccion'"}), 400
+            clientes_encontrados = API_Web.buscar_clientes_por_direccion(session, direccion_b)
+        elif criterio == "calle_altura":
+            calle_b = data.get("calle")
+            if not calle_b: # La calle es requerida para este criterio
+                return jsonify({"error": "El campo 'calle' es requerido para el criterio 'calle_altura'"}), 400
+            altura_b = data.get("altura") # Altura es opcional
+            clientes_encontrados = API_Web.buscar_clientes_por_calle_altura(session, calle_b, altura_b)
+        else:
+            return jsonify({"error": f"Criterio '{criterio}' no válido. Use 'nombre', 'direccion' o 'calle_altura'."}), 400
+
+        return jsonify(clientes_encontrados), 200
+
+    except Exception as e:
+        app.logger.error(f"Error en /api/clientes/buscar: {e}")
+        return jsonify({"error": "Error interno del servidor al buscar clientes."}), 500
+    finally:
+        session.close()
+
+@app.route("/api/clientes/actualizar/<int:cliente_id>", methods=["PUT"])
+# @jwt_required() # Descomentar si se necesita protección JWT
+def actualizar_cliente_api(cliente_id):
+    """
+    Actualiza los datos de un cliente existente.
+    ---
+    tags:
+      - Clientes
+    parameters:
+      - name: cliente_id
+        in: path
+        required: true
+        description: ID del cliente a actualizar.
+        schema:
+          type: integer
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              docenas:
+                type: number
+                format: float
+                nullable: true
+              nro_pao:
+                type: integer
+                nullable: true
+              tiene_pedido:
+                type: boolean # En JSON es true/false, API.py lo convierte a 1/0
+                nullable: true
+              es_regalo:
+                type: boolean # En JSON es true/false, API.py lo convierte a 1/0
+                nullable: true
+              observaciones:
+                type: string
+                nullable: true
+              horario:
+                type: string
+                format: time # HH:MM:SS
+                nullable: true
+                example: "10:30:00"
+    responses:
+      200:
+        description: Cliente actualizado con éxito.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mensaje:
+                  type: string
+                  example: "Cliente actualizado correctamente."
+      400:
+        description: Datos de entrada inválidos.
+      404:
+        description: Cliente no encontrado.
+      500:
+        description: Error interno del servidor.
+    """
+    datos_actualizados = request.get_json()
+    if not datos_actualizados:
+        return jsonify({"error": "No se proporcionaron datos para actualizar."}), 400
+
+    # Validación básica de tipos (más robusta podría hacerse con Marshmallow o Pydantic)
+    allowed_fields = {"docenas", "nro_pao", "tiene_pedido", "es_regalo", "observaciones", "horario"}
+    # Filtrar solo los campos permitidos para evitar inyección de campos no deseados
+    datos_filtrados = {k: v for k, v in datos_actualizados.items() if k in allowed_fields}
+
+    if not datos_filtrados:
+         return jsonify({"error": "No se proporcionaron campos válidos para actualizar."}), 400
+
+    session = Session()
+    try:
+        # La función API_Web.actualizar_cliente maneja el commit/rollback internamente
+        actualizacion_exitosa = API_Web.actualizar_cliente(session, cliente_id, datos_filtrados)
+
+        if actualizacion_exitosa:
+            return jsonify({"mensaje": "Cliente actualizado correctamente."}), 200
+        else:
+            # Podría ser que el cliente no exista (rowcount = 0) o un error en la BBDD.
+            # Para diferenciar, API_Web.actualizar_cliente debería ser más explícito o
+            # podríamos hacer una verificación previa de existencia del cliente aquí.
+            # Por ahora, si devuelve False, asumimos que no se encontró o no se pudo actualizar.
+            # Chequeamos si el cliente existe para dar un 404 más preciso.
+            cliente_existe_query = text("SELECT 1 FROM generalbelgrano.clientes WHERE id = :id")
+            existe = session.execute(cliente_existe_query, {"id": cliente_id}).fetchone()
+            if not existe:
+                return jsonify({"error": f"Cliente con ID {cliente_id} no encontrado."}), 404
+            else: # Existe pero no se actualizó, podría ser un error interno o datos sin cambios reales
+                return jsonify({"error": "No se pudo actualizar el cliente. Verifique los datos o inténtelo más tarde."}), 500
+
+
+    except Exception as e:
+        session.rollback() # Asegurar rollback si la excepción ocurre aquí y no en API_Web
+        app.logger.error(f"Error en /api/clientes/actualizar/{cliente_id}: {e}")
+        return jsonify({"error": "Error interno del servidor al actualizar el cliente."}), 500
+    finally:
+        session.close()

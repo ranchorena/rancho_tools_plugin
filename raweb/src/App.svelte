@@ -14,11 +14,15 @@
 
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
+  import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
 
   let mapElement;
   let map;
-  let showBuscarDireccionDialog = false;
+  // let showBuscarDireccionDialog = false; // Reemplazado por currentView
   let markerSource;
+
+  // Estado para controlar la vista actual
+  let currentView = 'map'; // 'map', 'buscarDireccion', 'buscarCliente'
 
   const initialCoordinates = {
     lon: -58.49442773720401,
@@ -62,17 +66,30 @@
     };
   });
 
-  function openBuscarDireccion() {
-    showBuscarDireccionDialog = true;
+  // function openBuscarDireccion() { // Reemplazado por setView
+  //   showBuscarDireccionDialog = true;
+  // }
+
+  function setView(viewName) {
+    currentView = viewName;
+    // Si volvemos al mapa y el mapa no estaba visible, podría necesitar un updateSize si su div contenedor cambió.
+    // Por ahora, asumimos que el div del mapa siempre existe y solo se oculta/muestra su contenido o el componente completo.
+    if (viewName === 'map' && map) {
+      // Pequeño delay para asegurar que el DOM está actualizado si se re-renderiza el mapa
+      setTimeout(() => {
+        map.updateSize();
+      }, 0);
+    }
   }
 
-  function handleCloseDialog() {
-    showBuscarDireccionDialog = false;
-  }
+  // function handleCloseDialog() { // Se manejará con setView('map')
+  //   showBuscarDireccionDialog = false;
+  // }
 
   async function handleBuscarDireccion(event) {
     const direccion = event.detail.direccion;
-    showBuscarDireccionDialog = false; // Cerrar diálogo
+    // showBuscarDireccionDialog = false; // Cerrar diálogo
+    setView('map'); // Volver al mapa después de buscar
     console.log("Buscando dirección:", direccion);
 
     try {
@@ -126,24 +143,30 @@
 
 <main>
   <nav class="navbar">
-    <button on:click={openBuscarDireccion}>Buscar Dirección</button>
-    <button on:click={() => alert('Funcionalidad "Buscar Cliente" no implementada.')}>Buscar Cliente</button>
+    <button on:click={() => setView('map')} class:active={currentView === 'map'}>Mapa Principal</button>
+    <button on:click={() => setView('buscarDireccion')} class:active={currentView === 'buscarDireccion'}>Buscar Dirección</button>
+    <button on:click={() => setView('buscarCliente')} class:active={currentView === 'buscarCliente'}>Buscar Cliente</button>
     <button on:click={() => alert('Funcionalidad "Pedidos" no implementada.')}>Pedidos</button>
   </nav>
 
-  <div class="map-container" bind:this={mapElement}>
-    <!-- El mapa se renderizará aquí -->
-  </div>
-
-  {#if showBuscarDireccionDialog}
+  {#if currentView === 'map'}
+    <div class="map-container" bind:this={mapElement}>
+      <!-- El mapa se renderizará aquí -->
+    </div>
+  {:else if currentView === 'buscarDireccion'}
     <BuscarDireccionDialog
-      on:close={handleCloseDialog}
+      on:close={() => setView('map')}
       on:buscar={handleBuscarDireccion}
     />
+  {:else if currentView === 'buscarCliente'}
+    <BuscarCliente />
+    <!-- El componente BuscarCliente no emite eventos 'close' o 'buscar' hacia App.svelte por ahora -->
+    <!-- Para volver al mapa, el usuario usaría el botón "Mapa Principal" del menú -->
   {/if}
 </main>
 
 <style>
+  /* Estilos existentes... */
   :global(body, html) {
     margin: 0;
     padding: 0;
@@ -177,6 +200,10 @@
 
   .navbar button:hover {
     background-color: #e9e9e9;
+  }
+  .navbar button.active {
+    background-color: #d1d5db; /* Un color para indicar activo */
+    font-weight: bold;
   }
 
   .map-container {
