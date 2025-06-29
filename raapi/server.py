@@ -78,17 +78,17 @@ def buscar_direccion():
     ---
     tags:
       - Direcciones
-    parameters:
-      - name: body
-        in: body
-        required: true
-        schema:
-          type: object
-          properties:
-            direccion:
-              type: string
-              description: La dirección a buscar (ej. "SAN MARTIN 123").
-              example: "SARMIENTO 550"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              direccion:
+                type: string
+                description: La dirección a buscar (ej. "SAN MARTIN 123").
+                example: "SARMIENTO 550"
     responses:
       200:
         description: Coordenadas del punto medio del tramo en EPSG:4326.
@@ -144,7 +144,7 @@ def buscar_direccion():
                 hasta,
                 ST_AsGeoJSON(ST_Transform(ST_Centroid(geometry), 4326)) as centroide_geojson
             FROM
-                tramos
+                generalbelgrano.tramos
             WHERE
                 UPPER(calle) = UPPER(:nombre_calle)
                 AND :altura BETWEEN desde AND hasta
