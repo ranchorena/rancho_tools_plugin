@@ -1,4 +1,7 @@
 <script>
+  import { createEventDispatcher } from 'svelte';
+  const dispatch = createEventDispatcher();
+
   // Variables de estado para los campos de búsqueda
   let searchTermCliente = "";
   let searchTermDireccion = "";
@@ -186,10 +189,16 @@
     font-family: "Inter", sans-serif; /* Intentar usar Inter */
     padding: 20px;
     max-width: 1000px;
-    margin: auto;
+    margin: auto; /* Esto centra el contenedor si es más estrecho que la ventana */
     background-color: #f9fafb; /* Similar a Tailwind bg-gray-50 */
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative; /* Necesario para el posicionamiento absoluto del botón de cierre */
+    /* Para hacerlo más tipo "dialogo grande" sobre el mapa, necesitaríamos: */
+    /* position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1002; */
+    /* max-height: 90vh; overflow-y: auto; */
+    /* Sin embargo, esto cambiaría significativamente su comportamiento actual. */
+    /* Por ahora, solo se asegura que el botón de cierre esté bien posicionado. */
   }
 
   h2 {
@@ -276,6 +285,17 @@
     overflow-x: auto; /* Para tablas anchas en pantallas pequeñas */
   }
 
+  .results-grid table { /* Aplicar al contenedor de la tabla para el scroll */
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .table-container { /* Nuevo contenedor para el scroll vertical */
+    max-height: 18em; /* Altura aproximada para 5 filas (5 * ~3em/fila + ajsutes) */
+    overflow-y: auto;
+    border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;
@@ -350,9 +370,34 @@
     min-width: 200px; /* Ancho mínimo para evitar que se encojan demasiado */
   }
 
+  /* Estilo para el botón de cierre del contenedor principal de BuscarCliente */
+  .main-close-button {
+    position: absolute; /* O fixed si el contenedor no es el body */
+    top: 20px; /* Ajustar según la posición del contenedor principal */
+    right: 20px; /* Ajustar según la posición del contenedor principal */
+    background-color: #f44336; /* Rojo */
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1005; /* Asegurar que esté sobre otros elementos del diálogo */
+  }
+  .main-close-button:hover {
+    background-color: #d32f2f; /* Rojo más oscuro */
+  }
+
 </style>
 
-<div class="container">
+<div class="container"> <!-- Este es el contenedor principal del componente -->
+  <button class="main-close-button" on:click={() => dispatch('close')}>&times;</button>
   <h2>Buscar Cliente</h2>
 
   {#if errorMessage}
@@ -398,10 +443,11 @@
   {#if searchResults.length > 0}
     <div class="results-grid search-section">
       <h3>Resultados de Búsqueda</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Id</th>
+      <div class="table-container"> <!-- Contenedor para el scroll -->
+        <table>
+          <thead>
+            <tr>
+              <th>Id</th>
             <th>Nombre</th>
             <th>Dirección</th>
             <th>Calle</th>
@@ -420,6 +466,7 @@
           {/each}
         </tbody>
       </table>
+      </div> <!-- Fin de table-container -->
     </div>
   {/if}
 

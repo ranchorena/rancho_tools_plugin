@@ -22,7 +22,10 @@
   let markerSource;
 
   // Estado para controlar la vista actual
-  let currentView = 'map'; // 'map', 'buscarDireccion', 'buscarCliente'
+  // let currentView = 'map'; // 'map', 'buscarDireccion', 'buscarCliente'
+  // Se reemplaza currentView por dos flags booleanos para superponer los dialogs
+  let showBuscarDireccionDialog = false;
+  let showBuscarClienteDialog = false;
 
   const initialCoordinates = {
     lon: -58.49442773720401,
@@ -70,11 +73,32 @@
   //   showBuscarDireccionDialog = true;
   // }
 
-  function setView(viewName) {
-    currentView = viewName;
-    // Si volvemos al mapa y el mapa no estaba visible, podría necesitar un updateSize si su div contenedor cambió.
-    // Por ahora, asumimos que el div del mapa siempre existe y solo se oculta/muestra su contenido o el componente completo.
-    if (viewName === 'map' && map) {
+  // function setView(viewName) {
+  //   currentView = viewName;
+  //   // Si volvemos al mapa y el mapa no estaba visible, podría necesitar un updateSize si su div contenedor cambió.
+  //   // Por ahora, asumimos que el div del mapa siempre existe y solo se oculta/muestra su contenido o el componente completo.
+  //   if (viewName === 'map' && map) {
+  //     // Pequeño delay para asegurar que el DOM está actualizado si se re-renderiza el mapa
+  //     setTimeout(() => {
+  //       map.updateSize();
+  //     }, 0);
+  //   }
+  // }
+
+  function openBuscarDireccion() {
+    showBuscarDireccionDialog = true;
+    showBuscarClienteDialog = false; // Asegurar que el otro diálogo esté cerrado
+  }
+
+  function openBuscarCliente() {
+    showBuscarClienteDialog = true;
+    showBuscarDireccionDialog = false; // Asegurar que el otro diálogo esté cerrado
+  }
+
+  function closeDialogs() {
+    showBuscarDireccionDialog = false;
+    showBuscarClienteDialog = false;
+    if (map) {
       // Pequeño delay para asegurar que el DOM está actualizado si se re-renderiza el mapa
       setTimeout(() => {
         map.updateSize();
@@ -82,14 +106,10 @@
     }
   }
 
-  // function handleCloseDialog() { // Se manejará con setView('map')
-  //   showBuscarDireccionDialog = false;
-  // }
-
   async function handleBuscarDireccion(event) {
     const direccion = event.detail.direccion;
-    // showBuscarDireccionDialog = false; // Cerrar diálogo
-    setView('map'); // Volver al mapa después de buscar
+    // showBuscarDireccionDialog = false; // Ya no se cierra aquí, se cierra con el botón X o Cancelar del diálogo
+    closeDialogs(); // Cerrar el diálogo después de la búsqueda
     console.log("Buscando dirección:", direccion);
 
     try {
@@ -143,25 +163,25 @@
 
 <main>
   <nav class="navbar">
-    <button on:click={() => setView('map')} class:active={currentView === 'map'}>Mapa Principal</button>
-    <button on:click={() => setView('buscarDireccion')} class:active={currentView === 'buscarDireccion'}>Buscar Dirección</button>
-    <button on:click={() => setView('buscarCliente')} class:active={currentView === 'buscarCliente'}>Buscar Cliente</button>
+    <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>Buscar Dirección</button>
+    <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>Buscar Cliente</button>
     <button on:click={() => alert('Funcionalidad "Pedidos" no implementada.')}>Pedidos</button>
   </nav>
 
-  {#if currentView === 'map'}
-    <div class="map-container" bind:this={mapElement}>
-      <!-- El mapa se renderizará aquí -->
-    </div>
-  {:else if currentView === 'buscarDireccion'}
+  <div class="map-container" bind:this={mapElement}>
+    <!-- El mapa siempre está presente en el DOM -->
+  </div>
+
+  {#if showBuscarDireccionDialog}
     <BuscarDireccionDialog
-      on:close={() => setView('map')}
+      on:close={closeDialogs}
       on:buscar={handleBuscarDireccion}
     />
-  {:else if currentView === 'buscarCliente'}
-    <BuscarCliente />
-    <!-- El componente BuscarCliente no emite eventos 'close' o 'buscar' hacia App.svelte por ahora -->
-    <!-- Para volver al mapa, el usuario usaría el botón "Mapa Principal" del menú -->
+  {/if}
+
+  {#if showBuscarClienteDialog}
+    <BuscarCliente on:close={closeDialogs}/>
+    <!-- Asegúrate de que BuscarCliente emita un evento 'close' -->
   {/if}
 </main>
 

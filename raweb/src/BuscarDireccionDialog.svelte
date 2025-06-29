@@ -27,6 +27,7 @@
 
 <div class="modal-backdrop" on:click={handleCancelar}>
   <div class="modal-content" on:click|stopPropagation>
+    <button class="close-button" on:click={handleCancelar}>&times;</button>
     <h2>Buscar Dirección</h2>
     <input
       type="text"
@@ -63,6 +64,19 @@
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     min-width: 300px;
     max-width: 500px;
+    position: relative; /* Para posicionar el botón de cierre absoluto */
+  }
+
+  .close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
   }
 
   .modal-content h2 {
