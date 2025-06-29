@@ -1,0 +1,8 @@
+Flask
+SQLAlchemy
+Flask-JWT-Extended
+Flask-CORS
+Flasgger
+psycopg2-binary
+requests
+MarkupSafe
