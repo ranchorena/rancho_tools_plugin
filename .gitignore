@@ -1,4 +1,18 @@
+# Ignorar el entorno virtual de Python
+/raapi/venv/
+
+# Ignorar dependencias de Node.js
+/raweb/node_modules/
+
+# Ignorar caché de Python
+__pycache__/
 *.pyc
+
+# Ignorar archivos de configuración del editor
+.vscode/
+
+# Ignorar archivos de compilación de Svelte si se generan en otro lado
+/raweb/public/build/
 
 # C++ objects and libs
 *.slo

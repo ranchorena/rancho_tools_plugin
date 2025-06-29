@@ -188,17 +188,9 @@ def buscar_direccion():
     finally:
         session.close()
 
-if __name__ == '__main__':
-    # Habilitar logging para ver errores de Flask y SQLAlchemy
-    import logging
-    logging.basicConfig(level=logging.INFO)
-    handler = logging.StreamHandler() # Log to stderr
-    app.logger.addHandler(handler)
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
 
 # --- Nuevos Endpoints para Clientes ---
-from raapi.API import API_Web # Importar la clase/módulo con la lógica de BD
+from API import API # Importar la clase/módulo con la lógica de BD
 
 @app.route("/api/clientes/buscar", methods=["POST"])
 # @jwt_required() # Descomentar si se necesita protección JWT
@@ -272,18 +264,18 @@ def buscar_clientes_api():
             nombre = data.get("nombre_cliente")
             if not nombre:
                 return jsonify({"error": "El campo 'nombre_cliente' es requerido para el criterio 'nombre'"}), 400
-            clientes_encontrados = API_Web.buscar_cliente_por_nombre(session, nombre)
+            clientes_encontrados = API.buscar_cliente_por_nombre(session, nombre)
         elif criterio == "direccion":
             direccion_b = data.get("direccion")
             if not direccion_b:
                 return jsonify({"error": "El campo 'direccion' es requerido para el criterio 'direccion'"}), 400
-            clientes_encontrados = API_Web.buscar_clientes_por_direccion(session, direccion_b)
+            clientes_encontrados = API.buscar_clientes_por_direccion(session, direccion_b)
         elif criterio == "calle_altura":
             calle_b = data.get("calle")
             if not calle_b: # La calle es requerida para este criterio
                 return jsonify({"error": "El campo 'calle' es requerido para el criterio 'calle_altura'"}), 400
             altura_b = data.get("altura") # Altura es opcional
-            clientes_encontrados = API_Web.buscar_clientes_por_calle_altura(session, calle_b, altura_b)
+            clientes_encontrados = API.buscar_clientes_por_calle_altura(session, calle_b, altura_b)
         else:
             return jsonify({"error": f"Criterio '{criterio}' no válido. Use 'nombre', 'direccion' o 'calle_altura'."}), 400
 
@@ -370,14 +362,14 @@ def actualizar_cliente_api(cliente_id):
 
     session = Session()
     try:
-        # La función API_Web.actualizar_cliente maneja el commit/rollback internamente
-        actualizacion_exitosa = API_Web.actualizar_cliente(session, cliente_id, datos_filtrados)
+        # La función API.actualizar_cliente maneja el commit/rollback internamente
+        actualizacion_exitosa = API.actualizar_cliente(session, cliente_id, datos_filtrados)
 
         if actualizacion_exitosa:
             return jsonify({"mensaje": "Cliente actualizado correctamente."}), 200
         else:
             # Podría ser que el cliente no exista (rowcount = 0) o un error en la BBDD.
-            # Para diferenciar, API_Web.actualizar_cliente debería ser más explícito o
+            # Para diferenciar, API.actualizar_cliente debería ser más explícito o
             # podríamos hacer una verificación previa de existencia del cliente aquí.
             # Por ahora, si devuelve False, asumimos que no se encontró o no se pudo actualizar.
             # Chequeamos si el cliente existe para dar un 404 más preciso.
@@ -390,8 +382,16 @@ def actualizar_cliente_api(cliente_id):
 
 
     except Exception as e:
-        session.rollback() # Asegurar rollback si la excepción ocurre aquí y no en API_Web
+        session.rollback() # Asegurar rollback si la excepción ocurre aquí y no en API
         app.logger.error(f"Error en /api/clientes/actualizar/{cliente_id}: {e}")
         return jsonify({"error": "Error interno del servidor al actualizar el cliente."}), 500
     finally:
         session.close()
+
+if __name__ == '__main__':
+    # Habilitar logging para ver errores de Flask y SQLAlchemy
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    handler = logging.StreamHandler() # Log to stderr
+    app.logger.addHandler(handler)
+    app.run(host='0.0.0.0', port=5000, debug=True)
