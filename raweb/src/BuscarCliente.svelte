@@ -1,5 +1,7 @@
 <script>
   import { API_BASE_URL } from './config.js';
+  import { createEventDispatcher } from 'svelte'; // Importar dispatcher
+  const dispatch = createEventDispatcher(); // Inicializar dispatcher
 
   // Variables de estado para los campos de búsqueda
   let searchTermCliente = "";
@@ -198,18 +200,87 @@
     /* Por ahora, solo se asegura que el botón de cierre esté bien posicionado. */
   }
 
+  /* Estilos para el modal */
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001; /* Encima del navbar, igual que BuscarDireccionDialog */
+  }
+
+  .modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    /* min-width: 300px; Ya no es necesario, el contenido lo definirá */
+    /* max-width: 1000px; Usaremos el max-width del .container original */
+    width: 90%; /* Ancho relativo a la ventana */
+    max-width: 1000px; /* Pero no más de 1000px */
+    max-height: 90vh; /* Alto máximo para permitir scroll */
+    overflow-y: auto; /* Scroll si el contenido es muy alto */
+    position: relative; /* Para el botón de cierre interno */
+  }
+
+  .main-close-button { /* Estilo para el botón de cierre del modal */
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: transparent; /* Similar a BuscarDireccionDialog */
+    color: #333; /* Color oscuro para contraste con fondo blanco */
+    border: none;
+    border-radius: 0; /* Sin borde redondeado para un look más limpio de 'x' */
+    font-size: 1.8rem; /* Más grande para que sea fácil de clickear */
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    /* box-shadow: 0 2px 5px rgba(0,0,0,0.2); No es necesario si es transparente */
+    /* z-index: 1005; Ya está dentro del modal-content */
+  }
+  .main-close-button:hover {
+    color: #000; /* Más oscuro al hacer hover */
+    background: transparent;
+  }
+
+  /* El estilo .container original se elimina o comenta si ya no es el principal contenedor del modal */
+  /*
+  .container {
+    font-family: "Inter", sans-serif;
+    padding: 20px;
+    max-width: 1000px;
+    margin: auto;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+  }
+  */
+
   h2 {
     color: #1f2937; /* Similar a Tailwind text-gray-800 */
+    margin-top: 0; /* Coincidir con BuscarDireccionDialog */
     margin-bottom: 16px;
   }
 
+  /* Simplificar las secciones internas: sin fondos ni bordes propios, solo espaciado */
   .search-section, .selected-client-section {
-    background-color: #ffffff;
-    padding: 20px;
-    border-radius: 8px;
+    /* background-color: #ffffff; */ /* No necesita fondo si modal-content es blanco */
+    padding: 10px 0; /* Menos padding vertical, sin padding horizontal (el modal-content ya tiene) */
+    border-radius: 0; /* Sin bordes redondeados internos */
     margin-bottom: 20px;
-    border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+    /* border: 1px solid #e5e7eb; */ /* Sin borde interno */
   }
+  .search-section:last-child, .selected-client-section:last-child {
+    margin-bottom: 0; /* Evitar doble margen al final */
+  }
+
 
   .form-group {
     margin-bottom: 15px;
@@ -218,24 +289,26 @@
   label {
     display: block;
     margin-bottom: 5px;
-    font-weight: 500;
-    color: #374151; /* Tailwind text-gray-700 */
+    font-weight: 500; /* Mantener o usar el de global.css si es más simple */
+    color: #374151; /* Mantener o usar el de global.css */
   }
 
+  /* Estilos simplificados para inputs y textarea, más cercanos a global.css y BuscarDireccionDialog */
   input[type="text"], input[type="number"], textarea {
-    width: calc(100% - 22px); /* Ajustar por padding y borde */
-    padding: 10px;
-    border: 1px solid #d1d5db; /* Tailwind border-gray-300 */
-    border-radius: 6px; /* Tailwind rounded-md */
-    font-size: 1rem;
+    width: calc(100% - 1.6em); /* Ajustar padding de 0.4em por lado y borde */
+    padding: 0.6em; /* Un poco más de padding que global.css para mejor tacto */
+    margin-bottom: 10px; /* Consistencia con BuscarDireccionDialog (0.5em global.css)*/
+    border: 1px solid #ccc; /* global.css */
+    border-radius: 4px; /* BuscarDireccionDialog (2px global.css) */
+    font-size: inherit; /* global.css */
+    box-sizing: border-box; /* global.css */
   }
 
   input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
     outline: none;
-    border-color: #2563eb; /* Tailwind focus:border-blue-500 */
-    box-shadow: 0 0 0 2px #bfdbfe; /* Tailwind focus:ring-blue-200 */
+    border-color: #007bff; /* Azul estándar para focus, similar a Bootstrap/BuscarDireccion */
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Sombra de focus suave */
   }
-
 
   textarea {
     min-height: 80px;
@@ -255,27 +328,52 @@
     white-space: nowrap; /* Evitar que el texto del botón se divida */
   }
 
+  /* Estilo base para botones, similar al botón "Cancelar" de BuscarDireccionDialog o global.css */
   button {
-    padding: 10px 15px;
-    background-color: #2563eb; /* Tailwind bg-blue-600 */
-    color: white;
-    border: none;
-    border-radius: 6px; /* Tailwind rounded-md */
+    padding: 8px 15px; /* BuscarDireccionDialog */
     cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s;
+    border: 1px solid #ccc; /* global.css / BuscarDireccionDialog */
+    border-radius: 4px; /* BuscarDireccionDialog */
+    background-color: #f4f4f4; /* global.css */
+    color: #333; /* global.css */
+    font-size: inherit; /* global.css */
+    transition: background-color 0.2s, border-color 0.2s;
+    margin-left: 5px; /* Pequeño margen entre botones si están juntos */
   }
+  button:first-of-type { /* Para grupos de botones como en .input-group o .modal-actions */
+      /* margin-left: 0; No, porque el botón Guardar Cambios es único en su línea a veces */
+  }
+
 
   button:hover {
-    background-color: #1d4ed8; /* Tailwind bg-blue-700 */
+    background-color: #e9e9e9; /* Un hover genérico */
+    border-color: #bbb;
   }
 
-  button.secondary {
-    background-color: #4b5563; /* Tailwind bg-gray-600 */
+  button:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
   }
-  button.secondary:hover {
-    background-color: #374151; /* Tailwind bg-gray-700 */
+
+  /* Estilo para botones primarios (equivalente al "Buscar" de BuscarDireccionDialog) */
+  button.primary,
+  .input-group button, /* Los botones de búsqueda en input-group serán primarios */
+  .selected-client-section button /* El botón "Guardar Cambios" */ {
+    background-color: #007bff; /* Azul primario */
+    color: white;
+    border-color: #007bff;
   }
+
+  button.primary:hover,
+  .input-group button:hover,
+  .selected-client-section button:hover {
+    background-color: #0056b3; /* Azul más oscuro */
+    border-color: #0056b3;
+  }
+
+  /* Si se necesita un botón secundario explícito diferente al base */
+  /* button.secondary { ... } */
 
   .results-grid {
     margin-top: 20px;
@@ -287,10 +385,12 @@
     border-collapse: collapse;
   }
 
-  .table-container { /* Nuevo contenedor para el scroll vertical */
-    max-height: 18em; /* Altura aproximada para 5 filas (5 * ~3em/fila + ajsutes) */
+  .table-container { /* Contenedor para el scroll vertical */
+    max-height: 18em;
     overflow-y: auto;
-    border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
+    border: 1px solid #ccc; /* Borde unificado */
+    border-radius: 4px; /* Consistente con otros elementos */
+    margin-top: 10px; /* Espacio antes de la tabla */
   }
 
   table {
@@ -299,14 +399,14 @@
   }
 
   th, td {
-    border: 1px solid #e5e7eb; /* Tailwind border-gray-200 */
-    padding: 10px;
+    border: 1px solid #ccc; /* Borde unificado */
+    padding: 8px; /* Un poco menos padding */
     text-align: left;
   }
 
   th {
-    background-color: #f3f4f6; /* Tailwind bg-gray-100 */
-    font-weight: 600;
+    background-color: #f4f4f4; /* Mismo color que fondo de botón base (global.css) */
+    font-weight: bold; /* Estándar para cabeceras */
   }
 
   tbody tr:hover {
@@ -393,11 +493,15 @@
 
 </style>
 
-<div class="container"> <!-- Este es el contenedor principal del componente -->
-  <button class="main-close-button" on:click={() => dispatch('close')}>&times;</button>
-  <h2>Buscar Cliente</h2>
+<!-- Estructura del Modal -->
+<div class="modal-backdrop" on:click={() => dispatch('close')}>
+  <div class="modal-content" on:click|stopPropagation>
+    <button class="main-close-button" on:click={() => dispatch('close')}>&times;</button>
 
-  {#if errorMessage}
+    <!-- Contenido Original del Componente -->
+    <h2>Buscar Cliente</h2>
+
+    {#if errorMessage}
     <div class="message error-message">{errorMessage}</div>
   {/if}
   {#if successMessage}
@@ -514,5 +618,7 @@
       <button on:click={saveChanges}>Guardar Cambios</button>
     </div>
   {/if}
+    <!-- Fin Contenido Original -->
 
-</div>
+  </div> <!-- Fin modal-content -->
+</div> <!-- Fin modal-backdrop -->
