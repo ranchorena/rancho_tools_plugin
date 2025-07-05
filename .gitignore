@@ -68,3 +68,11 @@ compile_commands.json
 *creator.user*
 
 *_qmlcache.qrc
+
+# Archivos de entorno local
+.env
+.env.*
+*.env
+*.env.*
+!/.env.example # No ignorar archivos .env.example
+!/.env.template
