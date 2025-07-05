@@ -103,7 +103,7 @@
         params: {
           'LAYERS': 'GeneralBelgrano:Pedidos',
           'VERSION': '1.1.0',
-          'STYLES': 'geomPoint', // Intentar solicitar un estilo de círculo. 'point' o un nombre de estilo específico de tu GeoServer
+          'STYLES': 'geomPoint', // Corregido: sin comilla simple al final
         },
         serverType: 'geoserver',
       }),
@@ -115,8 +115,11 @@
     clientesLayer = new ImageLayer({
       source: new ImageWMS({
         url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
-        // Asumimos que Clientes también podría tener un estilo de punto por defecto o uno específico
-        params: {'LAYERS': 'GeneralBelgrano:Clientes', 'VERSION': '1.1.0', 'STYLES': 'geomPoint'},
+        params: {
+          'LAYERS': 'GeneralBelgrano:Clientes',
+          'VERSION': '1.1.0',
+          'STYLES': 'geomPoint' // Corregido: sin comilla simple al final
+        },
         serverType: 'geoserver',
       }),
       visible: showClientesLayer // Usar la variable de estado
