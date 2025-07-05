@@ -103,7 +103,7 @@
         params: {
           'LAYERS': 'GeneralBelgrano:Pedidos',
           'VERSION': '1.1.0',
-          'STYLES': 'geomPoint', // Corregido: sin comilla simple al final
+          // 'STYLES': 'geomPoint', // Revertido: Se usará el estilo por defecto del servidor
         },
         serverType: 'geoserver',
       }),
@@ -118,7 +118,7 @@
         params: {
           'LAYERS': 'GeneralBelgrano:Clientes',
           'VERSION': '1.1.0',
-          'STYLES': 'geomPoint' // Corregido: sin comilla simple al final
+          // 'STYLES': 'geomPoint' // Revertido: Se usará el estilo por defecto del servidor
         },
         serverType: 'geoserver',
       }),
