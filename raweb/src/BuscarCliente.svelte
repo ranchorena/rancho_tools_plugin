@@ -113,10 +113,12 @@
   async function selectClient(client) {
     selectedClient = client;
     editableFields = {
-      docenas: client.cantidad !== undefined ? client.cantidad : null,
-      nro_pao: client.nro_pao !== undefined ? client.nro_pao : null,
-      tiene_pedido: client.tiene_pedido ? true : false,
-      es_regalo: client.es_regalo ? true : false,
+      // Si client.cantidad es undefined o null, default a 1. Sino, usar client.cantidad.
+      docenas: (client.cantidad !== undefined && client.cantidad !== null) ? client.cantidad : 1,
+      nro_pao: (client.nro_pao !== undefined && client.nro_pao !== null) ? client.nro_pao : null,
+      // Si client.tiene_pedido es undefined (no existe el campo), default a true. Si existe, usar su valor booleano.
+      tiene_pedido: client.tiene_pedido !== undefined ? Boolean(client.tiene_pedido) : true,
+      es_regalo: client.es_regalo !== undefined ? Boolean(client.es_regalo) : false,
       observaciones: client.observacion || "",
       horario: client.horario || ""
     };
@@ -443,7 +445,7 @@
   }
 </style>
 
-<div class="modal-backdrop" on:click={() => dispatch('close')}>
+<div class="modal-backdrop"> <!-- Eliminado on:click={() => dispatch('close')} -->
   <div class="modal-content" on:click|stopPropagation>
     <div class="modal-header">
       <h2>Buscar Cliente</h2>
