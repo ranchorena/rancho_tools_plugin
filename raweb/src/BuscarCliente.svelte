@@ -245,7 +245,6 @@
     margin-right: -15px; /* Compensar el padding-right para alinear contenido */
   }
 
-
   .main-close-button {
     background: transparent;
     color: #333;
@@ -277,7 +276,6 @@
 
   .form-group {
     margin-bottom: 15px;
-    /* Centrado de los grupos de búsqueda específicos */
   }
 
   .form-group.centered-search {
@@ -285,7 +283,6 @@
     margin-left: auto;
     margin-right: auto;
   }
-
 
   label {
     display: block;
@@ -304,12 +301,9 @@
     box-sizing: border-box;
   }
 
-  /* Ancho específico para campos numéricos */
   input[type="number"].narrow-number {
-    max-width: 100px; /* Suficiente para 4 dígitos y algo de padding */
-    /* También se puede usar ems: max-width: 8em; aproximadamente */
+    max-width: 100px;
   }
-
 
   input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
     outline: none;
@@ -325,25 +319,17 @@
   .input-group {
     display: flex;
     gap: 10px;
-    align-items: flex-end; /* Alinea el botón con la base del input más alto */
-  }
-
-  .input-group.centered-search {
-     /* El centrado ya está en .form-group.centered-search */
+    align-items: flex-end;
   }
 
   .input-group input[type="text"] {
-     flex-grow: 1; /* El input de texto toma el espacio disponible */
-  }
-  /* Para el caso de Calle y Altura, necesitamos que el input de calle también sea flexible */
-  .input-group input[type="text"][placeholder="Nombre de la calle"] {
-    flex-grow: 1;
-  }
-  .input-group input[type="text"][placeholder="Altura"] {
-    max-width: 100px; /* Consistente con narrow-number */
-    flex-grow: 0; /* No crece */
+     flex-grow: 1;
   }
 
+  .input-group input[type="text"][placeholder="Altura"] {
+    max-width: 100px;
+    flex-grow: 0;
+  }
 
   .input-group button {
     white-space: nowrap;
@@ -557,7 +543,7 @@
       <label>Calle y Altura:</label>
       <div class="input-group">
         <input type="text" bind:value={searchTermCalle} placeholder="Nombre de la calle">
-        <input type="text" bind:value={searchTermAltura} placeholder="Altura"> {/* Se quitará style inline, controlado por CSS */}
+        <input type="text" bind:value={searchTermAltura} placeholder="Altura">
         <button on:click={searchByStreetHeight}>Buscar</button>
       </div>
     </div>

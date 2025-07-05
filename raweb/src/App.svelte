@@ -51,7 +51,7 @@
       source: new ImageWMS({
         url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
         params: {'LAYERS': 'GeneralBelgrano:Pedidos', 'VERSION': '1.1.0'},
-        serverType: 'geoserver', // Tipo de servidor GeoServer
+        serverType: 'geoserver',
       }),
       visible: false // Por defecto apagada
     });
@@ -72,9 +72,9 @@
         new TileLayer({
           source: new OSM() // Capa base de OpenStreetMap
         }),
-        pedidosLayer, // Añadir capa de Pedidos
-        clientesLayer, // Añadir capa de Clientes
-        markerLayer // Capa para los marcadores (debe estar encima de las WMS si se quiere ver el marcador sobre ellas)
+        pedidosLayer,
+        clientesLayer,
+        markerLayer // Capa para los marcadores (debe estar encima de las WMS)
       ],
       view: new View({
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),
