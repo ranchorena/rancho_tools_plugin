@@ -514,7 +514,7 @@
   <div class="modal-content" on:click|stopPropagation>
     <div class="modal-header">
       <h2>Buscar Cliente</h2>
-      <button class="close-button" on:click={() => dispatch('close')}>&times;</button> {/* Clase cambiada */}
+      <button class="close-button" on:click={() => dispatch('close')}>&times;</button>
     </div>
 
     <div class="modal-body">
