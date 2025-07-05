@@ -372,7 +372,7 @@
   <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
 
   <!-- Elemento para el Tooltip -->
-  <!-- <div bind:this={tooltipElement} class="ol-tooltip"></div> --> {/* Comentado para evitar error */}
+  <!-- <div bind:this={tooltipElement} class="ol-tooltip"></div> -->
 </main>
 
 <style>
