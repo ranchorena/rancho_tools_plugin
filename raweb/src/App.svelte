@@ -33,8 +33,8 @@
   let clientesLayer;
 
   // Estado para los checkboxes del Layer Switcher
-  let showPedidosLayer = false; // Coincide con la visibilidad inicial de la capa
-  let showClientesLayer = true;  // Coincide con la visibilidad inicial de la capa
+  let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
+  let showClientesLayer = false;  // Por defecto: Clientes APAGADA
 
   // Reacciones para actualizar la visibilidad de las capas cuando cambian los checkboxes
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);

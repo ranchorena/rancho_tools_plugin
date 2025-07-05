@@ -345,6 +345,11 @@
     border-color: #0056b3;
   }
 
+  .form-actions {
+    text-align: right; /* Alinea el contenido (el botón) a la derecha */
+    margin-top: 20px; /* Espacio por encima del botón */
+  }
+
   .results-grid {
     margin-top: 20px;
     overflow-x: auto;
@@ -516,7 +521,22 @@
 
       {#if selectedClient}
         <div class="selected-client-section" id="selected-client-details">
-          <h3>Cliente Seleccionado: {selectedClient.nombre} (ID: {selectedClient.id})</h3>
+      <h3>Cliente Seleccionado</h3>
+
+      <div class="form-row">
+        <div class="form-column">
+          <div class="form-group">
+            <label for="selected-client-id">ID Cliente:</label>
+            <input type="text" id="selected-client-id" value={selectedClient.id} readonly>
+          </div>
+        </div>
+        <div class="form-column">
+          <div class="form-group">
+            <label for="selected-client-nombre">Nombre:</label>
+            <input type="text" id="selected-client-nombre" value={selectedClient.nombre} readonly>
+          </div>
+        </div>
+      </div>
 
           <div class="form-row">
             <div class="form-column">
@@ -557,7 +577,9 @@
             <textarea id="observaciones" bind:value={editableFields.observaciones}></textarea>
           </div>
 
-          <button on:click={saveChanges}>Guardar Cambios</button>
+          <div class="form-actions">
+            <button on:click={saveChanges}>Guardar Cambios</button>
+          </div>
         </div>
       {/if}
     </div>
