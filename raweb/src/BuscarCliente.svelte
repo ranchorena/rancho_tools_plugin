@@ -27,12 +27,12 @@
 
   let isLoading = false;
   let errorMessage = "";
-  let successMessage = "";
+  // let successMessage = ""; // Eliminada, se usará notificación global
 
   async function fetchData(url, options) {
     isLoading = true;
     errorMessage = "";
-    successMessage = "";
+    // successMessage = ""; // Eliminada
     try {
       const response = await fetch(url, options);
       if (!response.ok) {
@@ -165,14 +165,20 @@
     });
 
     if (result && result.mensaje) {
-      successMessage = result.mensaje;
-      const index = searchResults.findIndex(c => c.id === selectedClient.id);
-      if (index !== -1) {
-        searchResults[index] = {
-            ...searchResults[index],
-        };
-        searchResults = [...searchResults];
-      }
+      // successMessage = result.mensaje; // Ya no se usa localmente
+      dispatch('showGlobalNotification', { message: result.mensaje || 'Cliente actualizado correctamente.', type: 'success' });
+      dispatch('refreshPedidosLayer');
+      dispatch('close'); // Cerrar el formulario
+
+      // La actualización local de searchResults ya no es tan crítica si el formulario se cierra,
+      // pero se puede mantener si se desea por consistencia si se reabre inmediatamente.
+      // const index = searchResults.findIndex(c => c.id === selectedClient.id);
+      // if (index !== -1) {
+      //   searchResults[index] = {
+      //       ...searchResults[index],
+      //   };
+      //   searchResults = [...searchResults];
+      // }
     }
   }
 </script>
@@ -456,9 +462,7 @@
       {#if errorMessage}
       <div class="message error-message">{errorMessage}</div>
       {/if}
-      {#if successMessage}
-        <div class="message success-message">{successMessage}</div>
-      {/if}
+      <!-- Bloque de successMessage eliminado -->
       {#if isLoading}
         <div class="loading-indicator">Cargando...</div>
       {/if}

@@ -6,6 +6,7 @@
   import ImageLayer from 'ol/layer/Image.js'; // Importar ImageLayer
   import ImageWMS from 'ol/source/ImageWMS.js'; // Importar ImageWMS
   import OSM from 'ol/source/OSM.js';
+  import Overlay from 'ol/Overlay.js'; // Importar Overlay
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
@@ -20,8 +21,11 @@
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
+  import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
+  let tooltipElement; // Para el div del tooltip
+  let tooltipOverlay; // Para el ol/Overlay
   let map;
   let markerSource;
 
@@ -40,18 +44,55 @@
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
   $: if (clientesLayer) clientesLayer.setVisible(showClientesLayer);
 
+  // Estado para la notificación global
+  let globalNotificationMessage = "";
+  let globalNotificationType = "success";
+
+  function handleShowGlobalNotification(event) {
+    globalNotificationMessage = event.detail.message;
+    globalNotificationType = event.detail.type || "success";
+    // El componente GlobalNotification se encargará de resetear el mensaje o de ocultarse
+    // Para permitir que se muestre de nuevo si el mensaje es el mismo, podemos borrarlo aquí tras un pequeño delay
+    // o asegurar que GlobalNotification reaccione a cambios de message incluso si es el mismo (lo hace con el $: if message)
+    // Si se quiere que GlobalNotification se resetee para volver a aparecer con el mismo mensaje:
+    setTimeout(() => {
+        globalNotificationMessage = ""; // Esto lo ocultará después de que GlobalNotification lo haya mostrado y temporizado
+    }, 3500); // Un poco más que la duración del toast para asegurar que no parpadee
+  }
+
+  function refreshPedidosLayerMap() {
+    if (pedidosLayer) {
+      const source = pedidosLayer.getSource();
+      if (source && typeof source.updateParams === 'function') {
+        source.updateParams({'TIMESTAMP': new Date().getTime()});
+        console.log("Capa Pedidos refrescada");
+      }
+    }
+  }
+
   onMount(() => {
     markerSource = new VectorSource();
     const markerLayer = new VectorLayer({
       source: markerSource,
       style: new Style({
         image: new Icon({
-          anchor: [0.5, 46], // ancla en la parte inferior central del icono
+          anchor: [0.5, 46],
           anchorXUnits: 'fraction',
           anchorYUnits: 'pixels',
-          src: 'https://openlayers.org/en/latest/examples/data/icon.png' // Icono de marcador por defecto de OL
+          src: 'https://openlayers.org/en/latest/examples/data/icon.png'
         })
       })
+    });
+
+    // Crear el Overlay para el tooltip
+    tooltipOverlay = new Overlay({
+      element: tooltipElement,
+      autoPan: { // Deprecado, usar autoPan si es una versión más nueva de OL o ajustar manualmente
+        animation: {
+          duration: 250,
+        },
+      },
+      // offset: [0, -15] // Opcional: para ajustar la posición del tooltip relativo al puntero
     });
 
     // Definición de la capa de Pedidos (WMS)
@@ -59,7 +100,11 @@
     pedidosLayer = new ImageLayer({
       source: new ImageWMS({
         url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
-        params: {'LAYERS': 'GeneralBelgrano:Pedidos', 'VERSION': '1.1.0'},
+        params: {
+          'LAYERS': 'GeneralBelgrano:Pedidos',
+          'VERSION': '1.1.0',
+          'STYLES': 'geomPoint', // Intentar solicitar un estilo de círculo. 'point' o un nombre de estilo específico de tu GeoServer
+        },
         serverType: 'geoserver',
       }),
       visible: showPedidosLayer // Usar la variable de estado
@@ -70,7 +115,8 @@
     clientesLayer = new ImageLayer({
       source: new ImageWMS({
         url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
-        params: {'LAYERS': 'GeneralBelgrano:Clientes', 'VERSION': '1.1.0'},
+        // Asumimos que Clientes también podría tener un estilo de punto por defecto o uno específico
+        params: {'LAYERS': 'GeneralBelgrano:Clientes', 'VERSION': '1.1.0', 'STYLES': 'geomPoint'},
         serverType: 'geoserver',
       }),
       visible: showClientesLayer // Usar la variable de estado
@@ -89,10 +135,73 @@
       view: new View({
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),
         zoom: 15 // Nivel de zoom inicial
-      })
+      }),
+      overlays: [tooltipOverlay] // Añadir el overlay al mapa
     });
 
     // Limpiar el mapa al desmontar el componente
+    // Listener para el movimiento del puntero en el mapa (para el tooltip)
+    map.on('pointermove', (evt) => {
+      if (evt.dragging) {
+        tooltipElement.style.display = 'none';
+        return;
+      }
+
+      // Solo mostrar tooltip si la capa de Pedidos está visible
+      if (!pedidosLayer || !pedidosLayer.getVisible()) {
+        tooltipElement.style.display = 'none';
+        return;
+      }
+
+      const source = pedidosLayer.getSource();
+      if (!source || typeof source.getFeatureInfoUrl !== 'function') {
+        tooltipElement.style.display = 'none';
+        return;
+      }
+
+      const viewResolution = map.getView().getResolution();
+      const viewProjection = map.getView().getProjection();
+      // Ajustar INFO_FORMAT y nombres de propiedades según la configuración de GeoServer
+      const url = source.getFeatureInfoUrl(
+        evt.coordinate,
+        viewResolution,
+        viewProjection,
+        {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': '1', 'QUERY_LAYERS': 'GeneralBelgrano:Pedidos'}
+      );
+
+      if (url) {
+        fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.features && data.features.length > 0) {
+              const feature = data.features[0];
+              const props = feature.properties;
+              // *** IMPORTANTE: Ajusta los nombres de las propiedades a continuación ***
+              // *** según los nombres exactos de los atributos en tu capa GeoServer ***
+              // Ejemplo de nombres posibles: nombre_cliente, direccion_completa, cantidad_docenas
+              const nombre = props.nombre_cliente || props.cliente_nombre || props.nombre || 'Nombre no disponible';
+              const direccion = props.direccion_completa || props.direccion || 'Dirección no disponible';
+              const cantidad = props.cantidad_docenas !== undefined ? props.cantidad_docenas : (props.docenas || 'Cantidad no disponible');
+
+              tooltipElement.innerHTML = `
+                <strong>${nombre}</strong><br>
+                Dirección: ${direccion}<br>
+                Docenas: ${cantidad}
+              `;
+              tooltipOverlay.setPosition(evt.coordinate);
+              tooltipElement.style.display = 'block';
+            } else {
+              tooltipElement.style.display = 'none';
+            }
+          })
+          .catch(() => {
+            tooltipElement.style.display = 'none';
+          });
+      } else {
+        tooltipElement.style.display = 'none';
+      }
+    });
+
     return () => {
       if (map) {
         map.setTarget(undefined);
@@ -222,9 +331,17 @@
   {/if}
 
   {#if showBuscarClienteDialog}
-    <BuscarCliente on:close={closeDialogs}/>
-    <!-- Asegúrate de que BuscarCliente emita un evento 'close' -->
+    <BuscarCliente
+      on:close={closeDialogs}
+      on:showGlobalNotification={handleShowGlobalNotification}
+      on:refreshPedidosLayer={refreshPedidosLayerMap}
+    />
   {/if}
+
+  <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
+
+  <!-- Elemento para el Tooltip -->
+  <div bind:this={tooltipElement} class="ol-tooltip"></div>
 </main>
 
 <style>
@@ -308,5 +425,21 @@
   :global(.ol-viewport) {
     width: 100%;
     height: 100%;
+  }
+
+  /* Estilos para el tooltip, basados en ejemplos de OpenLayers */
+  .ol-tooltip {
+    position: absolute;
+    background-color: white;
+    color: black;
+    border: 1px solid #cccccc;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    pointer-events: none; /* El tooltip no debe capturar eventos del mouse */
+    display: none; /* Oculto por defecto */
+    white-space: nowrap; /* Evitar que el contenido se divida en múltiples líneas si es corto */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1010; /* Encima del mapa pero debajo de los diálogos */
   }
 </style>
