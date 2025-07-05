@@ -51,7 +51,7 @@ services:
     image: postgres:13-alpine
     container_name: raweb-db-qa
     ports:
-      - "5432:5432" # Exponer puerto de la BD al host solo si es necesario para acceso externo/debug
+      - "5433:5432" # Exponer puerto de la BD al host (5433) para evitar conflicto con local 5432
     environment:
       - POSTGRES_USER=${DB_USER:-postgres}
       - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
