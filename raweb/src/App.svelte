@@ -6,7 +6,7 @@
   // import ImageLayer from 'ol/layer/Image.js'; // Ya no se usa para Pedidos/Clientes
   // import ImageWMS from 'ol/source/ImageWMS.js'; // Ya no se usa para Pedidos/Clientes
   import OSM from 'ol/source/OSM.js';
-  // import Overlay from 'ol/Overlay.js'; // Se eliminará la lógica del tooltip por ahora
+  // import Overlay from 'ol/Overlay.js'; // Asegurarse que está comentado o eliminado
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
@@ -87,16 +87,15 @@
       })
     });
 
-    // Crear el Overlay para el tooltip
-    tooltipOverlay = new Overlay({
-      element: tooltipElement,
-      autoPan: { // Deprecado, usar autoPan si es una versión más nueva de OL o ajustar manualmente
-        animation: {
-          duration: 250,
-        },
-      },
-      // offset: [0, -15] // Opcional: para ajustar la posición del tooltip relativo al puntero
-    });
+    // Crear el Overlay para el tooltip -- ELIMINADO
+    // tooltipOverlay = new Overlay({
+    //   element: tooltipElement,
+    //   autoPan: {
+    //     animation: {
+    //       duration: 250,
+    //     },
+    //   },
+    // });
 
     // Definición de la capa de Pedidos (WMS)
     // Se asigna a la variable global para que el watcher pueda accederla
@@ -142,96 +141,12 @@
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),
         zoom: 15 // Nivel de zoom inicial
       }),
-      overlays: [tooltipOverlay] // Añadir el overlay al mapa
+      // overlays: [tooltipOverlay] // ELIMINADO
     });
 
     // Limpiar el mapa al desmontar el componente
-    // Listener para el movimiento del puntero en el mapa (para el tooltip)
-    map.on('pointermove', (evt) => {
-      if (evt.dragging) {
-        tooltipElement.style.display = 'none';
-        return;
-      }
-
-      // Solo mostrar tooltip si la capa de Pedidos está visible
-      if (!pedidosLayer || !pedidosLayer.getVisible()) {
-        tooltipElement.style.display = 'none';
-        return;
-      }
-
-      const source = pedidosLayer.getSource();
-      if (!source || typeof source.getFeatureInfoUrl !== 'function') {
-        tooltipElement.style.display = 'none';
-        return;
-      }
-
-      const viewResolution = map.getView().getResolution();
-      const viewProjection = map.getView().getProjection();
-      // Ajustar INFO_FORMAT y nombres de propiedades según la configuración de GeoServer
-      const url = source.getFeatureInfoUrl(
-        evt.coordinate,
-        viewResolution,
-        viewProjection,
-        {'INFO_FORMAT': 'application/json', 'FEATURE_COUNT': '1', 'QUERY_LAYERS': 'GeneralBelgrano:Pedidos'}
-      );
-
-      if (url) {
-        fetch(url)
-          .then(response => {
-            if (!response.ok) {
-              console.error('GetFeatureInfo response not OK:', response.status, response.statusText);
-              // No lanzar error aquí todavía, para poder leer el cuerpo si existe
-            }
-            return response.text(); // Obtener como texto primero
-          })
-          .then(text => {
-            console.log('GetFeatureInfo raw response text:', text); // Loguear el texto crudo
-
-            // Si la respuesta no fue ok pero tenía cuerpo, el log anterior lo mostrará.
-            // Ahora intentamos parsear solo si la respuesta original fue ok (o si queremos intentarlo de todas formas)
-            // El error original era net::ERR_FAILED con 200 OK, así que el problema es más probable post-recepción.
-
-            if (text && text.trim() !== "") { // Solo intentar parsear si hay texto
-              try {
-                const data = JSON.parse(text);
-                if (data.features && data.features.length > 0) {
-                  const feature = data.features[0];
-                  const props = feature.properties;
-                  const nombre = props.nombre_cliente || props.cliente_nombre || props.nombre || 'Nombre no disponible';
-                  const direccion = props.direccion_completa || props.direccion || 'Dirección no disponible';
-                  const cantidad = props.cantidad_docenas !== undefined ? props.cantidad_docenas : (props.docenas || 'Cantidad no disponible');
-
-                  tooltipElement.innerHTML = `
-                    <strong>${nombre}</strong><br>
-                    Dirección: ${direccion}<br>
-                    Docenas: ${cantidad}
-                  `;
-                  tooltipOverlay.setPosition(evt.coordinate);
-                  tooltipElement.style.display = 'block';
-                } else {
-                  // Respuesta JSON válida pero sin features, o formato inesperado
-                  console.log('GetFeatureInfo: No features found or unexpected data structure.', data);
-                  tooltipElement.style.display = 'none';
-                }
-              } catch (e) {
-                console.error('Error al parsear GetFeatureInfo JSON:', e);
-                console.error('Texto recibido que falló el parseo:', text);
-                tooltipElement.style.display = 'none';
-              }
-            } else {
-              // Respuesta vacía
-              console.log('GetFeatureInfo: Respuesta de texto vacía.');
-              tooltipElement.style.display = 'none';
-            }
-          })
-          .catch((err) => {
-            console.error('Error en fetch GetFeatureInfo:', err); // Esto captura errores de red (como el net::ERR_FAILED)
-            tooltipElement.style.display = 'none';
-          });
-      } else {
-        tooltipElement.style.display = 'none';
-      }
-    });
+    // Listener para el movimiento del puntero en el mapa (para el tooltip) -- ELIMINADO
+    // map.on('pointermove', (evt) => { ... });
 
     return () => {
       if (map) {
