@@ -3,14 +3,19 @@
   import Map from 'ol/Map.js';
   import View from 'ol/View.js';
   import TileLayer from 'ol/layer/Tile.js';
+  import ImageLayer from 'ol/layer/Image.js'; // Descomentado temporalmente
+  import ImageWMS from 'ol/source/ImageWMS.js'; // Descomentado temporalmente
   import OSM from 'ol/source/OSM.js';
+  // import Overlay from 'ol/Overlay.js'; // Asegurarse que está comentado o eliminado
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
   import VectorLayer from 'ol/layer/Vector.js';
   import VectorSource from 'ol/source/Vector.js';
-  import Style from 'ol/style/Style.js';
-  import Icon from 'ol/style/Icon.js';
+  import {bbox as bboxStrategy} from 'ol/loadingstrategy.js'; // Estrategia BBOX
+  import GeoJSON from 'ol/format/GeoJSON.js'; // Formato WFS
+  import {Style, Circle, Fill, Stroke} from 'ol/style.js'; // Estilos para WFS
+  import Icon from 'ol/style/Icon.js'; // Sigue siendo para el markerLayer
 
   // Importar configuración
   import { API_BASE_URL, INITIAL_COORDINATES } from './config.js';
@@ -18,17 +23,55 @@
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
+  import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
+  // let tooltipElement; // Confirmado: Comentado/Eliminado
+  // let tooltipOverlay; // Confirmado: Comentado/Eliminado
   let map;
-  // let showBuscarDireccionDialog = false; // Reemplazado por currentView
   let markerSource;
 
-  // Estado para controlar la vista actual
-  // let currentView = 'map'; // 'map', 'buscarDireccion', 'buscarCliente'
-  // Se reemplaza currentView por dos flags booleanos para superponer los dialogs
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
+
+  // Variables para las capas Vectoriales (WFS)
+  let pedidosLayer; // Será VectorLayer
+  let clientesLayer; // Será VectorLayer
+
+  // Estado para los checkboxes del Layer Switcher
+  let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
+  let showClientesLayer = false;  // Por defecto: Clientes APAGADA
+
+  // Reacciones para actualizar la visibilidad de las capas cuando cambian los checkboxes
+  // Esto seguirá funcionando igual para VectorLayer
+  $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
+  $: if (clientesLayer) clientesLayer.setVisible(showClientesLayer);
+
+  // Estado para la notificación global
+  let globalNotificationMessage = "";
+  let globalNotificationType = "success";
+
+  function handleShowGlobalNotification(event) {
+    globalNotificationMessage = event.detail.message;
+    globalNotificationType = event.detail.type || "success";
+    // El componente GlobalNotification se encargará de resetear el mensaje o de ocultarse
+    // Para permitir que se muestre de nuevo si el mensaje es el mismo, podemos borrarlo aquí tras un pequeño delay
+    // o asegurar que GlobalNotification reaccione a cambios de message incluso si es el mismo (lo hace con el $: if message)
+    // Si se quiere que GlobalNotification se resetee para volver a aparecer con el mismo mensaje:
+    setTimeout(() => {
+        globalNotificationMessage = ""; // Esto lo ocultará después de que GlobalNotification lo haya mostrado y temporizado
+    }, 3500); // Un poco más que la duración del toast para asegurar que no parpadee
+  }
+
+  function refreshPedidosLayerMap() {
+    if (pedidosLayer) {
+      const source = pedidosLayer.getSource();
+      if (source && typeof source.updateParams === 'function') {
+        source.updateParams({'TIMESTAMP': new Date().getTime()});
+        console.log("Capa Pedidos refrescada");
+      }
+    }
+  }
 
   onMount(() => {
     markerSource = new VectorSource();
@@ -36,12 +79,52 @@
       source: markerSource,
       style: new Style({
         image: new Icon({
-          anchor: [0.5, 46], // ancla en la parte inferior central del icono
+          anchor: [0.5, 46],
           anchorXUnits: 'fraction',
           anchorYUnits: 'pixels',
-          src: 'https://openlayers.org/en/latest/examples/data/icon.png' // Icono de marcador por defecto de OL
+          src: 'https://openlayers.org/en/latest/examples/data/icon.png'
         })
       })
+    });
+
+    // Crear el Overlay para el tooltip -- ELIMINADO
+    // tooltipOverlay = new Overlay({
+    //   element: tooltipElement,
+    //   autoPan: {
+    //     animation: {
+    //       duration: 250,
+    //     },
+    //   },
+    // });
+
+    // Definición de la capa de Pedidos (WMS)
+    // Se asigna a la variable global para que el watcher pueda accederla
+    pedidosLayer = new ImageLayer({
+      source: new ImageWMS({
+        url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
+        params: {
+          'LAYERS': 'GeneralBelgrano:Pedidos',
+          'VERSION': '1.1.0',
+          // 'STYLES': 'geomPoint', // Revertido: Se usará el estilo por defecto del servidor
+        },
+        serverType: 'geoserver',
+      }),
+      visible: showPedidosLayer // Usar la variable de estado
+    });
+
+    // Definición de la capa de Clientes (WMS)
+    // Se asigna a la variable global para que el watcher pueda accederla
+    clientesLayer = new ImageLayer({
+      source: new ImageWMS({
+        url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
+        params: {
+          'LAYERS': 'GeneralBelgrano:Clientes',
+          'VERSION': '1.1.0',
+          // 'STYLES': 'geomPoint' // Revertido: Se usará el estilo por defecto del servidor
+        },
+        serverType: 'geoserver',
+      }),
+      visible: showClientesLayer // Usar la variable de estado
     });
 
     map = new Map({
@@ -50,15 +133,21 @@
         new TileLayer({
           source: new OSM() // Capa base de OpenStreetMap
         }),
-        markerLayer // Capa para los marcadores
+        pedidosLayer,
+        clientesLayer,
+        markerLayer // Capa para los marcadores (debe estar encima de las WMS)
       ],
       view: new View({
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),
         zoom: 15 // Nivel de zoom inicial
-      })
+      }),
+      // overlays: [tooltipOverlay] // ELIMINADO
     });
 
     // Limpiar el mapa al desmontar el componente
+    // Listener para el movimiento del puntero en el mapa (para el tooltip) -- ELIMINADO
+    // map.on('pointermove', (evt) => { ... });
+
     return () => {
       if (map) {
         map.setTarget(undefined);
@@ -161,9 +250,19 @@
 
 <main>
   <nav class="navbar">
-    <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>Buscar Dirección</button>
-    <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>Buscar Cliente</button>
-    <button on:click={() => alert('Funcionalidad "Pedidos" no implementada.')}>Pedidos</button>
+    <div class="nav-buttons">
+      <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>Buscar Dirección</button>
+      <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>Buscar Cliente</button>
+      <button on:click={() => alert('Funcionalidad "Pedidos" no implementada.')}>Pedidos</button>
+    </div>
+    <div class="layer-switcher">
+      <label>
+        <input type="checkbox" bind:checked={showClientesLayer} /> Clientes
+      </label>
+      <label>
+        <input type="checkbox" bind:checked={showPedidosLayer} /> Pedidos
+      </label>
+    </div>
   </nav>
 
   <div class="map-container" bind:this={mapElement}>
@@ -178,9 +277,17 @@
   {/if}
 
   {#if showBuscarClienteDialog}
-    <BuscarCliente on:close={closeDialogs}/>
-    <!-- Asegúrate de que BuscarCliente emita un evento 'close' -->
+    <BuscarCliente
+      on:close={closeDialogs}
+      on:showGlobalNotification={handleShowGlobalNotification}
+      on:refreshPedidosLayer={refreshPedidosLayerMap}
+    />
   {/if}
+
+  <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
+
+  <!-- Elemento para el Tooltip -->
+  <!-- <div bind:this={tooltipElement} class="ol-tooltip"></div> -->
 </main>
 
 <style>
@@ -202,13 +309,25 @@
   .navbar {
     background-color: #f0f0f0;
     padding: 10px;
-    text-align: center;
+    display: flex; /* Cambiado para flex layout */
+    justify-content: space-between; /* Espacio entre botones y layer switcher */
+    align-items: center; /* Alineación vertical */
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     z-index: 1000; /* Asegura que esté sobre el mapa */
   }
 
+  .nav-buttons button { /* Estilos específicos para los botones de navegación */
+    margin-right: 10px; /* Margen solo a la derecha para espaciar botones */
+    /* Quitar margen izquierdo si ya no es necesario por flex */
+  }
+   .nav-buttons button:last-child {
+    margin-right: 0; /* El último botón no necesita margen a la derecha */
+  }
+
+
+  /* Estilos generales de botón dentro de navbar, si se quieren compartir */
   .navbar button {
-    margin: 0 10px;
+    /* margin: 0 10px; No, usar el de .nav-buttons o .layer-switcher */
     padding: 8px 15px;
     cursor: pointer;
     border: 1px solid #ccc;
@@ -224,6 +343,24 @@
     font-weight: bold;
   }
 
+  .layer-switcher {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Espacio entre los checkboxes */
+    padding-right: 10px; /* Un poco de espacio al final de la navbar */
+  }
+
+  .layer-switcher label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9em;
+  }
+
+  .layer-switcher input[type="checkbox"] {
+    margin-right: 5px;
+  }
+
   .map-container {
     flex-grow: 1; /* El mapa ocupa el espacio restante */
     width: 100%;
@@ -234,5 +371,21 @@
   :global(.ol-viewport) {
     width: 100%;
     height: 100%;
+  }
+
+  /* Estilos para el tooltip, basados en ejemplos de OpenLayers */
+  .ol-tooltip {
+    position: absolute;
+    background-color: white;
+    color: black;
+    border: 1px solid #cccccc;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    pointer-events: none; /* El tooltip no debe capturar eventos del mouse */
+    display: none; /* Oculto por defecto */
+    white-space: nowrap; /* Evitar que el contenido se divida en múltiples líneas si es corto */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1010; /* Encima del mapa pero debajo de los diálogos */
   }
 </style>

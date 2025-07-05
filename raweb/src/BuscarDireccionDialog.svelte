@@ -25,7 +25,7 @@
   }
 </script>
 
-<div class="modal-backdrop" on:click={handleCancelar}>
+<div class="modal-backdrop"> <!-- Eliminado on:click={handleCancelar} -->
   <div class="modal-content" on:click|stopPropagation>
     <button class="close-button" on:click={handleCancelar}>&times;</button>
     <h2>Buscar Dirección</h2>
