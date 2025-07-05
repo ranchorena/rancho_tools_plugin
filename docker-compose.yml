@@ -59,7 +59,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Montar el archivo dump y el script de restauración
-      - ./generalbelgrano.dump:/docker-entrypoint-initdb.d/generalbelgrano.dump
+      - ./db_init/generalbelgrano.dump:/docker-entrypoint-initdb.d/generalbelgrano.dump
       - ./db_init/restore_dump.sh:/docker-entrypoint-initdb.d/restore_dump.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-postgres}"]
