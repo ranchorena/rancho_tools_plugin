@@ -3,8 +3,8 @@
   import Map from 'ol/Map.js';
   import View from 'ol/View.js';
   import TileLayer from 'ol/layer/Tile.js';
-  // import ImageLayer from 'ol/layer/Image.js'; // Ya no se usa para Pedidos/Clientes
-  // import ImageWMS from 'ol/source/ImageWMS.js'; // Ya no se usa para Pedidos/Clientes
+  import ImageLayer from 'ol/layer/Image.js'; // Descomentado temporalmente
+  import ImageWMS from 'ol/source/ImageWMS.js'; // Descomentado temporalmente
   import OSM from 'ol/source/OSM.js';
   // import Overlay from 'ol/Overlay.js'; // Asegurarse que está comentado o eliminado
   import { fromLonLat } from 'ol/proj.js';
