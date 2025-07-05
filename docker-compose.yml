@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./raweb
+      dockerfile: Dockerfile
+    image: raweb:qa
+    container_name: raweb-qa
+    ports:
+      - "8080:8080"
+    networks:
+      - raweb-network
+    depends_on:
+      - backend
+    environment:
+      # Asegúrate de que la API_URL apunte al servicio backend dentro de la red de Docker
+      # El frontend (Svelte) necesitará saber dónde está la API.
+      # Esta variable debe ser utilizada en el código del frontend para hacer las llamadas a la API.
+      # Por ejemplo, en src/config.js o similar.
+      - API_URL=http://backend:5000
+      # Si el frontend hace llamadas directas al backend desde el navegador del cliente,
+      # entonces la URL debería ser la expuesta por el backend al host, ej: http://localhost:5000
+      # Pero para comunicación service-to-service dentro de Docker, http://backend:5000 es correcto.
+
+  backend:
+    build:
+      context: ./raapi
+      dockerfile: Dockerfile
+    container_name: raweb-api-qa
+    ports:
+      - "5000:5000"
+    networks:
+      - raweb-network
+    depends_on:
+      db:
+        condition: service_healthy # Esperar a que la base de datos esté lista
+    environment:
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-postgres}
+      - FLASK_APP=server.py
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_ENV=${FLASK_ENV:-production} # o development
+    volumes:
+      - ./raapi:/app # Opcional: para desarrollo, montar el código local en el contenedor
+
+  db:
+    image: postgres:13-alpine
+    container_name: raweb-db-qa
+    ports:
+      - "5432:5432" # Exponer puerto de la BD al host solo si es necesario para acceso externo/debug
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Para inicializar la base de datos con el esquema, si tienes un archivo .sql o .ddl
+      # Copia el archivo generalbelgrano.ddl a una carpeta (ej. ./db_init) y descomenta:
+      - ./generalbelgrano.ddl:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - raweb-network
+
+networks:
+  raweb-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
