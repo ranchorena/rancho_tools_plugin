@@ -110,7 +110,7 @@
     }
   }
 
-  function selectClient(client) {
+  async function selectClient(client) { // Asegurar que es async
     selectedClient = client;
     // Poblar campos editables. Usar valores del cliente o defaults.
     // Los nombres de campo en `client` son id, nombre, direccion, calle, altura.
