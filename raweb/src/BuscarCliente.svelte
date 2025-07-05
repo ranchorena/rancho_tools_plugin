@@ -122,7 +122,7 @@
       observaciones: client.observacion || "",
       horario: client.horario || ""
     };
-    successMessage = "";
+    // successMessage = ""; // Eliminado para evitar ReferenceError
     errorMessage = "";
 
     if (client) {

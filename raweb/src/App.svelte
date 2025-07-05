@@ -174,30 +174,55 @@
 
       if (url) {
         fetch(url)
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.features && data.features.length > 0) {
-              const feature = data.features[0];
-              const props = feature.properties;
-              // *** IMPORTANTE: Ajusta los nombres de las propiedades a continuación ***
-              // *** según los nombres exactos de los atributos en tu capa GeoServer ***
-              // Ejemplo de nombres posibles: nombre_cliente, direccion_completa, cantidad_docenas
-              const nombre = props.nombre_cliente || props.cliente_nombre || props.nombre || 'Nombre no disponible';
-              const direccion = props.direccion_completa || props.direccion || 'Dirección no disponible';
-              const cantidad = props.cantidad_docenas !== undefined ? props.cantidad_docenas : (props.docenas || 'Cantidad no disponible');
+          .then(response => {
+            if (!response.ok) {
+              console.error('GetFeatureInfo response not OK:', response.status, response.statusText);
+              // No lanzar error aquí todavía, para poder leer el cuerpo si existe
+            }
+            return response.text(); // Obtener como texto primero
+          })
+          .then(text => {
+            console.log('GetFeatureInfo raw response text:', text); // Loguear el texto crudo
 
-              tooltipElement.innerHTML = `
-                <strong>${nombre}</strong><br>
-                Dirección: ${direccion}<br>
-                Docenas: ${cantidad}
-              `;
-              tooltipOverlay.setPosition(evt.coordinate);
-              tooltipElement.style.display = 'block';
+            // Si la respuesta no fue ok pero tenía cuerpo, el log anterior lo mostrará.
+            // Ahora intentamos parsear solo si la respuesta original fue ok (o si queremos intentarlo de todas formas)
+            // El error original era net::ERR_FAILED con 200 OK, así que el problema es más probable post-recepción.
+
+            if (text && text.trim() !== "") { // Solo intentar parsear si hay texto
+              try {
+                const data = JSON.parse(text);
+                if (data.features && data.features.length > 0) {
+                  const feature = data.features[0];
+                  const props = feature.properties;
+                  const nombre = props.nombre_cliente || props.cliente_nombre || props.nombre || 'Nombre no disponible';
+                  const direccion = props.direccion_completa || props.direccion || 'Dirección no disponible';
+                  const cantidad = props.cantidad_docenas !== undefined ? props.cantidad_docenas : (props.docenas || 'Cantidad no disponible');
+
+                  tooltipElement.innerHTML = `
+                    <strong>${nombre}</strong><br>
+                    Dirección: ${direccion}<br>
+                    Docenas: ${cantidad}
+                  `;
+                  tooltipOverlay.setPosition(evt.coordinate);
+                  tooltipElement.style.display = 'block';
+                } else {
+                  // Respuesta JSON válida pero sin features, o formato inesperado
+                  console.log('GetFeatureInfo: No features found or unexpected data structure.', data);
+                  tooltipElement.style.display = 'none';
+                }
+              } catch (e) {
+                console.error('Error al parsear GetFeatureInfo JSON:', e);
+                console.error('Texto recibido que falló el parseo:', text);
+                tooltipElement.style.display = 'none';
+              }
             } else {
+              // Respuesta vacía
+              console.log('GetFeatureInfo: Respuesta de texto vacía.');
               tooltipElement.style.display = 'none';
             }
           })
-          .catch(() => {
+          .catch((err) => {
+            console.error('Error en fetch GetFeatureInfo:', err); // Esto captura errores de red (como el net::ERR_FAILED)
             tooltipElement.style.display = 'none';
           });
       } else {
