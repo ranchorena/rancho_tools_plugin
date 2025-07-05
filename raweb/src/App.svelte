@@ -26,8 +26,8 @@
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
-  // let tooltipElement; // Eliminado - Ya no se usa para tooltip WMS GetFeatureInfo
-  // let tooltipOverlay; // Eliminado - Ya no se usa para tooltip WMS GetFeatureInfo
+  // let tooltipElement; // Confirmado: Comentado/Eliminado
+  // let tooltipOverlay; // Confirmado: Comentado/Eliminado
   let map;
   let markerSource;
 
@@ -372,7 +372,7 @@
   <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
 
   <!-- Elemento para el Tooltip -->
-  <div bind:this={tooltipElement} class="ol-tooltip"></div>
+  <!-- <div bind:this={tooltipElement} class="ol-tooltip"></div> --> {/* Comentado para evitar error */}
 </main>
 
 <style>
