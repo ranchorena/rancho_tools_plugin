@@ -76,4 +76,3 @@ compile_commands.json
 *.env.*
 !/.env.example # No ignorar archivos .env.example
 !/.env.template
-!*.env.example
