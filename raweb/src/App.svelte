@@ -23,14 +23,22 @@
 
   let mapElement;
   let map;
-  // let showBuscarDireccionDialog = false; // Reemplazado por currentView
   let markerSource;
 
-  // Estado para controlar la vista actual
-  // let currentView = 'map'; // 'map', 'buscarDireccion', 'buscarCliente'
-  // Se reemplaza currentView por dos flags booleanos para superponer los dialogs
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
+
+  // Variables para las capas WMS que se añadirán al mapa
+  let pedidosLayer;
+  let clientesLayer;
+
+  // Estado para los checkboxes del Layer Switcher
+  let showPedidosLayer = false; // Coincide con la visibilidad inicial de la capa
+  let showClientesLayer = true;  // Coincide con la visibilidad inicial de la capa
+
+  // Reacciones para actualizar la visibilidad de las capas cuando cambian los checkboxes
+  $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
+  $: if (clientesLayer) clientesLayer.setVisible(showClientesLayer);
 
   onMount(() => {
     markerSource = new VectorSource();
@@ -47,23 +55,25 @@
     });
 
     // Definición de la capa de Pedidos (WMS)
-    const pedidosLayer = new ImageLayer({
+    // Se asigna a la variable global para que el watcher pueda accederla
+    pedidosLayer = new ImageLayer({
       source: new ImageWMS({
         url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
         params: {'LAYERS': 'GeneralBelgrano:Pedidos', 'VERSION': '1.1.0'},
         serverType: 'geoserver',
       }),
-      visible: false // Por defecto apagada
+      visible: showPedidosLayer // Usar la variable de estado
     });
 
     // Definición de la capa de Clientes (WMS)
-    const clientesLayer = new ImageLayer({
+    // Se asigna a la variable global para que el watcher pueda accederla
+    clientesLayer = new ImageLayer({
       source: new ImageWMS({
         url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
         params: {'LAYERS': 'GeneralBelgrano:Clientes', 'VERSION': '1.1.0'},
         serverType: 'geoserver',
       }),
-      visible: true // Por defecto encendida
+      visible: showClientesLayer // Usar la variable de estado
     });
 
     map = new Map({
@@ -185,9 +195,19 @@
 
 <main>
   <nav class="navbar">
-    <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>Buscar Dirección</button>
-    <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>Buscar Cliente</button>
-    <button on:click={() => alert('Funcionalidad "Pedidos" no implementada.')}>Pedidos</button>
+    <div class="nav-buttons">
+      <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>Buscar Dirección</button>
+      <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>Buscar Cliente</button>
+      <button on:click={() => alert('Funcionalidad "Pedidos" no implementada.')}>Pedidos</button>
+    </div>
+    <div class="layer-switcher">
+      <label>
+        <input type="checkbox" bind:checked={showClientesLayer} /> Clientes
+      </label>
+      <label>
+        <input type="checkbox" bind:checked={showPedidosLayer} /> Pedidos
+      </label>
+    </div>
   </nav>
 
   <div class="map-container" bind:this={mapElement}>
@@ -226,13 +246,25 @@
   .navbar {
     background-color: #f0f0f0;
     padding: 10px;
-    text-align: center;
+    display: flex; /* Cambiado para flex layout */
+    justify-content: space-between; /* Espacio entre botones y layer switcher */
+    align-items: center; /* Alineación vertical */
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     z-index: 1000; /* Asegura que esté sobre el mapa */
   }
 
+  .nav-buttons button { /* Estilos específicos para los botones de navegación */
+    margin-right: 10px; /* Margen solo a la derecha para espaciar botones */
+    /* Quitar margen izquierdo si ya no es necesario por flex */
+  }
+   .nav-buttons button:last-child {
+    margin-right: 0; /* El último botón no necesita margen a la derecha */
+  }
+
+
+  /* Estilos generales de botón dentro de navbar, si se quieren compartir */
   .navbar button {
-    margin: 0 10px;
+    /* margin: 0 10px; No, usar el de .nav-buttons o .layer-switcher */
     padding: 8px 15px;
     cursor: pointer;
     border: 1px solid #ccc;
@@ -246,6 +278,24 @@
   .navbar button.active {
     background-color: #d1d5db; /* Un color para indicar activo */
     font-weight: bold;
+  }
+
+  .layer-switcher {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Espacio entre los checkboxes */
+    padding-right: 10px; /* Un poco de espacio al final de la navbar */
+  }
+
+  .layer-switcher label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9em;
+  }
+
+  .layer-switcher input[type="checkbox"] {
+    margin-right: 5px;
   }
 
   .map-container {

@@ -1,6 +1,6 @@
 <script>
   import { API_BASE_URL } from './config.js';
-  import { createEventDispatcher } from 'svelte'; // Importar dispatcher
+  import { createEventDispatcher, tick } from 'svelte'; // Importar dispatcher y tick
   const dispatch = createEventDispatcher(); // Inicializar dispatcher
 
   // Variables de estado para los campos de búsqueda
@@ -130,6 +130,15 @@
     };
     successMessage = "";
     errorMessage = "";
+
+    // Scroll automático a la sección del cliente seleccionado
+    if (client) {
+      await tick(); // Esperar a que el DOM se actualice
+      const selectedClientSection = document.getElementById("selected-client-details");
+      if (selectedClientSection) {
+        selectedClientSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
   }
 
   function isValidTimeFormat(timeStr) {
@@ -245,18 +254,18 @@
     margin-right: -15px; /* Compensar el padding-right para alinear contenido */
   }
 
-  .main-close-button {
+  /* Estilo para el botón de cierre, para que coincida con BuscarDireccionDialog */
+  .close-button {
     background: transparent;
-    color: #333;
     border: none;
-    font-size: 1.8rem;
-    font-weight: bold;
+    font-size: 1.5rem; /* Coincide con BuscarDireccionDialog */
     cursor: pointer;
     padding: 0;
     line-height: 1;
-    /* No necesita position:absolute si está en el flex header */
+    color: #333; /* Mantener un color visible */
+    font-weight: normal; /* Quitar bold si no está en el original */
   }
-  .main-close-button:hover {
+  .close-button:hover {
     color: #000;
   }
 
@@ -505,7 +514,7 @@
   <div class="modal-content" on:click|stopPropagation>
     <div class="modal-header">
       <h2>Buscar Cliente</h2>
-      <button class="main-close-button" on:click={() => dispatch('close')}>&times;</button>
+      <button class="close-button" on:click={() => dispatch('close')}>&times;</button> {/* Clase cambiada */}
     </div>
 
     <div class="modal-body">
@@ -582,7 +591,7 @@
 
   <!-- Sección de Cliente Seleccionado -->
   {#if selectedClient}
-    <div class="selected-client-section">
+    <div class="selected-client-section" id="selected-client-details"> {/* ID añadido */}
       <h3>Cliente Seleccionado: {selectedClient.nombre} (ID: {selectedClient.id})</h3>
 
       <div class="form-row">
