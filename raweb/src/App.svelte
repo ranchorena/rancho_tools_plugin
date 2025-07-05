@@ -3,6 +3,8 @@
   import Map from 'ol/Map.js';
   import View from 'ol/View.js';
   import TileLayer from 'ol/layer/Tile.js';
+  import ImageLayer from 'ol/layer/Image.js'; // Importar ImageLayer
+  import ImageWMS from 'ol/source/ImageWMS.js'; // Importar ImageWMS
   import OSM from 'ol/source/OSM.js';
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
@@ -44,13 +46,35 @@
       })
     });
 
+    // Definición de la capa de Pedidos (WMS)
+    const pedidosLayer = new ImageLayer({
+      source: new ImageWMS({
+        url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
+        params: {'LAYERS': 'GeneralBelgrano:Pedidos', 'VERSION': '1.1.0'},
+        serverType: 'geoserver', // Tipo de servidor GeoServer
+      }),
+      visible: false // Por defecto apagada
+    });
+
+    // Definición de la capa de Clientes (WMS)
+    const clientesLayer = new ImageLayer({
+      source: new ImageWMS({
+        url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
+        params: {'LAYERS': 'GeneralBelgrano:Clientes', 'VERSION': '1.1.0'},
+        serverType: 'geoserver',
+      }),
+      visible: true // Por defecto encendida
+    });
+
     map = new Map({
       target: mapElement,
       layers: [
         new TileLayer({
           source: new OSM() // Capa base de OpenStreetMap
         }),
-        markerLayer // Capa para los marcadores
+        pedidosLayer, // Añadir capa de Pedidos
+        clientesLayer, // Añadir capa de Clientes
+        markerLayer // Capa para los marcadores (debe estar encima de las WMS si se quiere ver el marcador sobre ellas)
       ],
       view: new View({
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),

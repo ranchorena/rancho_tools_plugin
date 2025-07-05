@@ -219,95 +219,102 @@
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    /* min-width: 300px; Ya no es necesario, el contenido lo definirá */
-    /* max-width: 1000px; Usaremos el max-width del .container original */
     width: 90%; /* Ancho relativo a la ventana */
-    max-width: 1000px; /* Pero no más de 1000px */
+    max-width: 700px; /* Reducido de 1000px a 700px para hacerlo más angosto */
     max-height: 90vh; /* Alto máximo para permitir scroll */
-    overflow-y: auto; /* Scroll si el contenido es muy alto */
+    display: flex; /* Usar flexbox para la estructura interna */
+    flex-direction: column; /* Dirección de los elementos internos */
     position: relative; /* Para el botón de cierre interno */
   }
 
-  .main-close-button { /* Estilo para el botón de cierre del modal */
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: transparent; /* Similar a BuscarDireccionDialog */
-    color: #333; /* Color oscuro para contraste con fondo blanco */
+  .modal-header {
+    /* Contenedor para el título y el botón de cierre, no se desplaza */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px; /* Espacio antes del contenido desplazable */
+    border-bottom: 1px solid #e5e7eb; /* Separador visual */
+    margin-bottom: 10px;
+  }
+
+  .modal-body {
+    /* Contenedor para el contenido que sí se desplaza */
+    overflow-y: auto;
+    flex-grow: 1; /* Ocupa el espacio restante */
+    padding-right: 15px; /* Espacio para la barra de scroll si aparece */
+    margin-right: -15px; /* Compensar el padding-right para alinear contenido */
+  }
+
+
+  .main-close-button {
+    background: transparent;
+    color: #333;
     border: none;
-    border-radius: 0; /* Sin borde redondeado para un look más limpio de 'x' */
-    font-size: 1.8rem; /* Más grande para que sea fácil de clickear */
+    font-size: 1.8rem;
     font-weight: bold;
     cursor: pointer;
     padding: 0;
     line-height: 1;
-    /* box-shadow: 0 2px 5px rgba(0,0,0,0.2); No es necesario si es transparente */
-    /* z-index: 1005; Ya está dentro del modal-content */
+    /* No necesita position:absolute si está en el flex header */
   }
   .main-close-button:hover {
-    color: #000; /* Más oscuro al hacer hover */
-    background: transparent;
+    color: #000;
   }
-
-  /* El estilo .container original se elimina o comenta si ya no es el principal contenedor del modal */
-  /*
-  .container {
-    font-family: "Inter", sans-serif;
-    padding: 20px;
-    max-width: 1000px;
-    margin: auto;
-    background-color: #f9fafb;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: relative;
-  }
-  */
 
   h2 {
-    color: #1f2937; /* Similar a Tailwind text-gray-800 */
-    margin-top: 0; /* Coincidir con BuscarDireccionDialog */
-    margin-bottom: 16px;
+    color: #1f2937;
+    margin-top: 0;
+    margin-bottom: 0; /* Ajustado porque está en el modal-header */
   }
 
-  /* Simplificar las secciones internas: sin fondos ni bordes propios, solo espaciado */
   .search-section, .selected-client-section {
-    /* background-color: #ffffff; */ /* No necesita fondo si modal-content es blanco */
-    padding: 10px 0; /* Menos padding vertical, sin padding horizontal (el modal-content ya tiene) */
-    border-radius: 0; /* Sin bordes redondeados internos */
+    padding: 10px 0;
     margin-bottom: 20px;
-    /* border: 1px solid #e5e7eb; */ /* Sin borde interno */
   }
   .search-section:last-child, .selected-client-section:last-child {
-    margin-bottom: 0; /* Evitar doble margen al final */
+    margin-bottom: 0;
   }
-
 
   .form-group {
     margin-bottom: 15px;
+    /* Centrado de los grupos de búsqueda específicos */
   }
+
+  .form-group.centered-search {
+    max-width: 50%; /* Reducir a la mitad */
+    margin-left: auto;
+    margin-right: auto;
+  }
+
 
   label {
     display: block;
     margin-bottom: 5px;
-    font-weight: 500; /* Mantener o usar el de global.css si es más simple */
-    color: #374151; /* Mantener o usar el de global.css */
+    font-weight: 500;
+    color: #374151;
   }
 
-  /* Estilos simplificados para inputs y textarea, más cercanos a global.css y BuscarDireccionDialog */
   input[type="text"], input[type="number"], textarea {
-    width: calc(100% - 1.6em); /* Ajustar padding de 0.4em por lado y borde */
-    padding: 0.6em; /* Un poco más de padding que global.css para mejor tacto */
-    margin-bottom: 10px; /* Consistencia con BuscarDireccionDialog (0.5em global.css)*/
-    border: 1px solid #ccc; /* global.css */
-    border-radius: 4px; /* BuscarDireccionDialog (2px global.css) */
-    font-size: inherit; /* global.css */
-    box-sizing: border-box; /* global.css */
+    width: calc(100% - 1.6em);
+    padding: 0.6em;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: inherit;
+    box-sizing: border-box;
   }
+
+  /* Ancho específico para campos numéricos */
+  input[type="number"].narrow-number {
+    max-width: 100px; /* Suficiente para 4 dígitos y algo de padding */
+    /* También se puede usar ems: max-width: 8em; aproximadamente */
+  }
+
 
   input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
     outline: none;
-    border-color: #007bff; /* Azul estándar para focus, similar a Bootstrap/BuscarDireccion */
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Sombra de focus suave */
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
   }
 
   textarea {
@@ -318,17 +325,31 @@
   .input-group {
     display: flex;
     gap: 10px;
-    align-items: flex-end;
+    align-items: flex-end; /* Alinea el botón con la base del input más alto */
+  }
+
+  .input-group.centered-search {
+     /* El centrado ya está en .form-group.centered-search */
   }
 
   .input-group input[type="text"] {
-     flex-grow: 1;
+     flex-grow: 1; /* El input de texto toma el espacio disponible */
   }
-  .input-group button {
-    white-space: nowrap; /* Evitar que el texto del botón se divida */
+  /* Para el caso de Calle y Altura, necesitamos que el input de calle también sea flexible */
+  .input-group input[type="text"][placeholder="Nombre de la calle"] {
+    flex-grow: 1;
+  }
+  .input-group input[type="text"][placeholder="Altura"] {
+    max-width: 100px; /* Consistente con narrow-number */
+    flex-grow: 0; /* No crece */
   }
 
-  /* Estilo base para botones, similar al botón "Cancelar" de BuscarDireccionDialog o global.css */
+
+  .input-group button {
+    white-space: nowrap;
+  }
+
+  /* Estilo base para botones */
   button {
     padding: 8px 15px; /* BuscarDireccionDialog */
     cursor: pointer;
@@ -496,13 +517,15 @@
 <!-- Estructura del Modal -->
 <div class="modal-backdrop" on:click={() => dispatch('close')}>
   <div class="modal-content" on:click|stopPropagation>
-    <button class="main-close-button" on:click={() => dispatch('close')}>&times;</button>
+    <div class="modal-header">
+      <h2>Buscar Cliente</h2>
+      <button class="main-close-button" on:click={() => dispatch('close')}>&times;</button>
+    </div>
 
-    <!-- Contenido Original del Componente -->
-    <h2>Buscar Cliente</h2>
-
-    {#if errorMessage}
-    <div class="message error-message">{errorMessage}</div>
+    <div class="modal-body">
+      <!-- Contenido Original del Componente -->
+      {#if errorMessage}
+      <div class="message error-message">{errorMessage}</div>
   {/if}
   {#if successMessage}
     <div class="message success-message">{successMessage}</div>
@@ -514,7 +537,7 @@
   <!-- Sección de Búsqueda de Clientes -->
   <div class="search-section">
     <h3>Criterios de Búsqueda</h3>
-    <div class="form-group">
+    <div class="form-group centered-search">
       <label for="search-cliente">Cliente:</label>
       <div class="input-group">
         <input type="text" id="search-cliente" bind:value={searchTermCliente} placeholder="Nombre del cliente">
@@ -522,7 +545,7 @@
       </div>
     </div>
 
-    <div class="form-group">
+    <div class="form-group centered-search">
       <label for="search-direccion">Dirección (texto libre):</label>
       <div class="input-group">
         <input type="text" id="search-direccion" bind:value={searchTermDireccion} placeholder="Parte de la dirección">
@@ -530,11 +553,11 @@
       </div>
     </div>
 
-    <div class="form-group">
+    <div class="form-group centered-search">
       <label>Calle y Altura:</label>
       <div class="input-group">
         <input type="text" bind:value={searchTermCalle} placeholder="Nombre de la calle">
-        <input type="text" style="max-width: 100px;" bind:value={searchTermAltura} placeholder="Altura">
+        <input type="text" bind:value={searchTermAltura} placeholder="Altura"> {/* Se quitará style inline, controlado por CSS */}
         <button on:click={searchByStreetHeight}>Buscar</button>
       </div>
     </div>
@@ -580,13 +603,13 @@
         <div class="form-column">
           <div class="form-group">
             <label for="docenas">Docenas (Cantidad):</label>
-            <input type="number" id="docenas" bind:value={editableFields.docenas} placeholder="Ej: 1.5">
+            <input type="number" class="narrow-number" id="docenas" bind:value={editableFields.docenas} placeholder="Ej: 1.5">
           </div>
         </div>
         <div class="form-column">
           <div class="form-group">
             <label for="nro_pao">Nro. PaO:</label>
-            <input type="number" id="nro_pao" bind:value={editableFields.nro_pao} placeholder="Ej: 123">
+            <input type="number" class="narrow-number" id="nro_pao" bind:value={editableFields.nro_pao} placeholder="Ej: 123">
           </div>
         </div>
       </div>
@@ -618,7 +641,6 @@
       <button on:click={saveChanges}>Guardar Cambios</button>
     </div>
   {/if}
-    <!-- Fin Contenido Original -->
-
+    </div> <!-- Fin modal-body -->
   </div> <!-- Fin modal-content -->
 </div> <!-- Fin modal-backdrop -->
