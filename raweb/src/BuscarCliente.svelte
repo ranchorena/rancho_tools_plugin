@@ -169,16 +169,6 @@
       dispatch('showGlobalNotification', { message: result.mensaje || 'Cliente actualizado correctamente.', type: 'success' });
       dispatch('refreshPedidosLayer');
       dispatch('close'); // Cerrar el formulario
-
-      // La actualización local de searchResults ya no es tan crítica si el formulario se cierra,
-      // pero se puede mantener si se desea por consistencia si se reabre inmediatamente.
-      // const index = searchResults.findIndex(c => c.id === selectedClient.id);
-      // if (index !== -1) {
-      //   searchResults[index] = {
-      //       ...searchResults[index],
-      //   };
-      //   searchResults = [...searchResults];
-      // }
     }
   }
 </script>
@@ -354,8 +344,8 @@
   }
 
   .form-actions {
-    text-align: right; /* Alinea el contenido (el botón) a la derecha */
-    margin-top: 20px; /* Espacio por encima del botón */
+    text-align: right;
+    margin-top: 20px;
   }
 
   .results-grid {
@@ -426,11 +416,7 @@
     color: #b91c1c;
     border: 1px solid #fecaca;
   }
-  .success-message {
-    background-color: #dcfce7;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
-  }
+  /* success-message class is no longer used here as it's global */
 
   .loading-indicator {
     text-align: center;
@@ -451,7 +437,7 @@
   }
 </style>
 
-<div class="modal-backdrop"> <!-- Eliminado on:click={() => dispatch('close')} -->
+<div class="modal-backdrop">
   <div class="modal-content" on:click|stopPropagation>
     <div class="modal-header">
       <h2>Buscar Cliente</h2>
@@ -527,22 +513,22 @@
 
       {#if selectedClient}
         <div class="selected-client-section" id="selected-client-details">
-      <h3>Cliente Seleccionado</h3>
+          <h3>Cliente Seleccionado</h3>
 
-      <div class="form-row">
-        <div class="form-column">
-          <div class="form-group">
-            <label for="selected-client-id">ID Cliente:</label>
-            <input type="text" id="selected-client-id" value={selectedClient.id} readonly>
+          <div class="form-row">
+            <div class="form-column">
+              <div class="form-group">
+                <label for="selected-client-id">ID Cliente:</label>
+                <input type="text" id="selected-client-id" value={selectedClient.id} readonly>
+              </div>
+            </div>
+            <div class="form-column">
+              <div class="form-group">
+                <label for="selected-client-nombre">Nombre:</label>
+                <input type="text" id="selected-client-nombre" value={selectedClient.nombre} readonly>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="form-column">
-          <div class="form-group">
-            <label for="selected-client-nombre">Nombre:</label>
-            <input type="text" id="selected-client-nombre" value={selectedClient.nombre} readonly>
-          </div>
-        </div>
-      </div>
 
           <div class="form-row">
             <div class="form-column">

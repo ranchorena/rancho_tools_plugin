@@ -3,17 +3,19 @@
   import Map from 'ol/Map.js';
   import View from 'ol/View.js';
   import TileLayer from 'ol/layer/Tile.js';
-  import ImageLayer from 'ol/layer/Image.js'; // Importar ImageLayer
-  import ImageWMS from 'ol/source/ImageWMS.js'; // Importar ImageWMS
+  // import ImageLayer from 'ol/layer/Image.js'; // Ya no se usa para Pedidos/Clientes
+  // import ImageWMS from 'ol/source/ImageWMS.js'; // Ya no se usa para Pedidos/Clientes
   import OSM from 'ol/source/OSM.js';
-  import Overlay from 'ol/Overlay.js'; // Importar Overlay
+  // import Overlay from 'ol/Overlay.js'; // Se eliminará la lógica del tooltip por ahora
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
   import VectorLayer from 'ol/layer/Vector.js';
   import VectorSource from 'ol/source/Vector.js';
-  import Style from 'ol/style/Style.js';
-  import Icon from 'ol/style/Icon.js';
+  import {bbox as bboxStrategy} from 'ol/loadingstrategy.js'; // Estrategia BBOX
+  import GeoJSON from 'ol/format/GeoJSON.js'; // Formato WFS
+  import {Style, Circle, Fill, Stroke} from 'ol/style.js'; // Estilos para WFS
+  import Icon from 'ol/style/Icon.js'; // Sigue siendo para el markerLayer
 
   // Importar configuración
   import { API_BASE_URL, INITIAL_COORDINATES } from './config.js';
@@ -24,23 +26,24 @@
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
-  let tooltipElement; // Para el div del tooltip
-  let tooltipOverlay; // Para el ol/Overlay
+  // let tooltipElement; // Eliminado - Ya no se usa para tooltip WMS GetFeatureInfo
+  // let tooltipOverlay; // Eliminado - Ya no se usa para tooltip WMS GetFeatureInfo
   let map;
   let markerSource;
 
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
 
-  // Variables para las capas WMS que se añadirán al mapa
-  let pedidosLayer;
-  let clientesLayer;
+  // Variables para las capas Vectoriales (WFS)
+  let pedidosLayer; // Será VectorLayer
+  let clientesLayer; // Será VectorLayer
 
   // Estado para los checkboxes del Layer Switcher
   let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
   let showClientesLayer = false;  // Por defecto: Clientes APAGADA
 
   // Reacciones para actualizar la visibilidad de las capas cuando cambian los checkboxes
+  // Esto seguirá funcionando igual para VectorLayer
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
   $: if (clientesLayer) clientesLayer.setVisible(showClientesLayer);
 
