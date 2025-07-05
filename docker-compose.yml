@@ -5,6 +5,9 @@ services:
     build:
       context: ./raweb
       dockerfile: Dockerfile
+      args:
+        API_URL: ${API_URL:-http://backend:5000} # Valor por defecto si no está en .env o entorno
+        GEOSERVER_URL: ${GEOSERVER_URL:-http://localhost:8087/geoserver/wms} # Asume que GeoServer corre en el host o es accesible
     image: raweb:qa
     container_name: raweb-qa
     ports:
@@ -14,14 +17,11 @@ services:
     depends_on:
       - backend
     environment:
-      # Asegúrate de que la API_URL apunte al servicio backend dentro de la red de Docker
-      # El frontend (Svelte) necesitará saber dónde está la API.
-      # Esta variable debe ser utilizada en el código del frontend para hacer las llamadas a la API.
-      # Por ejemplo, en src/config.js o similar.
-      - API_URL=http://backend:5000
-      # Si el frontend hace llamadas directas al backend desde el navegador del cliente,
-      # entonces la URL debería ser la expuesta por el backend al host, ej: http://localhost:5000
-      # Pero para comunicación service-to-service dentro de Docker, http://backend:5000 es correcto.
+      # Estas variables también se pasan al entorno de ejecución del contenedor,
+      # aunque para Svelte/Rollup, los valores importantes son los usados en tiempo de BUILD (ver build.args).
+      # Podrían ser útiles si el entrypoint del contenedor las usara para alguna tarea (no es el caso aquí).
+      - API_URL=${API_URL:-http://backend:5000}
+      - GEOSERVER_URL=${GEOSERVER_URL:-http://localhost:8087/geoserver/wms} # Esta URL es para el cliente. Si GeoServer está en Docker, sería http://geoserver:8080/...
 
   backend:
     build:

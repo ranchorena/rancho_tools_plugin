@@ -4,6 +4,14 @@ FROM node:18-alpine as builder
 # Establecer el directorio de trabajo
 WORKDIR /app
 
+# Argumentos de build que pueden ser pasados desde docker-compose
+ARG API_URL
+ARG GEOSERVER_URL
+
+# Establecer las variables de entorno para que estén disponibles durante el build
+ENV API_URL=${API_URL}
+ENV GEOSERVER_URL=${GEOSERVER_URL}
+
 # Copiar los archivos de la aplicación Raweb
 COPY package*.json ./
 COPY rollup.config.js ./
