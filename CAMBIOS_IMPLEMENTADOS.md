@@ -15,11 +15,11 @@
 
 ### ✅ 3. Control de Capas Base y Overlay
 - **Capas de Datos** (independientes) - **ARRIBA en la lista**:
-  - � Clientes (checkbox independiente)
-  - � Pedidos (checkbox independiente)
+  - ● Clientes (checkbox independiente)
+  - ▪ Pedidos (checkbox independiente)
 - **Capas Base** (mutuamente excluyentes) - **ABAJO en la lista**:
-  - �️ OpenStreetMap (por defecto activa)
-  - �️ Satelital (por defecto inactiva)
+  - ○ OpenStreetMap (por defecto activa)
+  - ◉ Satelital (por defecto inactiva)
 
 ## Cambios Técnicos Implementados
 
@@ -71,7 +71,7 @@ satelliteLayer = new TileLayer({
 {#if showLayerToolbar}
   <div class="layer-toolbar">
     <div class="layer-toolbar-header">
-      <span class="layer-toolbar-title">🗂️ Capas</span>
+      <span class="layer-toolbar-title">▣ Capas</span>
       <button class="layer-toolbar-toggle" on:click={toggleLayerToolbar}>✕</button>
     </div>
     
@@ -81,11 +81,11 @@ satelliteLayer = new TileLayer({
         <div class="layer-group-title">Capas de Datos</div>
         <label class="layer-item">
           <input type="checkbox" bind:checked={showClientesLayer} />
-          <span class="layer-name">� Clientes</span>
+          <span class="layer-name">● Clientes</span>
         </label>
         <label class="layer-item">
           <input type="checkbox" bind:checked={showPedidosLayer} />
-          <span class="layer-name">� Pedidos</span>
+          <span class="layer-name">▪ Pedidos</span>
         </label>
       </div>
       
@@ -94,17 +94,17 @@ satelliteLayer = new TileLayer({
         <div class="layer-group-title">Capas Base</div>
         <label class="layer-item">
           <input type="radio" bind:group={baseLayerType} value="osm" />
-          <span class="layer-name">�️ OpenStreetMap</span>
+          <span class="layer-name">○ OpenStreetMap</span>
         </label>
         <label class="layer-item">
           <input type="radio" bind:group={baseLayerType} value="satellite" />
-          <span class="layer-name">�️ Satelital</span>
+          <span class="layer-name">◉ Satelital</span>
         </label>
       </div>
     </div>
   </div>
 {:else}
-  <button class="layer-toolbar-show-btn" on:click={toggleLayerToolbar}>🗂️</button>
+  <button class="layer-toolbar-show-btn" on:click={toggleLayerToolbar}>▣</button>
 {/if}
 ```
 
@@ -195,9 +195,15 @@ satelliteLayer = new TileLayer({
 - **Acceso rápido** via botón flotante cuando se necesite
 
 #### Iconografía Actualizada
-- **Cambiado** icono de 🗂️ (folder) a 🗺️ (mapa)
-- **Más intuitivo** - representa mejor las capas de mapa
-- **Consistente** en botón de mostrar y título del toolbar
+- **Cambiado** de 🗂️ (folder) a ▣ (capas)
+- **Solución de compatibilidad** - reemplazados emojis por símbolos universales  
+- **Iconos específicos por capa**:
+  - ▣ Toolbar de capas
+  - ● Clientes
+  - ▪ Pedidos  
+  - ○ OpenStreetMap
+  - ◉ Satelital
+- **Compatible** con todos los navegadores y sistemas
 
 #### Responsive Mobile Optimizado
 - **Móviles (< 768px)**: Toolbar 280px ancho (vs ancho completo anterior)
@@ -206,6 +212,27 @@ satelliteLayer = new TileLayer({
 - **Padding reducido**: Mejor aprovechamiento del espacio
 - **Max-width inteligente**: Se adapta a pantallas muy pequeñas
 
+### 🔧 Fix de Compatibilidad de Iconos
+
+#### Problema Identificado
+- **Emojis no renderizaban** correctamente en algunos navegadores/sistemas
+- **Aparecían signos de pregunta** en lugar de los iconos
+- **Afectaba** tanto el botón como los labels de las capas
+
+#### Solución Implementada
+- **Reemplazados todos los emojis** por símbolos Unicode universales
+- **Compatibilidad garantizada** con todos los navegadores modernos
+- **Mantenido significado visual** de cada tipo de capa
+
+#### Mapeo de Iconos:
+| Elemento | Emoji Original | Símbolo Universal | Significado |
+|----------|----------------|-------------------|-------------|
+| Toolbar | 🗂️ | ▣ | Selector de capas |
+| Clientes | 👤 | ● | Puntos de datos |
+| Pedidos | 📦 | ▪ | Elementos activos |
+| OpenStreetMap | 🗺️ | ○ | Capa base estándar |
+| Satelital | 🛰️ | ◉ | Capa base satelital |
+
 La implementación cumple exactamente con los requisitos solicitados:
 - ✅ Capa satelital agregada y por defecto apagada
 - ✅ Selector de capas convertido en toolbar a la **DERECHA** sobre el mapa
@@ -213,4 +240,4 @@ La implementación cumple exactamente con los requisitos solicitados:
 - ✅ **Capas de datos aparecen ARRIBA de las capas base** en el toolbar
 - ✅ **Optimizado para móviles** - toolbar más compacto y a la derecha
 - ✅ **Por defecto cerrado** - mejor experiencia inicial
-- ✅ **Icono de mapa** más intuitivo que el folder anterior
+- ✅ **Iconos universales** compatibles con todos los navegadores

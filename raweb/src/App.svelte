@@ -359,7 +359,7 @@
     {#if showLayerToolbar}
       <div class="layer-toolbar">
                  <div class="layer-toolbar-header">
-           <span class="layer-toolbar-title">�️ Capas</span>
+           <span class="layer-toolbar-title">▣ Capas</span>
            <button class="layer-toolbar-toggle" on:click={toggleLayerToolbar} title="Cerrar panel de capas">
              ✕
            </button>
@@ -370,11 +370,11 @@
             <div class="layer-group-title">Capas de Datos</div>
             <label class="layer-item">
               <input type="checkbox" bind:checked={showClientesLayer} />
-              <span class="layer-name">� Clientes</span>
+              <span class="layer-name">● Clientes</span>
             </label>
             <label class="layer-item">
               <input type="checkbox" bind:checked={showPedidosLayer} />
-              <span class="layer-name">� Pedidos</span>
+              <span class="layer-name">▪ Pedidos</span>
             </label>
           </div>
           
@@ -382,18 +382,18 @@
             <div class="layer-group-title">Capas Base</div>
             <label class="layer-item">
               <input type="radio" bind:group={baseLayerType} value="osm" />
-              <span class="layer-name">�️ OpenStreetMap</span>
+              <span class="layer-name">○ OpenStreetMap</span>
             </label>
             <label class="layer-item">
               <input type="radio" bind:group={baseLayerType} value="satellite" />
-              <span class="layer-name">�️ Satelital</span>
+              <span class="layer-name">◉ Satelital</span>
             </label>
           </div>
         </div>
       </div>
     {:else}
              <button class="layer-toolbar-show-btn" on:click={toggleLayerToolbar} title="Mostrar panel de capas">
-         �️
+         ▣
        </button>
     {/if}
   </div>
