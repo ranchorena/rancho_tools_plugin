@@ -7,16 +7,18 @@
   import ImageWMS from 'ol/source/ImageWMS.js'; // Para capa de clientes (WMS)
   import OSM from 'ol/source/OSM.js';
   import XYZ from 'ol/source/XYZ.js'; // Para Google Satellite
-  // import Overlay from 'ol/Overlay.js'; // Asegurarse que está comentado o eliminado
+  import Overlay from 'ol/Overlay.js'; // Para el tooltip de hover
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
   import VectorLayer from 'ol/layer/Vector.js';
   import VectorSource from 'ol/source/Vector.js';
-  import {bbox as bboxStrategy} from 'ol/loadingstrategy.js'; // Estrategia BBOX
-  import GeoJSON from 'ol/format/GeoJSON.js'; // Formato WFS
-  import {Style, Circle, Fill, Stroke} from 'ol/style.js'; // Estilos para WFS
-  import Icon from 'ol/style/Icon.js'; // Sigue siendo para el markerLayer
+  // Remover imports de WFS ya que no los necesitamos
+  // import {bbox as bboxStrategy} from 'ol/loadingstrategy.js';
+  // import GeoJSON from 'ol/format/GeoJSON.js';
+  // import {Style, Circle, Fill, Stroke} from 'ol/style.js';
+  import {Style} from 'ol/style.js'; // Para el markerLayer
+  import Icon from 'ol/style/Icon.js'; // Para el markerLayer
 
   // Importar configuración
   import { API_BASE_URL, INITIAL_COORDINATES, GEOSERVER_BASE_URL } from './config.js';
@@ -27,8 +29,8 @@
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
-  // let tooltipElement; // Confirmado: Comentado/Eliminado
-  // let tooltipOverlay; // Confirmado: Comentado/Eliminado
+  let tooltipElement; // Para el tooltip de hover
+  let tooltipOverlay; // Para el tooltip de hover
   let map;
   let markerSource;
 
@@ -39,9 +41,9 @@
   let osmLayer;
   let satelliteLayer;
 
-  // Variables para las capas Vectoriales (WFS)
-  let pedidosLayer; // VectorLayer con WFS
-  let clientesLayer; // Será VectorLayer
+  // Variables para las capas Vectoriales/WMS
+  let pedidosLayer; // Ahora será ImageLayer con WMS
+  let clientesLayer; // Será ImageLayer
 
   // Estado para los checkboxes del Layer Switcher
   let baseLayerType = 'osm'; // 'osm' o 'satellite'
@@ -68,9 +70,9 @@
   let globalNotificationMessage = "";
   let globalNotificationType = "success";
 
-  // Variables para el diálogo de información de pedido
-  let showPedidoInfoDialog = false;
-  let selectedPedidoInfo = null;
+  // Variables para el diálogo de información de pedido - Removido ya que WMS no permite click en features individuales
+  // let showPedidoInfoDialog = false;
+  // let selectedPedidoInfo = null;
 
   function handleShowGlobalNotification(event) {
     globalNotificationMessage = event.detail.message;
@@ -89,11 +91,11 @@
       const source = pedidosLayer.getSource();
       if (source && typeof source.refresh === 'function') {
         source.refresh();
-        console.log("Capa Pedidos WFS refrescada");
-      } else if (source && typeof source.clear === 'function') {
-        // Para capas WFS Vector, limpiar y volver a cargar
-        source.clear();
-        console.log("Capa Pedidos WFS recargada");
+        console.log("Capa Pedidos WMS refrescada");
+      } else {
+        // Para capas WMS, actualizar los parámetros para forzar recarga
+        source.updateParams({'_dc': Date.now()});
+        console.log("Capa Pedidos WMS recargada");
       }
     }
   }
@@ -124,15 +126,14 @@
       })
     });
 
-    // Crear el Overlay para el tooltip -- ELIMINADO
-    // tooltipOverlay = new Overlay({
-    //   element: tooltipElement,
-    //   autoPan: {
-    //     animation: {
-    //       duration: 250,
-    //     },
-    //   },
-    // });
+    // Crear el Overlay para el tooltip de hover
+    tooltipOverlay = new Overlay({
+      element: tooltipElement,
+      offset: [10, 0],
+      positioning: 'bottom-left',
+      stopEvent: false,
+      insertFirst: false,
+    });
 
     // Definición de las capas base
     osmLayer = new TileLayer({
@@ -148,27 +149,15 @@
       visible: showSatelliteLayer
     });
 
-      // Definición de la capa de Pedidos (WFS)
-    // Se asigna a la variable global para que el watcher pueda accederla
-    pedidosLayer = new VectorLayer({
-      source: new VectorSource({
-        url: function(extent) {
-          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
+    // Definición de la capa de Pedidos (WMS) - Cambiado de WFS a WMS
+    pedidosLayer = new ImageLayer({
+      source: new ImageWMS({
+        url: GEOSERVER_BASE_URL + '/wms',
+        params: {
+          'LAYERS': 'GeneralBelgrano:Pedidos',
+          'VERSION': '1.1.0',
         },
-        format: new GeoJSON(),
-        strategy: bboxStrategy
-      }),
-      style: new Style({
-        image: new Circle({
-          radius: 6,
-          fill: new Fill({
-            color: '#ff6b6b'
-          }),
-          stroke: new Stroke({
-            color: '#ffffff',
-            width: 2
-          })
-        })
+        serverType: 'geoserver',
       }),
       visible: showPedidosLayer
     });
@@ -201,29 +190,70 @@
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),
         zoom: 15 // Nivel de zoom inicial
       }),
-      // overlays: [tooltipOverlay] // ELIMINADO
+      overlays: [tooltipOverlay] // Agregar el tooltip overlay
     });
 
-    // Agregar evento de click para mostrar información de pedidos
-    map.on('singleclick', function(evt) {
-      const features = [];
-      map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
-        if (layer === pedidosLayer) {
-          features.push(feature);
-        }
-      });
+    // Evento para mostrar información básica al hacer hover sobre pedidos
+    map.on('pointermove', function(evt) {
+      const pixel = evt.pixel;
+      const coordinate = evt.coordinate;
+      
+      // Solo procesar si la capa de pedidos está visible
+      if (!showPedidosLayer) {
+        tooltipElement.style.display = 'none';
+        return;
+      }
 
-      if (features.length > 0) {
-        const feature = features[0];
-        const properties = feature.getProperties();
-        showPedidoInfo(properties);
+      // Hacer GetFeatureInfo request para obtener información del pedido
+      const viewResolution = map.getView().getResolution();
+      const url = pedidosLayer.getSource().getFeatureInfoUrl(
+        coordinate,
+        viewResolution,
+        'EPSG:3857',
+        {
+          'INFO_FORMAT': 'application/json',
+          'FEATURE_COUNT': 1
+        }
+      );
+
+      if (url) {
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            if (data.features && data.features.length > 0) {
+              const feature = data.features[0];
+              const properties = feature.properties;
+              
+              // Mostrar solo Id, Nombre y Dirección
+              const id = properties.id_pedido || properties.id || 'N/A';
+              const nombre = properties.nombre || 'N/A';
+              const direccion = properties.direccion || 'N/A';
+              
+              tooltipElement.innerHTML = `
+                <div><strong>ID:</strong> ${id}</div>
+                <div><strong>Nombre:</strong> ${nombre}</div>
+                <div><strong>Dirección:</strong> ${direccion}</div>
+              `;
+              
+              tooltipOverlay.setPosition(coordinate);
+              tooltipElement.style.display = 'block';
+            } else {
+              tooltipElement.style.display = 'none';
+            }
+          })
+          .catch(error => {
+            console.error('Error al obtener información del pedido:', error);
+            tooltipElement.style.display = 'none';
+          });
+      } else {
+        tooltipElement.style.display = 'none';
       }
     });
 
+    // Remover el evento de click ya que WMS no permite hacer click en features individuales
+    // El diálogo de información completa se podría implementar de otra manera si es necesario
+    
     // Limpiar el mapa al desmontar el componente
-    // Listener para el movimiento del puntero en el mapa (para el tooltip) -- ELIMINADO
-    // map.on('pointermove', (evt) => { ... });
-
     return () => {
       if (map) {
         map.setTarget(undefined);
@@ -329,24 +359,9 @@
     markerSource.addFeature(marker);
   }
 
-  function showPedidoInfo(properties) {
-    selectedPedidoInfo = {
-      id: properties.id_pedido || properties.id || 'N/A',
-      nombre: properties.nombre || 'N/A',
-      direccion: properties.direccion || 'N/A',
-      cantidad: properties.cantidad || 'N/A',
-      fecha: properties.fecha || 'N/A',
-      observaciones: properties.observaciones || 'N/A',
-      telefono: properties.telefono || 'N/A',
-      horario: properties.horario || 'N/A'
-    };
-    showPedidoInfoDialog = true;
-  }
-
-  function closePedidoInfoDialog() {
-    showPedidoInfoDialog = false;
-    selectedPedidoInfo = null;
-  }
+  // Funciones del diálogo de información de pedido removidas ya que WMS no permite click en features individuales
+  // function showPedidoInfo(properties) { ... }
+  // function closePedidoInfoDialog() { ... }
 
 </script>
 
@@ -466,58 +481,13 @@
     />
   {/if}
 
-  {#if showPedidoInfoDialog && selectedPedidoInfo}
-    <div class="modal-overlay" on:click={closePedidoInfoDialog}>
-      <div class="pedido-info-dialog" on:click|stopPropagation>
-        <div class="pedido-info-header">
-          <h3>Información del Pedido</h3>
-          <button class="close-btn" on:click={closePedidoInfoDialog}>×</button>
-        </div>
-        <div class="pedido-info-content">
-          <div class="pedido-info-row">
-            <label>ID:</label>
-            <span>{selectedPedidoInfo.id}</span>
-          </div>
-          <div class="pedido-info-row">
-            <label>Nombre:</label>
-            <span>{selectedPedidoInfo.nombre}</span>
-          </div>
-          <div class="pedido-info-row">
-            <label>Dirección:</label>
-            <span>{selectedPedidoInfo.direccion}</span>
-          </div>
-          <div class="pedido-info-row">
-            <label>Cantidad:</label>
-            <span>{selectedPedidoInfo.cantidad}</span>
-          </div>
-          <div class="pedido-info-row">
-            <label>Fecha:</label>
-            <span>{selectedPedidoInfo.fecha}</span>
-          </div>
-          <div class="pedido-info-row">
-            <label>Teléfono:</label>
-            <span>{selectedPedidoInfo.telefono}</span>
-          </div>
-          <div class="pedido-info-row">
-            <label>Horario:</label>
-            <span>{selectedPedidoInfo.horario}</span>
-          </div>
-          <div class="pedido-info-row">
-            <label>Observaciones:</label>
-            <span>{selectedPedidoInfo.observaciones}</span>
-          </div>
-        </div>
-        <div class="pedido-info-footer">
-          <button class="btn-primary" on:click={closePedidoInfoDialog}>Cerrar</button>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <!-- Diálogo de información del pedido removido ya que WMS no permite click en features individuales -->
+  <!-- La información básica ahora se muestra en el tooltip de hover -->
 
   <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
 
   <!-- Elemento para el Tooltip -->
-  <!-- <div bind:this={tooltipElement} class="ol-tooltip"></div> -->
+  <div bind:this={tooltipElement} class="ol-tooltip-hover"></div>
 </main>
 
 <style>
@@ -1045,7 +1015,34 @@
     }
   }
 
-  /* Estilos para el tooltip, basados en ejemplos de OpenLayers */
+  /* Estilos para el tooltip de hover */
+  .ol-tooltip-hover {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #333;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    pointer-events: none;
+    display: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 1010;
+    min-width: 200px;
+    backdrop-filter: blur(5px);
+  }
+
+  .ol-tooltip-hover div {
+    margin: 2px 0;
+    line-height: 1.3;
+  }
+
+  .ol-tooltip-hover strong {
+    color: #495057;
+    font-weight: 600;
+  }
+
+  /* Estilos para el tooltip original (mantenido por compatibilidad) */
   .ol-tooltip {
     position: absolute;
     background-color: white;
@@ -1061,161 +1058,6 @@
     z-index: 1010;
   }
 
-  /* Estilos para el diálogo de información de pedido */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    padding: 1rem;
-  }
-
-  .pedido-info-dialog {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    max-width: 500px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: fadeInUp 0.3s ease;
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .pedido-info-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 1.5rem 1rem 1.5rem;
-    border-bottom: 1px solid #e9ecef;
-  }
-
-  .pedido-info-header h3 {
-    margin: 0;
-    color: #495057;
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #6c757d;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .close-btn:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: #495057;
-  }
-
-  .pedido-info-content {
-    padding: 1rem 1.5rem;
-  }
-
-  .pedido-info-row {
-    display: flex;
-    margin-bottom: 1rem;
-    align-items: flex-start;
-  }
-
-  .pedido-info-row:last-child {
-    margin-bottom: 0;
-  }
-
-  .pedido-info-row label {
-    font-weight: 600;
-    color: #495057;
-    min-width: 120px;
-    margin-right: 1rem;
-    font-size: 0.9rem;
-  }
-
-  .pedido-info-row span {
-    color: #6c757d;
-    flex: 1;
-    word-break: break-word;
-    font-size: 0.9rem;
-    line-height: 1.4;
-  }
-
-  .pedido-info-footer {
-    padding: 1rem 1.5rem 1.5rem 1.5rem;
-    border-top: 1px solid #e9ecef;
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .btn-primary {
-    background-color: #007bff;
-    border: 1px solid #007bff;
-    color: white;
-    padding: 0.5rem 1.5rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-  }
-
-  .btn-primary:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
-    transform: translateY(-1px);
-  }
-
-  /* Responsive para el diálogo de pedido */
-  @media (max-width: 768px) {
-    .modal-overlay {
-      padding: 0.5rem;
-    }
-
-    .pedido-info-dialog {
-      margin: 0;
-      border-radius: 8px;
-    }
-
-    .pedido-info-header,
-    .pedido-info-content,
-    .pedido-info-footer {
-      padding-left: 1rem;
-      padding-right: 1rem;
-    }
-
-    .pedido-info-row {
-      flex-direction: column;
-      margin-bottom: 0.75rem;
-    }
-
-    .pedido-info-row label {
-      min-width: auto;
-      margin-right: 0;
-      margin-bottom: 0.25rem;
-    }
-  }
+  /* Estilos para el diálogo de información de pedido removidos ya que WMS no permite click en features individuales */
+  /* La información básica ahora se muestra en el tooltip de hover */
 </style>
