@@ -56,10 +56,21 @@ export default {
 		// Reemplazar variables de entorno en el código
 		replace({
 			preventAssignment: true,
-			values: {
-				'__API_URL__': JSON.stringify(process.env.API_URL || 'http://localhost:7070/api'), // Valor por defecto si no está definida
-				'__GEOSERVER_URL__': JSON.stringify(process.env.GEOSERVER_URL || 'http://localhost:8087/geoserver/wms') // Valor por defecto
-			}
+			values: (()=>{
+				let geoserverUrlValue = process.env.GEOSERVER_URL || 'http://localhost:8087/geoserver/wms';
+				// Remove leading/trailing quotes if they exist, to prevent double quoting by JSON.stringify
+				if (typeof geoserverUrlValue === 'string' && geoserverUrlValue.length > 1 && geoserverUrlValue.startsWith('"') && geoserverUrlValue.endsWith('"')) {
+					geoserverUrlValue = geoserverUrlValue.substring(1, geoserverUrlValue.length - 1);
+				}
+				let apiUrlValue = process.env.API_URL || 'http://localhost:7070/api';
+				if (typeof apiUrlValue === 'string' && apiUrlValue.length > 1 && apiUrlValue.startsWith('"') && apiUrlValue.endsWith('"')) {
+					apiUrlValue = apiUrlValue.substring(1, apiUrlValue.length - 1);
+				}
+				return {
+					'__API_URL__': JSON.stringify(apiUrlValue),
+					'__GEOSERVER_URL__': JSON.stringify(geoserverUrlValue)
+				};
+			})()
 		}),
 
 		// If you have external dependencies installed from

@@ -8,6 +8,9 @@ echo "Restaurando generalbelgrano.dump a la base de datos '$POSTGRES_DB' con el 
 # Se asume que POSTGRES_DB en el entorno es 'postgres' (o la base de datos destino correcta).
 # y POSTGRES_USER es 'postgres' (o el usuario correcto con permisos).
 
+# Crear el esquema 'generalbelgrano' si no existe
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "CREATE SCHEMA IF NOT EXISTS generalbelgrano;"
+
 pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --verbose --no-owner --no-privileges --schema="generalbelgrano" /docker-entrypoint-initdb.d/generalbelgrano.dump
 
 echo "Restauración de generalbelgrano.dump completada."
