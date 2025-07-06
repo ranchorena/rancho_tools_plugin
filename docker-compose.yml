@@ -27,6 +27,7 @@ services:
     build:
       context: ./raapi
       dockerfile: Dockerfile
+    image: raweb-api:qa      
     container_name: raweb-api-qa
     ports:
       - "5000:5000"
