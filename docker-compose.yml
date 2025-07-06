@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
       args:
         API_URL: ${API_URL:-http://backend:5000} # Valor por defecto si no está en .env o entorno
-        GEOSERVER_URL: ${GEOSERVER_URL:-http://localhost:8087/geoserver/wms} # Asume que GeoServer corre en el host o es accesible
+        GEOSERVER_URL: ${GEOSERVER_URL:-http://localhost:8087/geoserver} # Asume que GeoServer corre en el host o es accesible
     image: raweb:qa
     container_name: raweb-qa
     ports:
@@ -21,7 +21,7 @@ services:
       # aunque para Svelte/Rollup, los valores importantes son los usados en tiempo de BUILD (ver build.args).
       # Podrían ser útiles si el entrypoint del contenedor las usara para alguna tarea (no es el caso aquí).
       - API_URL=${API_URL:-http://backend:5000}
-      - GEOSERVER_URL=${GEOSERVER_URL:-http://localhost:8087/geoserver/wms} # Esta URL es para el cliente. Si GeoServer está en Docker, sería http://geoserver:8080/...
+      - GEOSERVER_URL=${GEOSERVER_URL:-http://localhost:8087/geoserver} # Esta URL es para el cliente. Si GeoServer está en Docker, sería http://geoserver:8080/...
 
   backend:
     build:

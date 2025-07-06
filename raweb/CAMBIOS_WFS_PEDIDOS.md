@@ -35,7 +35,7 @@ pedidosLayer = new ImageLayer({
 pedidosLayer = new VectorLayer({
   source: new VectorSource({
     url: function(extent) {
-      return GEOSERVER_BASE_URL + '/wfs?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
+      return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',');
     },
     format: new GeoJSON(),
     strategy: bboxStrategy
