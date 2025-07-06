@@ -3,8 +3,6 @@
   import Map from 'ol/Map.js';
   import View from 'ol/View.js';
   import TileLayer from 'ol/layer/Tile.js';
-  import ImageLayer from 'ol/layer/Image.js'; // Para capa de clientes (WMS)
-  import ImageWMS from 'ol/source/ImageWMS.js'; // Para capa de clientes (WMS)
   import OSM from 'ol/source/OSM.js';
   import XYZ from 'ol/source/XYZ.js'; // Para Google Satellite
   import Overlay from 'ol/Overlay.js'; // Para el tooltip de click
@@ -41,7 +39,7 @@
 
   // Variables para las capas
   let pedidosLayer; // VectorLayer con WFS
-  let clientesLayer; // ImageLayer con WMS
+  let clientesLayer; // VectorLayer con WFS
 
   // Estado para los checkboxes del Layer Switcher
   let baseLayerType = 'osm'; // 'osm' o 'satellite'
@@ -68,10 +66,11 @@
   let globalNotificationMessage = "";
   let globalNotificationType = "success";
 
-  // Variables para el tooltip de click (para WFS de pedidos)
-  let showPedidoTooltip = false;
-  let selectedPedidoData = null;
+  // Variables para el tooltip de click (para WFS de pedidos y clientes)
+  let showFeatureTooltip = false;
+  let selectedFeatureData = null;
   let tooltipPosition = null;
+  let tooltipType = null; // 'pedido' o 'cliente'
 
   function handleShowGlobalNotification(event) {
     globalNotificationMessage = event.detail.message;
@@ -91,6 +90,16 @@
       if (source && typeof source.clear === 'function') {
         source.clear();
         console.log("Capa Pedidos WFS recargada");
+      }
+    }
+  }
+
+  function refreshClientesLayerMap() {
+    if (clientesLayer) {
+      const source = clientesLayer.getSource();
+      if (source && typeof source.clear === 'function') {
+        source.clear();
+        console.log("Capa Clientes WFS recargada");
       }
     }
   }
@@ -169,15 +178,26 @@
       visible: showPedidosLayer
     });
 
-    // Definición de la capa de Clientes (WMS)
-    clientesLayer = new ImageLayer({
-      source: new ImageWMS({
-        url: GEOSERVER_BASE_URL + '/wms',
-        params: {
-          'LAYERS': 'GeneralBelgrano:Clientes',
-          'VERSION': '1.1.0',
+    // Definición de la capa de Clientes (WFS)
+    clientesLayer = new VectorLayer({
+      source: new VectorSource({
+        url: function(extent) {
+          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Clientes&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
         },
-        serverType: 'geoserver',
+        format: new GeoJSON(),
+        strategy: bboxStrategy
+      }),
+      style: new Style({
+        image: new Circle({
+          radius: 8,
+          fill: new Fill({
+            color: '#4285f4'
+          }),
+          stroke: new Stroke({
+            color: '#ffffff',
+            width: 2
+          })
+        })
       }),
       visible: showClientesLayer
     });
@@ -198,23 +218,27 @@
       overlays: [tooltipOverlay] // Agregar el tooltip overlay
     });
 
-    // Evento de click para mostrar información del pedido (WFS)
+    // Evento de click para mostrar información de pedidos y clientes (WFS)
     map.on('singleclick', function(evt) {
-      const features = [];
+      let foundFeature = null;
+      let foundLayer = null;
       
-      // Buscar features de pedidos en el pixel clickeado
+      // Buscar features de pedidos o clientes en el pixel clickeado
       map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
-        if (layer === pedidosLayer) {
-          features.push(feature);
+        if (layer === pedidosLayer || layer === clientesLayer) {
+          foundFeature = feature;
+          foundLayer = layer;
+          return true; // Parar la búsqueda al encontrar la primera feature
         }
       });
 
-      if (features.length > 0) {
-        // Mostrar información del pedido
-        const feature = features[0];
-        const properties = feature.getProperties();
+      if (foundFeature) {
+        const properties = foundFeature.getProperties();
         
-        selectedPedidoData = {
+        // Determinar el tipo de feature
+        const isPedido = foundLayer === pedidosLayer;
+        
+        selectedFeatureData = {
           id: properties.id_pedido || properties.id || 'N/A',
           nombre: properties.nombre || 'N/A',
           direccion: properties.direccion || 'N/A',
@@ -222,15 +246,25 @@
           fecha: properties.fecha || 'N/A',
           telefono: properties.telefono || 'N/A',
           horario: properties.horario || 'N/A',
-          observaciones: properties.observaciones || 'N/A'
+          observaciones: properties.observaciones || 'N/A',
+          calle: properties.calle || 'N/A',
+          altura: properties.altura || 'N/A'
         };
         
+        tooltipType = isPedido ? 'pedido' : 'cliente';
         tooltipPosition = evt.coordinate;
-        showPedidoTooltip = true;
-        tooltipOverlay.setPosition(evt.coordinate);
+        showFeatureTooltip = true;
+        
+        // Posicionar el tooltip cerca del click pero un poco desplazado
+        const pixelOffset = [20, -20]; // Desplazamiento en píxeles
+        const clickPixel = map.getPixelFromCoordinate(evt.coordinate);
+        const offsetPixel = [clickPixel[0] + pixelOffset[0], clickPixel[1] + pixelOffset[1]];
+        const offsetCoordinate = map.getCoordinateFromPixel(offsetPixel);
+        
+        tooltipOverlay.setPosition(offsetCoordinate);
       } else {
-        // Click fuera de cualquier pedido - cerrar tooltip
-        closePedidoTooltip();
+        // Click fuera de cualquier feature - cerrar tooltip
+        closeFeatureTooltip();
       }
     });
 
@@ -340,10 +374,11 @@
     markerSource.addFeature(marker);
   }
 
-  function closePedidoTooltip() {
-    showPedidoTooltip = false;
-    selectedPedidoData = null;
+  function closeFeatureTooltip() {
+    showFeatureTooltip = false;
+    selectedFeatureData = null;
     tooltipPosition = null;
+    tooltipType = null;
   }
 
   // Funciones relacionadas con el tooltip de pedidos se manejan con closePedidoTooltip()
@@ -466,45 +501,57 @@
     />
   {/if}
 
-  <!-- Tooltip de información del pedido -->
-  {#if showPedidoTooltip && selectedPedidoData}
-    <div bind:this={tooltipElement} class="pedido-tooltip" on:click|stopPropagation>
-      <div class="pedido-tooltip-header">
-        <h4>Información del Pedido</h4>
-        <button class="tooltip-close-btn" on:click={closePedidoTooltip}>×</button>
+  <!-- Tooltip de información de pedidos y clientes -->
+  {#if showFeatureTooltip && selectedFeatureData}
+    <div bind:this={tooltipElement} class="feature-tooltip" on:click|stopPropagation>
+      <div class="feature-tooltip-header">
+        <h4>Información del {tooltipType === 'pedido' ? 'Pedido' : 'Cliente'}</h4>
+        <button class="tooltip-close-btn" on:click={closeFeatureTooltip}>×</button>
       </div>
-      <div class="pedido-tooltip-content">
-        <div class="pedido-tooltip-row">
+      <div class="feature-tooltip-content">
+        <div class="feature-tooltip-row">
           <span class="label">ID:</span>
-          <span class="value">{selectedPedidoData.id}</span>
+          <span class="value">{selectedFeatureData.id}</span>
         </div>
-        <div class="pedido-tooltip-row">
+        <div class="feature-tooltip-row">
           <span class="label">Nombre:</span>
-          <span class="value">{selectedPedidoData.nombre}</span>
+          <span class="value">{selectedFeatureData.nombre}</span>
         </div>
-        <div class="pedido-tooltip-row">
+        <div class="feature-tooltip-row">
           <span class="label">Dirección:</span>
-          <span class="value">{selectedPedidoData.direccion}</span>
+          <span class="value">{selectedFeatureData.direccion}</span>
         </div>
-        <div class="pedido-tooltip-row">
-          <span class="label">Cantidad:</span>
-          <span class="value">{selectedPedidoData.cantidad}</span>
-        </div>
-        <div class="pedido-tooltip-row">
-          <span class="label">Fecha:</span>
-          <span class="value">{selectedPedidoData.fecha}</span>
-        </div>
-        <div class="pedido-tooltip-row">
+        {#if tooltipType === 'cliente'}
+          <div class="feature-tooltip-row">
+            <span class="label">Calle:</span>
+            <span class="value">{selectedFeatureData.calle}</span>
+          </div>
+          <div class="feature-tooltip-row">
+            <span class="label">Altura:</span>
+            <span class="value">{selectedFeatureData.altura}</span>
+          </div>
+        {/if}
+        {#if tooltipType === 'pedido'}
+          <div class="feature-tooltip-row">
+            <span class="label">Cantidad:</span>
+            <span class="value">{selectedFeatureData.cantidad}</span>
+          </div>
+          <div class="feature-tooltip-row">
+            <span class="label">Fecha:</span>
+            <span class="value">{selectedFeatureData.fecha}</span>
+          </div>
+        {/if}
+        <div class="feature-tooltip-row">
           <span class="label">Teléfono:</span>
-          <span class="value">{selectedPedidoData.telefono}</span>
+          <span class="value">{selectedFeatureData.telefono}</span>
         </div>
-        <div class="pedido-tooltip-row">
+        <div class="feature-tooltip-row">
           <span class="label">Horario:</span>
-          <span class="value">{selectedPedidoData.horario}</span>
+          <span class="value">{selectedFeatureData.horario}</span>
         </div>
-        <div class="pedido-tooltip-row">
+        <div class="feature-tooltip-row">
           <span class="label">Observaciones:</span>
-          <span class="value">{selectedPedidoData.observaciones}</span>
+          <span class="value">{selectedFeatureData.observaciones}</span>
         </div>
       </div>
     </div>
@@ -1056,8 +1103,8 @@
     z-index: 1010;
   }
 
-  /* Estilos para el tooltip de información del pedido */
-  .pedido-tooltip {
+  /* Estilos para el tooltip de información de pedidos y clientes */
+  .feature-tooltip {
     position: absolute;
     background-color: rgba(255, 255, 255, 0.95);
     color: #333;
@@ -1073,7 +1120,7 @@
     backdrop-filter: blur(5px);
   }
 
-  .pedido-tooltip-header {
+  .feature-tooltip-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1082,7 +1129,7 @@
     border-bottom: 1px solid #eee;
   }
 
-  .pedido-tooltip-header h4 {
+  .feature-tooltip-header h4 {
     margin: 0;
     font-size: 1rem;
     color: #495057;
@@ -1109,11 +1156,11 @@
     color: #495057;
   }
 
-  .pedido-tooltip-content {
+  .feature-tooltip-content {
     font-size: 0.9em;
   }
 
-  .pedido-tooltip-row {
+  .feature-tooltip-row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0.3rem;
