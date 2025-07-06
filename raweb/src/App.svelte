@@ -25,8 +25,6 @@
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
-  let tooltipElement; // Para el tooltip de click (mantener para evitar errores)
-  let tooltipOverlay; // Para el tooltip de click (mantener para evitar errores)
   let map;
   let markerSource;
 
@@ -69,7 +67,7 @@
   // Variables para el tooltip de click (para WFS de pedidos y clientes)
   let showFeatureTooltip = false;
   let selectedFeatureData = null;
-  let tooltipPosition = null;
+  let tooltipPosition = { x: 0, y: 0 }; // Posición en píxeles
   let tooltipType = null; // 'pedido' o 'cliente'
 
   function handleShowGlobalNotification(event) {
@@ -117,6 +115,19 @@
   }
 
   onMount(() => {
+    // Event listener global para cerrar tooltip al hacer click fuera
+    function handleGlobalClick(event) {
+      if (showFeatureTooltip) {
+        // Verificar si el click fue fuera del tooltip
+        const tooltipElement = document.querySelector('.feature-tooltip');
+        if (tooltipElement && !tooltipElement.contains(event.target)) {
+          closeFeatureTooltip();
+        }
+      }
+    }
+    
+    document.addEventListener('click', handleGlobalClick);
+    
     markerSource = new VectorSource();
     const markerLayer = new VectorLayer({
       source: markerSource,
@@ -130,15 +141,8 @@
       })
     });
 
-    // Crear el Overlay para el tooltip de click
-    tooltipOverlay = new Overlay({
-      element: tooltipElement,
-      autoPan: {
-        animation: {
-          duration: 250,
-        },
-      },
-    });
+    // Ya no usamos overlay, el tooltip se maneja con CSS puro
+    // tooltipOverlay se mantiene para evitar errores pero no se usa
 
     // Definición de las capas base
     osmLayer = new TileLayer({
@@ -214,8 +218,8 @@
       view: new View({
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),
         zoom: 15 // Nivel de zoom inicial
-      }),
-      overlays: [tooltipOverlay] // Agregar el tooltip overlay
+      })
+      // Ya no usamos overlays
     });
 
     // Evento de click para mostrar información de pedidos y clientes (WFS)
@@ -252,16 +256,43 @@
         };
         
         tooltipType = isPedido ? 'pedido' : 'cliente';
-        tooltipPosition = evt.coordinate;
         showFeatureTooltip = true;
         
-        // Posicionar el tooltip cerca del click pero un poco desplazado
-        const pixelOffset = [20, -20]; // Desplazamiento en píxeles
-        const clickPixel = map.getPixelFromCoordinate(evt.coordinate);
-        const offsetPixel = [clickPixel[0] + pixelOffset[0], clickPixel[1] + pixelOffset[1]];
-        const offsetCoordinate = map.getCoordinateFromPixel(offsetPixel);
+        // Posicionar el tooltip usando coordenadas CSS (no overlay)
+        const pixel = evt.pixel;
+        const mapRect = mapElement.getBoundingClientRect();
         
-        tooltipOverlay.setPosition(offsetCoordinate);
+        // Calcular posición con ajustes para evitar que se salga de la pantalla
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const tooltipWidth = 300; // max-width del tooltip
+        const tooltipHeight = 200; // altura estimada del tooltip
+        
+        let x = pixel[0] + 15; // 15px a la derecha del click
+        let y = pixel[1] - 15; // 15px arriba del click
+        
+        // Ajustar si se sale por la derecha
+        if (x + tooltipWidth > viewportWidth) {
+          x = pixel[0] - tooltipWidth - 15; // Mover a la izquierda del click
+        }
+        
+        // Ajustar si se sale por arriba
+        if (y < 0) {
+          y = pixel[1] + 15; // Mover abajo del click
+        }
+        
+        // Ajustar si se sale por abajo
+        if (y + tooltipHeight > viewportHeight) {
+          y = viewportHeight - tooltipHeight - 10; // Mover arriba
+        }
+        
+        // En móviles, posicionar más centrado
+        if (viewportWidth <= 768) {
+          x = Math.max(10, Math.min(x, viewportWidth - tooltipWidth - 10));
+          y = Math.max(10, Math.min(y, viewportHeight - tooltipHeight - 10));
+        }
+        
+        tooltipPosition = { x, y };
       } else {
         // Click fuera de cualquier feature - cerrar tooltip
         closeFeatureTooltip();
@@ -274,6 +305,8 @@
         map.setTarget(undefined);
         map = undefined;
       }
+      // Limpiar event listener global
+      document.removeEventListener('click', handleGlobalClick);
     };
   });
 
@@ -377,7 +410,7 @@
   function closeFeatureTooltip() {
     showFeatureTooltip = false;
     selectedFeatureData = null;
-    tooltipPosition = null;
+    tooltipPosition = { x: 0, y: 0 };
     tooltipType = null;
   }
 
@@ -503,7 +536,9 @@
 
   <!-- Tooltip de información de pedidos y clientes -->
   {#if showFeatureTooltip && selectedFeatureData}
-    <div bind:this={tooltipElement} class="feature-tooltip" on:click|stopPropagation>
+    <div class="feature-tooltip" 
+         style="left: {tooltipPosition.x}px; top: {tooltipPosition.y}px;" 
+         on:click|stopPropagation>
       <div class="feature-tooltip-header">
         <h4>Información del {tooltipType === 'pedido' ? 'Pedido' : 'Cliente'}</h4>
         <button class="tooltip-close-btn" on:click={closeFeatureTooltip}>×</button>
@@ -522,41 +557,53 @@
           <span class="value">{selectedFeatureData.direccion}</span>
         </div>
         {#if tooltipType === 'cliente'}
-          <div class="feature-tooltip-row">
-            <span class="label">Calle:</span>
-            <span class="value">{selectedFeatureData.calle}</span>
-          </div>
-          <div class="feature-tooltip-row">
-            <span class="label">Altura:</span>
-            <span class="value">{selectedFeatureData.altura}</span>
-          </div>
+          {#if selectedFeatureData.calle !== 'N/A'}
+            <div class="feature-tooltip-row">
+              <span class="label">Calle:</span>
+              <span class="value">{selectedFeatureData.calle}</span>
+            </div>
+          {/if}
+          {#if selectedFeatureData.altura !== 'N/A'}
+            <div class="feature-tooltip-row">
+              <span class="label">Altura:</span>
+              <span class="value">{selectedFeatureData.altura}</span>
+            </div>
+          {/if}
         {/if}
         {#if tooltipType === 'pedido'}
+          {#if selectedFeatureData.cantidad !== 'N/A'}
+            <div class="feature-tooltip-row">
+              <span class="label">Cantidad:</span>
+              <span class="value">{selectedFeatureData.cantidad}</span>
+            </div>
+          {/if}
+          {#if selectedFeatureData.fecha !== 'N/A'}
+            <div class="feature-tooltip-row">
+              <span class="label">Fecha:</span>
+              <span class="value">{selectedFeatureData.fecha}</span>
+            </div>
+          {/if}
+        {/if}
+        {#if selectedFeatureData.telefono !== 'N/A'}
           <div class="feature-tooltip-row">
-            <span class="label">Cantidad:</span>
-            <span class="value">{selectedFeatureData.cantidad}</span>
-          </div>
-          <div class="feature-tooltip-row">
-            <span class="label">Fecha:</span>
-            <span class="value">{selectedFeatureData.fecha}</span>
+            <span class="label">Teléfono:</span>
+            <span class="value">{selectedFeatureData.telefono}</span>
           </div>
         {/if}
-        <div class="feature-tooltip-row">
-          <span class="label">Teléfono:</span>
-          <span class="value">{selectedFeatureData.telefono}</span>
-        </div>
-        <div class="feature-tooltip-row">
-          <span class="label">Horario:</span>
-          <span class="value">{selectedFeatureData.horario}</span>
-        </div>
-        <div class="feature-tooltip-row">
-          <span class="label">Observaciones:</span>
-          <span class="value">{selectedFeatureData.observaciones}</span>
-        </div>
+        {#if selectedFeatureData.horario !== 'N/A'}
+          <div class="feature-tooltip-row">
+            <span class="label">Horario:</span>
+            <span class="value">{selectedFeatureData.horario}</span>
+          </div>
+        {/if}
+        {#if selectedFeatureData.observaciones !== 'N/A'}
+          <div class="feature-tooltip-row">
+            <span class="label">Observaciones:</span>
+            <span class="value">{selectedFeatureData.observaciones}</span>
+          </div>
+        {/if}
       </div>
     </div>
-  {:else}
-    <div bind:this={tooltipElement} style="display: none;"></div>
   {/if}
 
   <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
@@ -577,6 +624,11 @@
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
+    /* Mejoras para móvil */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: pan-x pan-y;
   }
 
   /* Navbar responsive */
@@ -875,6 +927,10 @@
     width: 100%;
     position: relative;
     min-height: 0; /* Importante para flex */
+    /* Optimizaciones para móvil */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    overflow: hidden;
   }
 
   /* Estilos para OpenLayers */
@@ -1115,9 +1171,10 @@
     pointer-events: auto; /* Permitir que el tooltip pueda ser clickeado */
     display: block; /* Mostrar siempre */
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    z-index: 1010;
     min-width: 250px;
+    max-width: 300px;
     backdrop-filter: blur(5px);
+    z-index: 10000; /* Asegurar que esté encima de todo */
   }
 
   .feature-tooltip-header {
@@ -1174,5 +1231,98 @@
   .value {
     font-weight: 600;
     color: #495057;
+  }
+
+  /* Estilos responsive para el tooltip */
+  @media (max-width: 768px) {
+    .feature-tooltip {
+      min-width: 280px;
+      max-width: calc(100vw - 20px);
+      font-size: 0.9em;
+      padding: 12px;
+    }
+
+    .feature-tooltip-header {
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-tooltip-header h4 {
+      font-size: 1.1rem;
+    }
+
+    .tooltip-close-btn {
+      width: 32px;
+      height: 32px;
+      font-size: 1.4rem;
+    }
+
+    .feature-tooltip-row {
+      margin-bottom: 0.5rem;
+    }
+
+    .label {
+      min-width: 90px;
+      font-size: 0.9rem;
+    }
+
+    .value {
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .feature-tooltip {
+      min-width: 260px;
+      max-width: calc(100vw - 16px);
+      font-size: 0.85em;
+      padding: 10px;
+    }
+
+    .feature-tooltip-header {
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-tooltip-header h4 {
+      font-size: 1rem;
+    }
+
+    .tooltip-close-btn {
+      width: 28px;
+      height: 28px;
+      font-size: 1.2rem;
+    }
+
+    .feature-tooltip-row {
+      margin-bottom: 0.4rem;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .label {
+      min-width: auto;
+      margin-bottom: 0.2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .value {
+      font-size: 0.85rem;
+      margin-left: 0;
+      word-break: break-word;
+    }
+  }
+
+  /* Landscape móvil - tooltip más compacto */
+  @media (max-width: 768px) and (orientation: landscape) {
+    .feature-tooltip {
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    .feature-tooltip-content {
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
   }
 </style>
