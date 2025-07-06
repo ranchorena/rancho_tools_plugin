@@ -59,7 +59,7 @@ export default {
 			values: {
 				// Usar las variables de entorno directamente, ya están en el formato correcto
 				'__API_URL__': process.env.API_URL || "http://localhost:5000",
-				'__GEOSERVER_URL__': process.env.GEOSERVER_URL || "http://localhost:8087/geoserver/wms"
+				'__GEOSERVER_URL__': process.env.GEOSERVER_URL || "http://localhost:8087/geoserver"
 			}
 		}),
 

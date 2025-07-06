@@ -3,8 +3,8 @@
   import Map from 'ol/Map.js';
   import View from 'ol/View.js';
   import TileLayer from 'ol/layer/Tile.js';
-  import ImageLayer from 'ol/layer/Image.js'; // Descomentado temporalmente
-  import ImageWMS from 'ol/source/ImageWMS.js'; // Descomentado temporalmente
+  import ImageLayer from 'ol/layer/Image.js'; // Para capa de clientes (WMS)
+  import ImageWMS from 'ol/source/ImageWMS.js'; // Para capa de clientes (WMS)
   import OSM from 'ol/source/OSM.js';
   import XYZ from 'ol/source/XYZ.js'; // Para Google Satellite
   // import Overlay from 'ol/Overlay.js'; // Asegurarse que está comentado o eliminado
@@ -40,7 +40,7 @@
   let satelliteLayer;
 
   // Variables para las capas Vectoriales (WFS)
-  let pedidosLayer; // Será VectorLayer
+  let pedidosLayer; // VectorLayer con WFS
   let clientesLayer; // Será VectorLayer
 
   // Estado para los checkboxes del Layer Switcher
@@ -68,6 +68,10 @@
   let globalNotificationMessage = "";
   let globalNotificationType = "success";
 
+  // Variables para el diálogo de información de pedido
+  let showPedidoInfoDialog = false;
+  let selectedPedidoInfo = null;
+
   function handleShowGlobalNotification(event) {
     globalNotificationMessage = event.detail.message;
     globalNotificationType = event.detail.type || "success";
@@ -83,9 +87,13 @@
   function refreshPedidosLayerMap() {
     if (pedidosLayer) {
       const source = pedidosLayer.getSource();
-      if (source && typeof source.updateParams === 'function') {
-        source.updateParams({'TIMESTAMP': new Date().getTime()});
-        console.log("Capa Pedidos refrescada");
+      if (source && typeof source.refresh === 'function') {
+        source.refresh();
+        console.log("Capa Pedidos WFS refrescada");
+      } else if (source && typeof source.clear === 'function') {
+        // Para capas WFS Vector, limpiar y volver a cargar
+        source.clear();
+        console.log("Capa Pedidos WFS recargada");
       }
     }
   }
@@ -140,26 +148,36 @@
       visible: showSatelliteLayer
     });
 
-    // Definición de la capa de Pedidos (WMS)
+      // Definición de la capa de Pedidos (WFS)
     // Se asigna a la variable global para que el watcher pueda accederla
-    pedidosLayer = new ImageLayer({
-      source: new ImageWMS({
-        url: GEOSERVER_BASE_URL, // Usar la variable importada
-        params: {
-          'LAYERS': 'GeneralBelgrano:Pedidos',
-          'VERSION': '1.1.0',
-          // 'STYLES': 'geomPoint', // Revertido: Se usará el estilo por defecto del servidor
+    pedidosLayer = new VectorLayer({
+      source: new VectorSource({
+        url: function(extent) {
+          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
         },
-        serverType: 'geoserver',
+        format: new GeoJSON(),
+        strategy: bboxStrategy
       }),
-      visible: showPedidosLayer // Usar la variable de estado
+      style: new Style({
+        image: new Circle({
+          radius: 6,
+          fill: new Fill({
+            color: '#ff6b6b'
+          }),
+          stroke: new Stroke({
+            color: '#ffffff',
+            width: 2
+          })
+        })
+      }),
+      visible: showPedidosLayer
     });
 
     // Definición de la capa de Clientes (WMS)
     // Se asigna a la variable global para que el watcher pueda accederla
     clientesLayer = new ImageLayer({
       source: new ImageWMS({
-        url: GEOSERVER_BASE_URL, // Usar la variable importada
+        url: GEOSERVER_BASE_URL + '/wms', // Usar la variable importada
         params: {
           'LAYERS': 'GeneralBelgrano:Clientes',
           'VERSION': '1.1.0',
@@ -184,6 +202,22 @@
         zoom: 15 // Nivel de zoom inicial
       }),
       // overlays: [tooltipOverlay] // ELIMINADO
+    });
+
+    // Agregar evento de click para mostrar información de pedidos
+    map.on('singleclick', function(evt) {
+      const features = [];
+      map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
+        if (layer === pedidosLayer) {
+          features.push(feature);
+        }
+      });
+
+      if (features.length > 0) {
+        const feature = features[0];
+        const properties = feature.getProperties();
+        showPedidoInfo(properties);
+      }
     });
 
     // Limpiar el mapa al desmontar el componente
@@ -293,6 +327,25 @@
       geometry: new Point(fromLonLat([lon, lat]))
     });
     markerSource.addFeature(marker);
+  }
+
+  function showPedidoInfo(properties) {
+    selectedPedidoInfo = {
+      id: properties.id_pedido || properties.id || 'N/A',
+      nombre: properties.nombre || 'N/A',
+      direccion: properties.direccion || 'N/A',
+      cantidad: properties.cantidad || 'N/A',
+      fecha: properties.fecha || 'N/A',
+      observaciones: properties.observaciones || 'N/A',
+      telefono: properties.telefono || 'N/A',
+      horario: properties.horario || 'N/A'
+    };
+    showPedidoInfoDialog = true;
+  }
+
+  function closePedidoInfoDialog() {
+    showPedidoInfoDialog = false;
+    selectedPedidoInfo = null;
   }
 
 </script>
@@ -411,6 +464,54 @@
       on:showGlobalNotification={handleShowGlobalNotification}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
     />
+  {/if}
+
+  {#if showPedidoInfoDialog && selectedPedidoInfo}
+    <div class="modal-overlay" on:click={closePedidoInfoDialog}>
+      <div class="pedido-info-dialog" on:click|stopPropagation>
+        <div class="pedido-info-header">
+          <h3>Información del Pedido</h3>
+          <button class="close-btn" on:click={closePedidoInfoDialog}>×</button>
+        </div>
+        <div class="pedido-info-content">
+          <div class="pedido-info-row">
+            <label>ID:</label>
+            <span>{selectedPedidoInfo.id}</span>
+          </div>
+          <div class="pedido-info-row">
+            <label>Nombre:</label>
+            <span>{selectedPedidoInfo.nombre}</span>
+          </div>
+          <div class="pedido-info-row">
+            <label>Dirección:</label>
+            <span>{selectedPedidoInfo.direccion}</span>
+          </div>
+          <div class="pedido-info-row">
+            <label>Cantidad:</label>
+            <span>{selectedPedidoInfo.cantidad}</span>
+          </div>
+          <div class="pedido-info-row">
+            <label>Fecha:</label>
+            <span>{selectedPedidoInfo.fecha}</span>
+          </div>
+          <div class="pedido-info-row">
+            <label>Teléfono:</label>
+            <span>{selectedPedidoInfo.telefono}</span>
+          </div>
+          <div class="pedido-info-row">
+            <label>Horario:</label>
+            <span>{selectedPedidoInfo.horario}</span>
+          </div>
+          <div class="pedido-info-row">
+            <label>Observaciones:</label>
+            <span>{selectedPedidoInfo.observaciones}</span>
+          </div>
+        </div>
+        <div class="pedido-info-footer">
+          <button class="btn-primary" on:click={closePedidoInfoDialog}>Cerrar</button>
+        </div>
+      </div>
+    </div>
   {/if}
 
   <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
@@ -958,5 +1059,163 @@
     white-space: nowrap;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     z-index: 1010;
+  }
+
+  /* Estilos para el diálogo de información de pedido */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 1rem;
+  }
+
+  .pedido-info-dialog {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: fadeInUp 0.3s ease;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pedido-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+  }
+
+  .pedido-info-header h3 {
+    margin: 0;
+    color: #495057;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .close-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #495057;
+  }
+
+  .pedido-info-content {
+    padding: 1rem 1.5rem;
+  }
+
+  .pedido-info-row {
+    display: flex;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+  }
+
+  .pedido-info-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .pedido-info-row label {
+    font-weight: 600;
+    color: #495057;
+    min-width: 120px;
+    margin-right: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .pedido-info-row span {
+    color: #6c757d;
+    flex: 1;
+    word-break: break-word;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  .pedido-info-footer {
+    padding: 1rem 1.5rem 1.5rem 1.5rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-primary {
+    background-color: #007bff;
+    border: 1px solid #007bff;
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+  }
+
+  .btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+    transform: translateY(-1px);
+  }
+
+  /* Responsive para el diálogo de pedido */
+  @media (max-width: 768px) {
+    .modal-overlay {
+      padding: 0.5rem;
+    }
+
+    .pedido-info-dialog {
+      margin: 0;
+      border-radius: 8px;
+    }
+
+    .pedido-info-header,
+    .pedido-info-content,
+    .pedido-info-footer {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .pedido-info-row {
+      flex-direction: column;
+      margin-bottom: 0.75rem;
+    }
+
+    .pedido-info-row label {
+      min-width: auto;
+      margin-right: 0;
+      margin-bottom: 0.25rem;
+    }
   }
 </style>

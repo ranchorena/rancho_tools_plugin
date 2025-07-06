@@ -23,10 +23,13 @@ from .buscar_direccion_dialog import BuscarDireccionDialog
 from .buscar_cliente_dialog import BuscarClienteDialog
 from .pedidos_dialog import PedidosDialog
 from .pedidos_filtro_dialog import PedidosFiltroDialog
+from .pedidos_wfs_tool import PedidosWFSManager
+from .pedidos_wfs_config_dialog import PedidosWFSConfigDialog
 
 class RAnchoTools:
     def __init__(self, iface):
         self.iface = iface
+        self.pedidos_wfs_manager = PedidosWFSManager()
 
     def initGui(self):
         self.toolbar = self.iface.addToolBar("RAncho")
@@ -58,6 +61,19 @@ class RAnchoTools:
         self.actionPedidosFiltro = QAction(QIcon(iconPedidosFiltro),u"Pedidos Filtro", self.iface.mainWindow())
         self.actionPedidosFiltro.triggered.connect(self.runPedidosFiltro)
         
+        # Nuevas acciones WFS
+        iconWFSConfig = os.path.join(os.path.dirname(__file__), 'images\open-file-folder_blue.png')
+        self.actionWFSConfig = QAction(QIcon(iconWFSConfig),u"Configurar WFS Pedidos", self.iface.mainWindow())
+        self.actionWFSConfig.triggered.connect(self.runWFSConfig)
+        
+        iconWFSLoad = os.path.join(os.path.dirname(__file__), 'images\list_blue.png')
+        self.actionWFSLoad = QAction(QIcon(iconWFSLoad),u"Cargar Pedidos WFS", self.iface.mainWindow())
+        self.actionWFSLoad.triggered.connect(self.runWFSLoad)
+        
+        iconWFSClick = os.path.join(os.path.dirname(__file__), 'images\punto_blue.png')
+        self.actionWFSClick = QAction(QIcon(iconWFSClick),u"Activar Click Pedidos", self.iface.mainWindow())
+        self.actionWFSClick.triggered.connect(self.runWFSClickTool)
+        
         self.toolbar.addAction(self.actionAbrirProyecto)
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.action)
@@ -67,6 +83,11 @@ class RAnchoTools:
         self.toolbar.addAction(self.actionExport)
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.actionPedidosFiltro)
+        self.toolbar.addSeparator()
+        # Acciones WFS
+        self.toolbar.addAction(self.actionWFSConfig)
+        self.toolbar.addAction(self.actionWFSLoad)
+        self.toolbar.addAction(self.actionWFSClick)
         #self.iface.addToolBarIcon(self.action)
         
         #agrega el menu al menu de complementos
@@ -94,9 +115,17 @@ class RAnchoTools:
         self.menu.addAction(self.actionExport)
         self.menu.addSeparator()
         self.menu.addAction(self.actionPedidosFiltro)
+        self.menu.addSeparator()
+        # Submenu WFS
+        self.menu.addAction(self.actionWFSConfig)
+        self.menu.addAction(self.actionWFSLoad)
+        self.menu.addAction(self.actionWFSClick)
         
         menuBar = self.iface.mainWindow().menuBar()
         menuBar.insertMenu(self.iface.firstRightStandardMenu().menuAction(), self.menu)
+        
+        # Verificar auto-carga WFS al inicializar
+        self.verificarAutoCargarWFS()
 
     def unload(self):
         self.iface.removeToolBarIcon(self.action)
@@ -104,6 +133,9 @@ class RAnchoTools:
         self.iface.removeToolBarIcon(self.actionPedidos)
         self.iface.removeToolBarIcon(self.actionExport)
         self.iface.removeToolBarIcon(self.actionPedidosFiltro)
+        self.iface.removeToolBarIcon(self.actionWFSConfig)
+        self.iface.removeToolBarIcon(self.actionWFSLoad)
+        self.iface.removeToolBarIcon(self.actionWFSClick)
         self.menu.deleteLater()
         
         #Elimina el menu al menu de complementos
@@ -116,6 +148,9 @@ class RAnchoTools:
         del self.actionPedidos
         del self.actionExport
         del self.actionPedidosFiltro
+        del self.actionWFSConfig
+        del self.actionWFSLoad
+        del self.actionWFSClick
         
         del self.toolbar
         del self.menu
@@ -180,5 +215,82 @@ class RAnchoTools:
     def runPedidosFiltro(self):       
         self.dialog = PedidosFiltroDialog()
         # self.dialog.setWindowFlags(Qt.Window);
-        self.dialog.show()     
+        self.dialog.show()
+        
+    # Métodos WFS
+    def runWFSConfig(self):
+        """Abrir diálogo de configuración WFS"""
+        self.wfs_config_dialog = PedidosWFSConfigDialog()
+        if self.wfs_config_dialog.exec_() == QDialog.Accepted:
+            # Si se guardó la configuración, verificar si debe auto-cargar
+            self.verificarAutoCargarWFS()
+    
+    def runWFSLoad(self):
+        """Cargar la capa WFS de pedidos"""
+        import configparser
+        import os
+        
+        try:
+            config_file = os.path.join(os.path.dirname(__file__), 'pedidos_wfs_config.ini')
+            if not os.path.exists(config_file):
+                QMessageBox.warning(None, "Advertencia", 
+                                  "No se ha configurado la conexión WFS.\n"
+                                  "Use 'Configurar WFS Pedidos' primero.")
+                return
+            
+            config = configparser.ConfigParser()
+            config.read(config_file)
+            
+            if 'WFS' not in config:
+                QMessageBox.warning(None, "Advertencia", "Configuración WFS incompleta.")
+                return
+            
+            wfs_url = config.get('WFS', 'url', fallback='')
+            layer_name = config.get('WFS', 'layer_name', fallback='')
+            
+            if not wfs_url or not layer_name:
+                QMessageBox.warning(None, "Advertencia", 
+                                  "URL del servidor WFS o nombre de capa no configurados.")
+                return
+            
+            # Construir URI completa
+            version = config.get('WFS', 'version', fallback='1.1.0')
+            usuario = config.get('WFS', 'usuario', fallback='')
+            password = config.get('WFS', 'password', fallback='')
+            
+            wfs_uri = f"url='{wfs_url}' typename='{layer_name}' version='{version}'"
+            if usuario and password:
+                wfs_uri += f" username='{usuario}' password='{password}'"
+            
+            # Cargar la capa usando el manager
+            if self.pedidos_wfs_manager.cargarCapaWFS(wfs_uri, layer_name):
+                # Verificar si debe activar herramienta automáticamente
+                if 'DISPLAY' in config and config.getboolean('DISPLAY', 'auto_click_tool', fallback=False):
+                    self.pedidos_wfs_manager.activarHerramientaClick()
+                    
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"Error al cargar capa WFS: {str(e)}")
+    
+    def runWFSClickTool(self):
+        """Activar herramienta de click para pedidos WFS"""
+        self.pedidos_wfs_manager.activarHerramientaClick()
+    
+    def verificarAutoCargarWFS(self):
+        """Verificar si debe auto-cargar la capa WFS al inicio"""
+        import configparser
+        import os
+        
+        try:
+            config_file = os.path.join(os.path.dirname(__file__), 'pedidos_wfs_config.ini')
+            if os.path.exists(config_file):
+                config = configparser.ConfigParser()
+                config.read(config_file)
+                
+                if ('DISPLAY' in config and 
+                    config.getboolean('DISPLAY', 'auto_cargar', fallback=False)):
+                    # Auto-cargar la capa WFS
+                    self.runWFSLoad()
+                    
+        except Exception as e:
+            print(f"Error en auto-carga WFS: {e}")     
         
