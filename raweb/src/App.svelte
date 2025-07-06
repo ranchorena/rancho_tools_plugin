@@ -133,8 +133,8 @@
         new TileLayer({
           source: new OSM() // Capa base de OpenStreetMap
         }),
-        pedidosLayer,
         clientesLayer,
+        pedidosLayer, // Los pedidos ahora van encima de los clientes
         markerLayer // Capa para los marcadores (debe estar encima de las WMS)
       ],
       view: new View({
@@ -200,7 +200,7 @@
     console.log("Buscando dirección:", direccion);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/buscar_direccion`, { // URL desde config.js
+      const response = await fetch(`${API_BASE_URL}/buscar_direccion`, { // Endpoint sin /api al inicio
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

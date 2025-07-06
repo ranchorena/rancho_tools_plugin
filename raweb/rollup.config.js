@@ -11,7 +11,7 @@ import dotenv from 'dotenv';
 const production = !process.env.ROLLUP_WATCH;
 
 // Cargar variables de entorno desde .env
-dotenv.config();
+dotenv.config({ path: '.env' });
 
 function serve() {
 	let server;
@@ -56,21 +56,11 @@ export default {
 		// Reemplazar variables de entorno en el código
 		replace({
 			preventAssignment: true,
-			values: (()=>{
-				let geoserverUrlValue = process.env.GEOSERVER_URL || 'http://localhost:8087/geoserver/wms';
-				// Remove leading/trailing quotes if they exist, to prevent double quoting by JSON.stringify
-				if (typeof geoserverUrlValue === 'string' && geoserverUrlValue.length > 1 && geoserverUrlValue.startsWith('"') && geoserverUrlValue.endsWith('"')) {
-					geoserverUrlValue = geoserverUrlValue.substring(1, geoserverUrlValue.length - 1);
-				}
-				let apiUrlValue = process.env.API_URL || 'http://localhost:7070/api';
-				if (typeof apiUrlValue === 'string' && apiUrlValue.length > 1 && apiUrlValue.startsWith('"') && apiUrlValue.endsWith('"')) {
-					apiUrlValue = apiUrlValue.substring(1, apiUrlValue.length - 1);
-				}
-				return {
-					'__API_URL__': JSON.stringify(apiUrlValue),
-					'__GEOSERVER_URL__': JSON.stringify(geoserverUrlValue)
-				};
-			})()
+			values: {
+				// Usar las variables de entorno directamente, ya están en el formato correcto
+				'__API_URL__': process.env.API_URL || "http://localhost:5000",
+				'__GEOSERVER_URL__': process.env.GEOSERVER_URL || "http://localhost:8087/geoserver/wms"
+			}
 		}),
 
 		// If you have external dependencies installed from

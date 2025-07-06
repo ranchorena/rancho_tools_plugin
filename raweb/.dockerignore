@@ -19,6 +19,7 @@ npm-debug.log.*
 # Archivos de entorno local (no deberían estar en el contexto de build de todas formas)
 .env
 .env.*
+!*.env.example
 
 # Archivos específicos del OS o IDE
 .DS_Store
