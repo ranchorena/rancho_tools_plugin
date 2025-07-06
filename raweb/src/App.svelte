@@ -15,7 +15,7 @@
   import VectorSource from 'ol/source/Vector.js';
   import {bbox as bboxStrategy} from 'ol/loadingstrategy.js'; // Estrategia BBOX para WFS
   import GeoJSON from 'ol/format/GeoJSON.js'; // Formato WFS
-  import {Style, Circle, Fill, Stroke} from 'ol/style.js'; // Estilos para WFS
+  import {Style, Circle, Fill, Stroke} from 'ol/style.js'; // Estilos para WFS y marcadores
   import Icon from 'ol/style/Icon.js'; // Para el markerLayer
 
   // Importar configuración
@@ -27,8 +27,8 @@
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
-  let tooltipElement; // Para el tooltip de click
-  let tooltipOverlay; // Para el tooltip de click
+  let tooltipElement; // Para el tooltip de click (mantener para evitar errores)
+  let tooltipOverlay; // Para el tooltip de click (mantener para evitar errores)
   let map;
   let markerSource;
 
@@ -39,9 +39,9 @@
   let osmLayer;
   let satelliteLayer;
 
-  // Variables para las capas Vectoriales/WMS
-  let pedidosLayer; // Vuelve a ser VectorLayer con WFS
-  let clientesLayer; // Será ImageLayer
+  // Variables para las capas
+  let pedidosLayer; // VectorLayer con WFS
+  let clientesLayer; // ImageLayer con WMS
 
   // Estado para los checkboxes del Layer Switcher
   let baseLayerType = 'osm'; // 'osm' o 'satellite'
@@ -68,7 +68,7 @@
   let globalNotificationMessage = "";
   let globalNotificationType = "success";
 
-  // Variables para el tooltip de click
+  // Variables para el tooltip de click (para WFS de pedidos)
   let showPedidoTooltip = false;
   let selectedPedidoData = null;
   let tooltipPosition = null;
@@ -88,11 +88,7 @@
   function refreshPedidosLayerMap() {
     if (pedidosLayer) {
       const source = pedidosLayer.getSource();
-      if (source && typeof source.refresh === 'function') {
-        source.refresh();
-        console.log("Capa Pedidos WFS refrescada");
-      } else if (source && typeof source.clear === 'function') {
-        // Para capas WFS Vector, limpiar y volver a cargar
+      if (source && typeof source.clear === 'function') {
         source.clear();
         console.log("Capa Pedidos WFS recargada");
       }
@@ -149,7 +145,7 @@
       visible: showSatelliteLayer
     });
 
-    // Definición de la capa de Pedidos (WFS) - Vuelve a ser WFS
+    // Definición de la capa de Pedidos (WFS) - Restaurado a WFS como debe ser
     pedidosLayer = new VectorLayer({
       source: new VectorSource({
         url: function(extent) {
@@ -202,7 +198,7 @@
       overlays: [tooltipOverlay] // Agregar el tooltip overlay
     });
 
-    // Evento de click para mostrar información del pedido
+    // Evento de click para mostrar información del pedido (WFS)
     map.on('singleclick', function(evt) {
       const features = [];
       
