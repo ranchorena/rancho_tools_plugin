@@ -5,7 +5,6 @@
   import TileLayer from 'ol/layer/Tile.js';
   import OSM from 'ol/source/OSM.js';
   import XYZ from 'ol/source/XYZ.js'; // Para Google Satellite
-  import Overlay from 'ol/Overlay.js'; // Para el tooltip de click
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
@@ -15,6 +14,7 @@
   import GeoJSON from 'ol/format/GeoJSON.js'; // Formato WFS
   import {Style, Circle, Fill, Stroke} from 'ol/style.js'; // Estilos para WFS y marcadores
   import Icon from 'ol/style/Icon.js'; // Para el markerLayer
+  import {defaults as defaultControls} from 'ol/control.js'; // Para controles personalizados
 
   // Importar configuración
   import { API_BASE_URL, INITIAL_COORDINATES, GEOSERVER_BASE_URL } from './config.js';
@@ -141,8 +141,7 @@
       })
     });
 
-    // Ya no usamos overlay, el tooltip se maneja con CSS puro
-    // tooltipOverlay se mantiene para evitar errores pero no se usa
+    // Tooltip se maneja con CSS puro, sin overlay de OpenLayers
 
     // Definición de las capas base
     osmLayer = new TileLayer({
@@ -208,6 +207,11 @@
 
     map = new Map({
       target: mapElement,
+      controls: defaultControls({
+        rotate: false, // Desactivar el control de rotación
+        attribution: true,
+        zoom: true
+      }),
       layers: [
         osmLayer, // Capa base OSM
         satelliteLayer, // Capa base Satelital
@@ -219,7 +223,6 @@
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),
         zoom: 15 // Nivel de zoom inicial
       })
-      // Ya no usamos overlays
     });
 
     // Evento de click para mostrar información de pedidos y clientes (WFS)
@@ -941,14 +944,13 @@
 
   /* Controles de OpenLayers - mantener pequeños y no responsivos */
   :global(.ol-zoom),
-  :global(.ol-rotate),
   :global(.ol-attribution) {
     position: absolute;
   }
 
   :global(.ol-zoom) {
     top: 0.5rem;
-    left: 0.5rem; /* Volver a la posición original, toolbar ahora está a la derecha */
+    left: 0.5rem;
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.8);
@@ -956,8 +958,7 @@
     overflow: hidden;
   }
 
-  :global(.ol-zoom button),
-  :global(.ol-rotate button) {
+  :global(.ol-zoom button) {
     width: 30px !important;
     height: 30px !important;
     min-height: 30px !important;
@@ -976,24 +977,15 @@
     border-radius: 0 !important;
   }
 
-  :global(.ol-zoom button:hover),
-  :global(.ol-rotate button:hover) {
+  :global(.ol-zoom button:hover) {
     background: rgba(255, 255, 255, 0.9) !important;
     transform: none !important;
   }
 
-  :global(.ol-zoom button:focus),
-  :global(.ol-rotate button:focus) {
+  :global(.ol-zoom button:focus) {
     outline: 2px solid #3b82f6 !important;
     outline-offset: -2px !important;
     box-shadow: none !important;
-  }
-
-  :global(.ol-rotate) {
-    top: 0.5rem;
-    left: 3rem; /* Volver a la posición original junto al zoom */
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 4px;
   }
 
   :global(.ol-attribution) {
@@ -1029,16 +1021,10 @@
   @media (max-width: 768px) {
     :global(.ol-zoom) {
       top: 0.25rem;
-      left: 0.25rem; /* En móviles, volver a la posición original */
+      left: 0.25rem;
     }
 
-    :global(.ol-rotate) {
-      top: 0.25rem;
-      left: 2.25rem; /* En móviles, volver a la posición original */
-    }
-
-    :global(.ol-zoom button),
-    :global(.ol-rotate button) {
+    :global(.ol-zoom button) {
       width: 28px !important;
       height: 28px !important;
       min-height: 28px !important;
