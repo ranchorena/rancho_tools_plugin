@@ -33,7 +33,7 @@ WORKDIR /app
 
 COPY --from=builder /app/public /app/public
 COPY package*.json ./
-COPY rollup.config.js ./ # Necesario para sirv
+# COPY rollup.config.js ./ # Comentado: rollup.config.js no es necesario para servir con sirv en producción
 
 # Instalar dependencias de producción (sirv-cli)
 RUN npm install --omit=dev
