@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 echo "Restaurando generalbelgrano.dump a la base de datos '$POSTGRES_DB' con el usuario '$POSTGRES_USER'..."
