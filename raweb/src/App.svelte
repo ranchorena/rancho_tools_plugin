@@ -177,7 +177,7 @@
     // Se asigna a la variable global para que el watcher pueda accederla
     clientesLayer = new ImageLayer({
       source: new ImageWMS({
-        url: GEOSERVER_BASE_URL, // Usar la variable importada
+        url: GEOSERVER_BASE_URL + '/wms', // Usar la variable importada
         params: {
           'LAYERS': 'GeneralBelgrano:Clientes',
           'VERSION': '1.1.0',
