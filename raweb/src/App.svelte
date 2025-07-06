@@ -7,17 +7,15 @@
   import ImageWMS from 'ol/source/ImageWMS.js'; // Para capa de clientes (WMS)
   import OSM from 'ol/source/OSM.js';
   import XYZ from 'ol/source/XYZ.js'; // Para Google Satellite
-  import Overlay from 'ol/Overlay.js'; // Para el tooltip de hover
+  import Overlay from 'ol/Overlay.js'; // Para el tooltip de click
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
   import VectorLayer from 'ol/layer/Vector.js';
   import VectorSource from 'ol/source/Vector.js';
-  // Remover imports de WFS ya que no los necesitamos
-  // import {bbox as bboxStrategy} from 'ol/loadingstrategy.js';
-  // import GeoJSON from 'ol/format/GeoJSON.js';
-  // import {Style, Circle, Fill, Stroke} from 'ol/style.js';
-  import {Style} from 'ol/style.js'; // Para el markerLayer
+  import {bbox as bboxStrategy} from 'ol/loadingstrategy.js'; // Estrategia BBOX para WFS
+  import GeoJSON from 'ol/format/GeoJSON.js'; // Formato WFS
+  import {Style, Circle, Fill, Stroke} from 'ol/style.js'; // Estilos para WFS
   import Icon from 'ol/style/Icon.js'; // Para el markerLayer
 
   // Importar configuración
@@ -29,8 +27,8 @@
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
-  let tooltipElement; // Para el tooltip de hover
-  let tooltipOverlay; // Para el tooltip de hover
+  let tooltipElement; // Para el tooltip de click
+  let tooltipOverlay; // Para el tooltip de click
   let map;
   let markerSource;
 
@@ -42,7 +40,7 @@
   let satelliteLayer;
 
   // Variables para las capas Vectoriales/WMS
-  let pedidosLayer; // Ahora será ImageLayer con WMS
+  let pedidosLayer; // Vuelve a ser VectorLayer con WFS
   let clientesLayer; // Será ImageLayer
 
   // Estado para los checkboxes del Layer Switcher
@@ -70,9 +68,10 @@
   let globalNotificationMessage = "";
   let globalNotificationType = "success";
 
-  // Variables para el diálogo de información de pedido - Removido ya que WMS no permite click en features individuales
-  // let showPedidoInfoDialog = false;
-  // let selectedPedidoInfo = null;
+  // Variables para el tooltip de click
+  let showPedidoTooltip = false;
+  let selectedPedidoData = null;
+  let tooltipPosition = null;
 
   function handleShowGlobalNotification(event) {
     globalNotificationMessage = event.detail.message;
@@ -91,11 +90,11 @@
       const source = pedidosLayer.getSource();
       if (source && typeof source.refresh === 'function') {
         source.refresh();
-        console.log("Capa Pedidos WMS refrescada");
-      } else {
-        // Para capas WMS, actualizar los parámetros para forzar recarga
-        source.updateParams({'_dc': Date.now()});
-        console.log("Capa Pedidos WMS recargada");
+        console.log("Capa Pedidos WFS refrescada");
+      } else if (source && typeof source.clear === 'function') {
+        // Para capas WFS Vector, limpiar y volver a cargar
+        source.clear();
+        console.log("Capa Pedidos WFS recargada");
       }
     }
   }
@@ -126,13 +125,14 @@
       })
     });
 
-    // Crear el Overlay para el tooltip de hover
+    // Crear el Overlay para el tooltip de click
     tooltipOverlay = new Overlay({
       element: tooltipElement,
-      offset: [10, 0],
-      positioning: 'bottom-left',
-      stopEvent: false,
-      insertFirst: false,
+      autoPan: {
+        animation: {
+          duration: 250,
+        },
+      },
     });
 
     // Definición de las capas base
@@ -149,32 +149,41 @@
       visible: showSatelliteLayer
     });
 
-    // Definición de la capa de Pedidos (WMS) - Cambiado de WFS a WMS
-    pedidosLayer = new ImageLayer({
-      source: new ImageWMS({
-        url: GEOSERVER_BASE_URL + '/wms',
-        params: {
-          'LAYERS': 'GeneralBelgrano:Pedidos',
-          'VERSION': '1.1.0',
+    // Definición de la capa de Pedidos (WFS) - Vuelve a ser WFS
+    pedidosLayer = new VectorLayer({
+      source: new VectorSource({
+        url: function(extent) {
+          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
         },
-        serverType: 'geoserver',
+        format: new GeoJSON(),
+        strategy: bboxStrategy
+      }),
+      style: new Style({
+        image: new Circle({
+          radius: 6,
+          fill: new Fill({
+            color: '#ff6b6b'
+          }),
+          stroke: new Stroke({
+            color: '#ffffff',
+            width: 2
+          })
+        })
       }),
       visible: showPedidosLayer
     });
 
     // Definición de la capa de Clientes (WMS)
-    // Se asigna a la variable global para que el watcher pueda accederla
     clientesLayer = new ImageLayer({
       source: new ImageWMS({
-        url: GEOSERVER_BASE_URL + '/wms', // Usar la variable importada
+        url: GEOSERVER_BASE_URL + '/wms',
         params: {
           'LAYERS': 'GeneralBelgrano:Clientes',
           'VERSION': '1.1.0',
-          // 'STYLES': 'geomPoint' // Revertido: Se usará el estilo por defecto del servidor
         },
         serverType: 'geoserver',
       }),
-      visible: showClientesLayer // Usar la variable de estado
+      visible: showClientesLayer
     });
 
     map = new Map({
@@ -193,66 +202,42 @@
       overlays: [tooltipOverlay] // Agregar el tooltip overlay
     });
 
-    // Evento para mostrar información básica al hacer hover sobre pedidos
-    map.on('pointermove', function(evt) {
-      const pixel = evt.pixel;
-      const coordinate = evt.coordinate;
+    // Evento de click para mostrar información del pedido
+    map.on('singleclick', function(evt) {
+      const features = [];
       
-      // Solo procesar si la capa de pedidos está visible
-      if (!showPedidosLayer) {
-        tooltipElement.style.display = 'none';
-        return;
-      }
-
-      // Hacer GetFeatureInfo request para obtener información del pedido
-      const viewResolution = map.getView().getResolution();
-      const url = pedidosLayer.getSource().getFeatureInfoUrl(
-        coordinate,
-        viewResolution,
-        'EPSG:3857',
-        {
-          'INFO_FORMAT': 'application/json',
-          'FEATURE_COUNT': 1
+      // Buscar features de pedidos en el pixel clickeado
+      map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
+        if (layer === pedidosLayer) {
+          features.push(feature);
         }
-      );
+      });
 
-      if (url) {
-        fetch(url)
-          .then(response => response.json())
-          .then(data => {
-            if (data.features && data.features.length > 0) {
-              const feature = data.features[0];
-              const properties = feature.properties;
-              
-              // Mostrar solo Id, Nombre y Dirección
-              const id = properties.id_pedido || properties.id || 'N/A';
-              const nombre = properties.nombre || 'N/A';
-              const direccion = properties.direccion || 'N/A';
-              
-              tooltipElement.innerHTML = `
-                <div><strong>ID:</strong> ${id}</div>
-                <div><strong>Nombre:</strong> ${nombre}</div>
-                <div><strong>Dirección:</strong> ${direccion}</div>
-              `;
-              
-              tooltipOverlay.setPosition(coordinate);
-              tooltipElement.style.display = 'block';
-            } else {
-              tooltipElement.style.display = 'none';
-            }
-          })
-          .catch(error => {
-            console.error('Error al obtener información del pedido:', error);
-            tooltipElement.style.display = 'none';
-          });
+      if (features.length > 0) {
+        // Mostrar información del pedido
+        const feature = features[0];
+        const properties = feature.getProperties();
+        
+        selectedPedidoData = {
+          id: properties.id_pedido || properties.id || 'N/A',
+          nombre: properties.nombre || 'N/A',
+          direccion: properties.direccion || 'N/A',
+          cantidad: properties.cantidad || 'N/A',
+          fecha: properties.fecha || 'N/A',
+          telefono: properties.telefono || 'N/A',
+          horario: properties.horario || 'N/A',
+          observaciones: properties.observaciones || 'N/A'
+        };
+        
+        tooltipPosition = evt.coordinate;
+        showPedidoTooltip = true;
+        tooltipOverlay.setPosition(evt.coordinate);
       } else {
-        tooltipElement.style.display = 'none';
+        // Click fuera de cualquier pedido - cerrar tooltip
+        closePedidoTooltip();
       }
     });
 
-    // Remover el evento de click ya que WMS no permite hacer click en features individuales
-    // El diálogo de información completa se podría implementar de otra manera si es necesario
-    
     // Limpiar el mapa al desmontar el componente
     return () => {
       if (map) {
@@ -359,9 +344,13 @@
     markerSource.addFeature(marker);
   }
 
-  // Funciones del diálogo de información de pedido removidas ya que WMS no permite click en features individuales
-  // function showPedidoInfo(properties) { ... }
-  // function closePedidoInfoDialog() { ... }
+  function closePedidoTooltip() {
+    showPedidoTooltip = false;
+    selectedPedidoData = null;
+    tooltipPosition = null;
+  }
+
+  // Funciones relacionadas con el tooltip de pedidos se manejan con closePedidoTooltip()
 
 </script>
 
@@ -481,13 +470,53 @@
     />
   {/if}
 
-  <!-- Diálogo de información del pedido removido ya que WMS no permite click en features individuales -->
-  <!-- La información básica ahora se muestra en el tooltip de hover -->
+  <!-- Tooltip de información del pedido -->
+  {#if showPedidoTooltip && selectedPedidoData}
+    <div bind:this={tooltipElement} class="pedido-tooltip" on:click|stopPropagation>
+      <div class="pedido-tooltip-header">
+        <h4>Información del Pedido</h4>
+        <button class="tooltip-close-btn" on:click={closePedidoTooltip}>×</button>
+      </div>
+      <div class="pedido-tooltip-content">
+        <div class="pedido-tooltip-row">
+          <span class="label">ID:</span>
+          <span class="value">{selectedPedidoData.id}</span>
+        </div>
+        <div class="pedido-tooltip-row">
+          <span class="label">Nombre:</span>
+          <span class="value">{selectedPedidoData.nombre}</span>
+        </div>
+        <div class="pedido-tooltip-row">
+          <span class="label">Dirección:</span>
+          <span class="value">{selectedPedidoData.direccion}</span>
+        </div>
+        <div class="pedido-tooltip-row">
+          <span class="label">Cantidad:</span>
+          <span class="value">{selectedPedidoData.cantidad}</span>
+        </div>
+        <div class="pedido-tooltip-row">
+          <span class="label">Fecha:</span>
+          <span class="value">{selectedPedidoData.fecha}</span>
+        </div>
+        <div class="pedido-tooltip-row">
+          <span class="label">Teléfono:</span>
+          <span class="value">{selectedPedidoData.telefono}</span>
+        </div>
+        <div class="pedido-tooltip-row">
+          <span class="label">Horario:</span>
+          <span class="value">{selectedPedidoData.horario}</span>
+        </div>
+        <div class="pedido-tooltip-row">
+          <span class="label">Observaciones:</span>
+          <span class="value">{selectedPedidoData.observaciones}</span>
+        </div>
+      </div>
+    </div>
+  {:else}
+    <div bind:this={tooltipElement} style="display: none;"></div>
+  {/if}
 
   <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
-
-  <!-- Elemento para el Tooltip -->
-  <div bind:this={tooltipElement} class="ol-tooltip-hover"></div>
 </main>
 
 <style>
@@ -1015,33 +1044,6 @@
     }
   }
 
-  /* Estilos para el tooltip de hover */
-  .ol-tooltip-hover {
-    position: absolute;
-    background-color: rgba(255, 255, 255, 0.95);
-    color: #333;
-    border: 1px solid #ccc;
-    padding: 10px;
-    border-radius: 6px;
-    font-size: 0.85em;
-    pointer-events: none;
-    display: none;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    z-index: 1010;
-    min-width: 200px;
-    backdrop-filter: blur(5px);
-  }
-
-  .ol-tooltip-hover div {
-    margin: 2px 0;
-    line-height: 1.3;
-  }
-
-  .ol-tooltip-hover strong {
-    color: #495057;
-    font-weight: 600;
-  }
-
   /* Estilos para el tooltip original (mantenido por compatibilidad) */
   .ol-tooltip {
     position: absolute;
@@ -1058,6 +1060,76 @@
     z-index: 1010;
   }
 
-  /* Estilos para el diálogo de información de pedido removidos ya que WMS no permite click en features individuales */
-  /* La información básica ahora se muestra en el tooltip de hover */
+  /* Estilos para el tooltip de información del pedido */
+  .pedido-tooltip {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #333;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    pointer-events: auto; /* Permitir que el tooltip pueda ser clickeado */
+    display: block; /* Mostrar siempre */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 1010;
+    min-width: 250px;
+    backdrop-filter: blur(5px);
+  }
+
+  .pedido-tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  .pedido-tooltip-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #495057;
+  }
+
+  .tooltip-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  }
+
+  .tooltip-close-btn:hover {
+    background: #f8f9fa;
+    color: #495057;
+  }
+
+  .pedido-tooltip-content {
+    font-size: 0.9em;
+  }
+
+  .pedido-tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.3rem;
+  }
+
+  .label {
+    font-weight: 500;
+    color: #6c757d;
+  }
+
+  .value {
+    font-weight: 600;
+    color: #495057;
+  }
 </style>
