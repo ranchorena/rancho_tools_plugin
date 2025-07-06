@@ -21,7 +21,7 @@ services:
       # aunque para Svelte/Rollup, los valores importantes son los usados en tiempo de BUILD (ver build.args).
       # Podrían ser útiles si el entrypoint del contenedor las usara para alguna tarea (no es el caso aquí).
       - API_URL=${API_URL:-http://backend:5000}
-      - GEOSERVER_URL=${GEOSERVER_URL:-http://localhost:8087/geoserver} # Esta URL es para el cliente. Si GeoServer está en Docker, sería http://geoserver:8080/...
+      - GEOSERVER_URL=${GEOSERVER_URL:-http://localhost:8086/geoserver} # Esta URL es para el cliente. Si GeoServer está en Docker, sería http://geoserver:8080/...
 
   backend:
     build:
