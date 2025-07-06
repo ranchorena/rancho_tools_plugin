@@ -42,6 +42,9 @@
   let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
   let showClientesLayer = false;  // Por defecto: Clientes APAGADA
 
+  // Estado para el menú móvil
+  let mobileMenuOpen = false;
+
   // Reacciones para actualizar la visibilidad de las capas cuando cambian los checkboxes
   // Esto seguirá funcionando igual para VectorLayer
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
@@ -71,6 +74,14 @@
         console.log("Capa Pedidos refrescada");
       }
     }
+  }
+
+  function toggleMobileMenu() {
+    mobileMenuOpen = !mobileMenuOpen;
+  }
+
+  function closeMobileMenu() {
+    mobileMenuOpen = false;
   }
 
   onMount(() => {
@@ -175,11 +186,13 @@
   function openBuscarDireccion() {
     showBuscarDireccionDialog = true;
     showBuscarClienteDialog = false; // Asegurar que el otro diálogo esté cerrado
+    closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
   function openBuscarCliente() {
     showBuscarClienteDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que el otro diálogo esté cerrado
+    closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
   function closeDialogs() {
@@ -191,6 +204,11 @@
         map.updateSize();
       }, 0);
     }
+  }
+
+  function handlePedidosAction() {
+    alert('Funcionalidad "Pedidos" no implementada.');
+    closeMobileMenu();
   }
 
   async function handleBuscarDireccion(event) {
@@ -250,12 +268,25 @@
 
 <main>
   <nav class="navbar">
-    <div class="nav-buttons">
-      <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>Buscar Dirección</button>
-      <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>Buscar Cliente</button>
-      <button on:click={() => alert('Funcionalidad "Pedidos" no implementada.')}>Pedidos</button>
+    <div class="navbar-brand">
+      <h1>RAWEB</h1>
     </div>
-    <div class="layer-switcher">
+
+    <!-- Menú desktop -->
+    <div class="nav-buttons d-mobile-none">
+      <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>
+        📍 Buscar Dirección
+      </button>
+      <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
+        👤 Buscar Cliente
+      </button>
+      <button on:click={handlePedidosAction}>
+        📦 Pedidos
+      </button>
+    </div>
+
+    <!-- Layer switcher desktop -->
+    <div class="layer-switcher d-mobile-none">
       <label>
         <input type="checkbox" bind:checked={showClientesLayer} /> Clientes
       </label>
@@ -263,7 +294,48 @@
         <input type="checkbox" bind:checked={showPedidosLayer} /> Pedidos
       </label>
     </div>
+
+    <!-- Botón hamburguesa para móviles -->
+    <button class="mobile-menu-toggle d-mobile-block" on:click={toggleMobileMenu} aria-label="Menú">
+      <span class="hamburger-line" class:active={mobileMenuOpen}></span>
+      <span class="hamburger-line" class:active={mobileMenuOpen}></span>
+      <span class="hamburger-line" class:active={mobileMenuOpen}></span>
+    </button>
   </nav>
+
+  <!-- Menú móvil desplegable -->
+  {#if mobileMenuOpen}
+    <div class="mobile-menu d-mobile-block" class:open={mobileMenuOpen}>
+      <div class="mobile-menu-content">
+        <div class="mobile-nav-buttons">
+          <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>
+            📍 Buscar Dirección
+          </button>
+          <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
+            👤 Buscar Cliente
+          </button>
+          <button on:click={handlePedidosAction}>
+            📦 Pedidos
+          </button>
+        </div>
+        
+        <div class="mobile-layer-switcher">
+          <h3>Capas del Mapa</h3>
+          <label>
+            <input type="checkbox" bind:checked={showClientesLayer} /> Clientes
+          </label>
+          <label>
+            <input type="checkbox" bind:checked={showPedidosLayer} /> Pedidos
+          </label>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Overlay para cerrar menú móvil -->
+  {#if mobileMenuOpen}
+    <div class="mobile-menu-overlay" on:click={closeMobileMenu}></div>
+  {/if}
 
   <div class="map-container" bind:this={mapElement}>
     <!-- El mapa siempre está presente en el DOM -->
@@ -291,7 +363,7 @@
 </main>
 
 <style>
-  /* Estilos existentes... */
+  /* Estilos responsive base */
   :global(body, html) {
     margin: 0;
     padding: 0;
@@ -303,74 +375,309 @@
   main {
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Ocupa toda la altura de la ventana */
+    height: 100vh;
+    overflow: hidden;
   }
 
+  /* Navbar responsive */
   .navbar {
-    background-color: #f0f0f0;
-    padding: 10px;
-    display: flex; /* Cambiado para flex layout */
-    justify-content: space-between; /* Espacio entre botones y layer switcher */
-    align-items: center; /* Alineación vertical */
+    background-color: #f8f9fa;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    z-index: 1000; /* Asegura que esté sobre el mapa */
+    z-index: 1000;
+    position: relative;
+    min-height: 60px;
   }
 
-  .nav-buttons button { /* Estilos específicos para los botones de navegación */
-    margin-right: 10px; /* Margen solo a la derecha para espaciar botones */
-    /* Quitar margen izquierdo si ya no es necesario por flex */
-  }
-   .nav-buttons button:last-child {
-    margin-right: 0; /* El último botón no necesita margen a la derecha */
+  .navbar-brand h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #007bff;
+    font-weight: 600;
   }
 
+  /* Botones de navegación desktop */
+  .nav-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
 
-  /* Estilos generales de botón dentro de navbar, si se quieren compartir */
-  .navbar button {
-    /* margin: 0 10px; No, usar el de .nav-buttons o .layer-switcher */
-    padding: 8px 15px;
+  .nav-buttons button {
+    margin: 0;
+    padding: 0.5rem 1rem;
     cursor: pointer;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
     background-color: #fff;
+    color: #495057;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
   }
 
-  .navbar button:hover {
-    background-color: #e9e9e9;
-  }
-  .navbar button.active {
-    background-color: #d1d5db; /* Un color para indicar activo */
-    font-weight: bold;
+  .nav-buttons button:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    transform: translateY(-1px);
   }
 
+  .nav-buttons button.active {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #fff;
+  }
+
+  /* Layer switcher desktop */
   .layer-switcher {
     display: flex;
     align-items: center;
-    gap: 15px; /* Espacio entre los checkboxes */
-    padding-right: 10px; /* Un poco de espacio al final de la navbar */
+    gap: 1rem;
+    font-size: 0.875rem;
   }
 
   .layer-switcher label {
     display: flex;
     align-items: center;
     cursor: pointer;
-    font-size: 0.9em;
+    margin: 0;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+
+  .layer-switcher label:hover {
+    background-color: rgba(0,123,255,0.1);
   }
 
   .layer-switcher input[type="checkbox"] {
-    margin-right: 5px;
+    margin-right: 0.5rem;
+    margin-bottom: 0;
+    width: auto;
   }
 
-  .map-container {
-    flex-grow: 1; /* El mapa ocupa el espacio restante */
+  /* Botón hamburguesa móvil */
+  .mobile-menu-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+  }
+
+  .hamburger-line {
+    width: 24px;
+    height: 3px;
+    background-color: #495057;
+    margin: 2px 0;
+    transition: all 0.3s ease;
+    border-radius: 1.5px;
+  }
+
+  .hamburger-line.active:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+
+  .hamburger-line.active:nth-child(2) {
+    opacity: 0;
+  }
+
+  .hamburger-line.active:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+  }
+
+  /* Menú móvil */
+  .mobile-menu {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    border-bottom: 1px solid #dee2e6;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 999;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .mobile-menu.open {
+    transform: translateY(0);
+  }
+
+  .mobile-menu-content {
+    padding: 1rem;
+  }
+
+  .mobile-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 998;
+  }
+
+  /* Botones navegación móvil */
+  .mobile-nav-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .mobile-nav-buttons button {
     width: 100%;
-    position: relative; /* Necesario para que el mapa se muestre correctamente */
+    padding: 1rem;
+    font-size: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #495057;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-align: left;
   }
 
-  /* Estilos para OpenLayers (importante para que se vea el mapa) */
+  .mobile-nav-buttons button:hover,
+  .mobile-nav-buttons button:focus {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+  }
+
+  .mobile-nav-buttons button.active {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #fff;
+  }
+
+  /* Layer switcher móvil */
+  .mobile-layer-switcher {
+    border-top: 1px solid #dee2e6;
+    padding-top: 1rem;
+  }
+
+  .mobile-layer-switcher h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: #495057;
+    font-weight: 600;
+  }
+
+  .mobile-layer-switcher label {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .mobile-layer-switcher label:hover {
+    background-color: #f8f9fa;
+  }
+
+  .mobile-layer-switcher input[type="checkbox"] {
+    margin-right: 0.75rem;
+    margin-bottom: 0;
+    width: auto;
+    transform: scale(1.2);
+  }
+
+  /* Contenedor del mapa */
+  .map-container {
+    flex-grow: 1;
+    width: 100%;
+    position: relative;
+    min-height: 0; /* Importante para flex */
+  }
+
+  /* Estilos para OpenLayers */
   :global(.ol-viewport) {
     width: 100%;
     height: 100%;
+  }
+
+  :global(.ol-zoom) {
+    top: 0.5rem;
+    left: 0.5rem;
+  }
+
+  :global(.ol-attribution) {
+    bottom: 0.25rem;
+    right: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  /* Media queries responsivas */
+  @media (max-width: 768px) {
+    .navbar {
+      padding: 0.5rem 1rem;
+      min-height: 56px;
+    }
+
+    .navbar-brand h1 {
+      font-size: 1.25rem;
+    }
+
+    .mobile-menu-toggle {
+      display: flex;
+    }
+
+    .mobile-menu {
+      top: 56px;
+    }
+
+    /* Ajustes para pantallas muy pequeñas */
+    @media (max-width: 480px) {
+      .navbar {
+        padding: 0.5rem;
+      }
+
+      .navbar-brand h1 {
+        font-size: 1.1rem;
+      }
+
+      .mobile-menu-content {
+        padding: 0.75rem;
+      }
+
+      .mobile-nav-buttons button {
+        padding: 0.875rem;
+      }
+    }
+  }
+
+  /* Landscape móvil */
+  @media (max-width: 768px) and (orientation: landscape) {
+    .mobile-menu {
+      max-height: calc(100vh - 56px);
+      overflow-y: auto;
+    }
+  }
+
+  /* Tablet */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .nav-buttons button {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    .layer-switcher {
+      gap: 0.75rem;
+      font-size: 0.8rem;
+    }
   }
 
   /* Estilos para el tooltip, basados en ejemplos de OpenLayers */
@@ -382,10 +689,10 @@
     padding: 8px;
     border-radius: 4px;
     font-size: 0.9em;
-    pointer-events: none; /* El tooltip no debe capturar eventos del mouse */
-    display: none; /* Oculto por defecto */
-    white-space: nowrap; /* Evitar que el contenido se divida en múltiples líneas si es corto */
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 1010; /* Encima del mapa pero debajo de los diálogos */
+    z-index: 1010;
   }
 </style>
