@@ -1,0 +1,28 @@
+# Ignorar dependencias de Node, se instalarán en la imagen
+node_modules
+
+# Ignorar logs de npm
+npm-debug.log
+npm-debug.log.*
+
+# Ignorar el propio Dockerfile si está en el contexto y no se quiere copiar
+# Dockerfile
+
+# Artefactos de build locales (si los hubiera y no estuvieran en public/)
+# build/
+# dist/
+
+# Archivos de Git
+.git
+.gitignore
+
+# Archivos de entorno local (no deberían estar en el contexto de build de todas formas)
+.env
+.env.*
+
+# Archivos específicos del OS o IDE
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

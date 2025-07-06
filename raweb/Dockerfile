@@ -15,7 +15,7 @@ ENV GEOSERVER_URL=${GEOSERVER_URL}
 # Copiar los archivos de la aplicación Raweb
 COPY package*.json ./
 COPY rollup.config.js ./
-COPY svelte.config.js ./
+# COPY svelte.config.js ./ # Archivo no encontrado en el proyecto, comentado/eliminado
 COPY public public/
 COPY src src/
 COPY scripts scripts/
