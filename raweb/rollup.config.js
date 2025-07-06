@@ -11,7 +11,7 @@ import dotenv from 'dotenv';
 const production = !process.env.ROLLUP_WATCH;
 
 // Cargar variables de entorno desde .env
-dotenv.config();
+dotenv.config({ path: '.env' });
 
 function serve() {
 	let server;
@@ -57,8 +57,9 @@ export default {
 		replace({
 			preventAssignment: true,
 			values: {
-				'__API_URL__': JSON.stringify(process.env.API_URL || 'http://localhost:7070/api'), // Valor por defecto si no está definida
-				'__GEOSERVER_URL__': JSON.stringify(process.env.GEOSERVER_URL || 'http://localhost:8087/geoserver/wms') // Valor por defecto
+				// Usar las variables de entorno directamente, ya están en el formato correcto
+				'__API_URL__': process.env.API_URL || "http://localhost:5000",
+				'__GEOSERVER_URL__': process.env.GEOSERVER_URL || "http://localhost:8087/geoserver/wms"
 			}
 		}),
 
