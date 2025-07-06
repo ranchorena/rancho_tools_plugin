@@ -367,26 +367,26 @@
         
         <div class="layer-toolbar-content">
           <div class="layer-group">
-            <div class="layer-group-title">Capas Base</div>
+            <div class="layer-group-title">Capas de Datos</div>
             <label class="layer-item">
-              <input type="radio" bind:group={baseLayerType} value="osm" />
-              <span class="layer-name">🗺️ OpenStreetMap</span>
+              <input type="checkbox" bind:checked={showClientesLayer} />
+              <span class="layer-name">� Clientes</span>
             </label>
             <label class="layer-item">
-              <input type="radio" bind:group={baseLayerType} value="satellite" />
-              <span class="layer-name">🛰️ Satelital</span>
+              <input type="checkbox" bind:checked={showPedidosLayer} />
+              <span class="layer-name">� Pedidos</span>
             </label>
           </div>
           
           <div class="layer-group">
-            <div class="layer-group-title">Capas de Datos</div>
+            <div class="layer-group-title">Capas Base</div>
             <label class="layer-item">
-              <input type="checkbox" bind:checked={showClientesLayer} />
-              <span class="layer-name">👤 Clientes</span>
+              <input type="radio" bind:group={baseLayerType} value="osm" />
+              <span class="layer-name">�️ OpenStreetMap</span>
             </label>
             <label class="layer-item">
-              <input type="checkbox" bind:checked={showPedidosLayer} />
-              <span class="layer-name">📦 Pedidos</span>
+              <input type="radio" bind:group={baseLayerType} value="satellite" />
+              <span class="layer-name">�️ Satelital</span>
             </label>
           </div>
         </div>
@@ -493,7 +493,7 @@
   .layer-toolbar {
     position: absolute;
     top: 1rem;
-    left: 1rem;
+    right: 1rem;
     width: 250px;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
@@ -600,7 +600,7 @@
   .layer-toolbar-show-btn {
     position: absolute;
     top: 1rem;
-    left: 1rem;
+    right: 1rem;
     width: 44px;
     height: 44px;
     background: rgba(255, 255, 255, 0.95);
@@ -749,7 +749,7 @@
 
   :global(.ol-zoom) {
     top: 0.5rem;
-    left: 280px; /* Mover a la derecha para evitar superposición con el toolbar */
+    left: 0.5rem; /* Volver a la posición original, toolbar ahora está a la derecha */
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.8);
@@ -792,7 +792,7 @@
 
   :global(.ol-rotate) {
     top: 0.5rem;
-    left: 315px; /* Mover a la derecha del zoom */
+    left: 3rem; /* Volver a la posición original junto al zoom */
     background: rgba(255, 255, 255, 0.8);
     border-radius: 4px;
   }
@@ -824,17 +824,7 @@
     border: none !important;
   }
 
-  /* Ajustar controles cuando el toolbar está colapsado */
-  @media (min-width: 769px) {
-    /* Cuando el toolbar está colapsado, mover los controles de zoom */
-    .map-container:has(.layer-toolbar-show-btn) :global(.ol-zoom) {
-      left: 4rem;
-    }
-    
-    .map-container:has(.layer-toolbar-show-btn) :global(.ol-rotate) {
-      left: 7rem;
-    }
-  }
+
 
   /* Ajustes para móviles - mantener controles pequeños */
   @media (max-width: 768px) {
@@ -887,13 +877,13 @@
       width: calc(100vw - 2rem);
       max-width: 300px;
       top: 0.5rem;
-      left: 0.5rem;
       right: 0.5rem;
+      left: 0.5rem;
     }
 
     .layer-toolbar-show-btn {
       top: 0.5rem;
-      left: 0.5rem;
+      right: 0.5rem;
       width: 40px;
       height: 40px;
     }
@@ -935,6 +925,7 @@
 
     .layer-toolbar {
       width: 280px;
+      right: 1rem;
     }
   }
 

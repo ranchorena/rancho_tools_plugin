@@ -8,18 +8,18 @@
 - **Mutuamente excluyente** con la capa base OSM (solo una puede estar activa)
 
 ### ✅ 2. Toolbar Flotante de Capas
-- **Nuevo toolbar flotante** posicionado a la izquierda sobre el mapa
+- **Nuevo toolbar flotante** posicionado a la **DERECHA** sobre el mapa
 - **Diseño moderno** con efecto de vidrio esmerilado (backdrop-filter: blur)
 - **Collapsible** - se puede abrir y cerrar con botones
 - **Responsive** - se adapta a dispositivos móviles
 
 ### ✅ 3. Control de Capas Base y Overlay
-- **Capas Base** (mutuamente excluyentes):
-  - 🗺️ OpenStreetMap (por defecto activa)
-  - 🛰️ Satelital (por defecto inactiva)
-- **Capas de Datos** (independientes):
-  - 👤 Clientes (checkbox independiente)
-  - 📦 Pedidos (checkbox independiente)
+- **Capas de Datos** (independientes) - **ARRIBA en la lista**:
+  - � Clientes (checkbox independiente)
+  - � Pedidos (checkbox independiente)
+- **Capas Base** (mutuamente excluyentes) - **ABAJO en la lista**:
+  - �️ OpenStreetMap (por defecto activa)
+  - �️ Satelital (por defecto inactiva)
 
 ## Cambios Técnicos Implementados
 
@@ -76,29 +76,29 @@ satelliteLayer = new TileLayer({
     </div>
     
     <div class="layer-toolbar-content">
-      <!-- Capas Base (Radio Buttons) -->
-      <div class="layer-group">
-        <div class="layer-group-title">Capas Base</div>
-        <label class="layer-item">
-          <input type="radio" bind:group={baseLayerType} value="osm" />
-          <span class="layer-name">🗺️ OpenStreetMap</span>
-        </label>
-        <label class="layer-item">
-          <input type="radio" bind:group={baseLayerType} value="satellite" />
-          <span class="layer-name">🛰️ Satelital</span>
-        </label>
-      </div>
-      
-      <!-- Capas de Datos (Checkboxes) -->
+      <!-- Capas de Datos (Checkboxes) - ARRIBA -->
       <div class="layer-group">
         <div class="layer-group-title">Capas de Datos</div>
         <label class="layer-item">
           <input type="checkbox" bind:checked={showClientesLayer} />
-          <span class="layer-name">👤 Clientes</span>
+          <span class="layer-name">� Clientes</span>
         </label>
         <label class="layer-item">
           <input type="checkbox" bind:checked={showPedidosLayer} />
-          <span class="layer-name">📦 Pedidos</span>
+          <span class="layer-name">� Pedidos</span>
+        </label>
+      </div>
+      
+      <!-- Capas Base (Radio Buttons) - ABAJO -->
+      <div class="layer-group">
+        <div class="layer-group-title">Capas Base</div>
+        <label class="layer-item">
+          <input type="radio" bind:group={baseLayerType} value="osm" />
+          <span class="layer-name">�️ OpenStreetMap</span>
+        </label>
+        <label class="layer-item">
+          <input type="radio" bind:group={baseLayerType} value="satellite" />
+          <span class="layer-name">�️ Satelital</span>
         </label>
       </div>
     </div>
@@ -147,10 +147,10 @@ satelliteLayer = new TileLayer({
 - **Collapsible** para ahorrar espacio en pantalla
 
 ### 🎯 Responsive Design:
-- **Desktop**: Toolbar de 250px de ancho, posicionado a la izquierda
-- **Tablet**: Toolbar de 280px de ancho
-- **Móvil**: Toolbar de ancho completo (con máximo 300px)
-- **Controles de zoom** se reposicionan automáticamente
+- **Desktop**: Toolbar de 250px de ancho, posicionado a la **DERECHA**
+- **Tablet**: Toolbar de 280px de ancho, posicionado a la **DERECHA**
+- **Móvil**: Toolbar de ancho completo (con máximo 300px), posicionado a la **DERECHA**
+- **Controles de zoom** mantienen su posición original a la izquierda
 
 ## Validación
 
@@ -168,7 +168,25 @@ satelliteLayer = new TileLayer({
 | 👤 Clientes | ❌ **INACTIVA** | Checkbox |
 | 📦 Pedidos | ✅ **ACTIVA** | Checkbox |
 
+## ⚡ Ajustes Posteriores Realizados
+
+### 📍 Reposicionamiento del Toolbar
+- **Cambiado** de la izquierda a la **DERECHA** del mapa
+- **Actualizado** CSS `left: 1rem` → `right: 1rem`
+- **Ajustado** responsive design para mantener posición a la derecha en todos los dispositivos
+
+### 📋 Reordenamiento de Capas
+- **Capas de Datos** movidas **ARRIBA** en la lista del toolbar
+- **Capas Base** movidas **ABAJO** en la lista del toolbar
+- **Orden final**: Datos (Clientes, Pedidos) → Base (OSM, Satelital)
+
+### 🎮 Controles de Mapa
+- **Controles de zoom** devueltos a su posición original (izquierda)
+- **Eliminado** reposicionamiento automático que ya no es necesario
+- **Mantiene** separación óptima entre controles y toolbar
+
 La implementación cumple exactamente con los requisitos solicitados:
 - ✅ Capa satelital agregada y por defecto apagada
-- ✅ Selector de capas convertido en toolbar a la izquierda sobre el mapa
+- ✅ Selector de capas convertido en toolbar a la **DERECHA** sobre el mapa
 - ✅ Opciones para controlar capas base y satelital independientemente
+- ✅ **Capas de datos aparecen ARRIBA de las capas base** en el toolbar
