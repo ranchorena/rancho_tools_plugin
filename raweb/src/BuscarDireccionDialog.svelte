@@ -52,9 +52,6 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn-secondary" on:click={handleCancelar}>
-        Cancelar
-      </button>
       <button class="btn-primary" on:click={handleBuscar}>
         🔍 Buscar
       </button>
@@ -180,29 +177,11 @@
 
   .modal-footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 0.75rem;
     padding: 1rem 1.5rem 1.5rem 1.5rem;
     border-top: 1px solid #e5e7eb;
     flex-shrink: 0;
-  }
-
-  .btn-secondary {
-    padding: 0.625rem 1.25rem;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    background-color: #fff;
-    color: #374151;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-    min-height: 44px;
-  }
-
-  .btn-secondary:hover {
-    background-color: #f9fafb;
-    border-color: #9ca3af;
   }
 
   .btn-primary {
@@ -223,8 +202,7 @@
     border-color: #2563eb;
   }
 
-  .btn-primary:focus,
-  .btn-secondary:focus {
+  .btn-primary:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
@@ -263,16 +241,15 @@
 
     .modal-footer {
       padding: 0.75rem 1rem 1rem 1rem;
-      flex-direction: column-reverse;
-      gap: 0.5rem;
+      justify-content: center;
     }
 
-    .btn-primary,
-    .btn-secondary {
+    .btn-primary {
       width: 100%;
       padding: 0.875rem 1rem;
       font-size: 1rem;
       min-height: 48px;
+      max-width: 300px;
     }
 
     input[type="text"] {
@@ -318,14 +295,13 @@
     }
 
     .modal-footer {
-      flex-direction: row;
-      justify-content: flex-end;
+      justify-content: center;
     }
 
-    .btn-primary,
-    .btn-secondary {
+    .btn-primary {
       width: auto;
-      min-width: 120px;
+      min-width: 140px;
+      max-width: none;
     }
   }
 

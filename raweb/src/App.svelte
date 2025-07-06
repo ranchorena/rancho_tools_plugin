@@ -609,15 +609,115 @@
     height: 100%;
   }
 
+  /* Controles de OpenLayers - mantener pequeños y no responsivos */
+  :global(.ol-zoom),
+  :global(.ol-rotate),
+  :global(.ol-attribution) {
+    position: absolute;
+  }
+
   :global(.ol-zoom) {
     top: 0.5rem;
     left: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  :global(.ol-zoom button),
+  :global(.ol-rotate button) {
+    width: 30px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+    border: none !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    color: #333 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 0 !important;
+  }
+
+  :global(.ol-zoom button:hover),
+  :global(.ol-rotate button:hover) {
+    background: rgba(255, 255, 255, 0.9) !important;
+    transform: none !important;
+  }
+
+  :global(.ol-zoom button:focus),
+  :global(.ol-rotate button:focus) {
+    outline: 2px solid #3b82f6 !important;
+    outline-offset: -2px !important;
+    box-shadow: none !important;
+  }
+
+  :global(.ol-rotate) {
+    top: 0.5rem;
+    left: 3rem;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
   }
 
   :global(.ol-attribution) {
     bottom: 0.25rem;
     right: 0.25rem;
     font-size: 0.75rem;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+
+  :global(.ol-attribution ul) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.7rem;
+  }
+
+  :global(.ol-attribution button) {
+    width: auto !important;
+    height: auto !important;
+    min-height: auto !important;
+    padding: 1px 3px !important;
+    margin: 0 !important;
+    font-size: 0.7rem !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* Ajustes para móviles - mantener controles pequeños */
+  @media (max-width: 768px) {
+    :global(.ol-zoom) {
+      top: 0.25rem;
+      left: 0.25rem;
+    }
+
+    :global(.ol-rotate) {
+      top: 0.25rem;
+      left: 2.25rem;
+    }
+
+    :global(.ol-zoom button),
+    :global(.ol-rotate button) {
+      width: 28px !important;
+      height: 28px !important;
+      min-height: 28px !important;
+      font-size: 16px !important;
+    }
+
+    :global(.ol-attribution) {
+      bottom: 0.125rem;
+      right: 0.125rem;
+      font-size: 0.65rem;
+    }
   }
 
   /* Media queries responsivas */
