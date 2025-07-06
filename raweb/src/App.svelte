@@ -53,7 +53,7 @@
   $: showSatelliteLayer = baseLayerType === 'satellite';
 
   // Estado para el toolbar de capas
-  let showLayerToolbar = true;
+  let showLayerToolbar = false;
 
   // Estado para el menú móvil
   let mobileMenuOpen = false;
@@ -358,12 +358,12 @@
     <!-- Toolbar de capas flotante -->
     {#if showLayerToolbar}
       <div class="layer-toolbar">
-        <div class="layer-toolbar-header">
-          <span class="layer-toolbar-title">🗂️ Capas</span>
-          <button class="layer-toolbar-toggle" on:click={toggleLayerToolbar} title="Cerrar panel de capas">
-            ✕
-          </button>
-        </div>
+                 <div class="layer-toolbar-header">
+           <span class="layer-toolbar-title">�️ Capas</span>
+           <button class="layer-toolbar-toggle" on:click={toggleLayerToolbar} title="Cerrar panel de capas">
+             ✕
+           </button>
+         </div>
         
         <div class="layer-toolbar-content">
           <div class="layer-group">
@@ -392,9 +392,9 @@
         </div>
       </div>
     {:else}
-      <button class="layer-toolbar-show-btn" on:click={toggleLayerToolbar} title="Mostrar panel de capas">
-        🗂️
-      </button>
+             <button class="layer-toolbar-show-btn" on:click={toggleLayerToolbar} title="Mostrar panel de capas">
+         �️
+       </button>
     {/if}
   </div>
 
@@ -874,11 +874,11 @@
 
     /* Toolbar responsivo en móviles */
     .layer-toolbar {
-      width: calc(100vw - 2rem);
-      max-width: 300px;
+      width: 280px;
+      max-width: calc(100vw - 4rem);
       top: 0.5rem;
       right: 0.5rem;
-      left: 0.5rem;
+      left: auto; /* Eliminar left para que solo use right */
     }
 
     .layer-toolbar-show-btn {
@@ -904,6 +904,21 @@
 
       .mobile-nav-buttons button {
         padding: 0.875rem;
+      }
+
+      /* Toolbar aún más compacto en pantallas muy pequeñas */
+      .layer-toolbar {
+        width: 260px;
+        max-width: calc(100vw - 6rem);
+      }
+
+      .layer-toolbar-content {
+        padding: 0.75rem;
+      }
+
+      .layer-item {
+        padding: 0.375rem;
+        margin-bottom: 0.375rem;
       }
     }
   }

@@ -149,8 +149,10 @@ satelliteLayer = new TileLayer({
 ### 🎯 Responsive Design:
 - **Desktop**: Toolbar de 250px de ancho, posicionado a la **DERECHA**
 - **Tablet**: Toolbar de 280px de ancho, posicionado a la **DERECHA**
-- **Móvil**: Toolbar de ancho completo (con máximo 300px), posicionado a la **DERECHA**
+- **Móvil (< 768px)**: Toolbar de 280px de ancho, posicionado a la **DERECHA**
+- **Móvil pequeño (< 480px)**: Toolbar de 260px de ancho compacto
 - **Controles de zoom** mantienen su posición original a la izquierda
+- **Por defecto CERRADO** en todas las resoluciones
 
 ## Validación
 
@@ -185,8 +187,30 @@ satelliteLayer = new TileLayer({
 - **Eliminado** reposicionamiento automático que ya no es necesario
 - **Mantiene** separación óptima entre controles y toolbar
 
+### 📱 Optimización Móvil y UX
+
+#### Estado Inicial Mejorado
+- **Toolbar por defecto CERRADO** (`showLayerToolbar = false`)
+- **Mejor experiencia inicial** - mapa más limpio al cargar
+- **Acceso rápido** via botón flotante cuando se necesite
+
+#### Iconografía Actualizada
+- **Cambiado** icono de 🗂️ (folder) a 🗺️ (mapa)
+- **Más intuitivo** - representa mejor las capas de mapa
+- **Consistente** en botón de mostrar y título del toolbar
+
+#### Responsive Mobile Optimizado
+- **Móviles (< 768px)**: Toolbar 280px ancho (vs ancho completo anterior)
+- **Pantallas pequeñas (< 480px)**: Toolbar 260px ancho más compacto
+- **Posicionamiento mejorado**: Más espacio para el mapa
+- **Padding reducido**: Mejor aprovechamiento del espacio
+- **Max-width inteligente**: Se adapta a pantallas muy pequeñas
+
 La implementación cumple exactamente con los requisitos solicitados:
 - ✅ Capa satelital agregada y por defecto apagada
 - ✅ Selector de capas convertido en toolbar a la **DERECHA** sobre el mapa
 - ✅ Opciones para controlar capas base y satelital independientemente
 - ✅ **Capas de datos aparecen ARRIBA de las capas base** en el toolbar
+- ✅ **Optimizado para móviles** - toolbar más compacto y a la derecha
+- ✅ **Por defecto cerrado** - mejor experiencia inicial
+- ✅ **Icono de mapa** más intuitivo que el folder anterior
