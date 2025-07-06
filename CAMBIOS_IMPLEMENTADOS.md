@@ -241,3 +241,84 @@ La implementación cumple exactamente con los requisitos solicitados:
 - ✅ **Optimizado para móviles** - toolbar más compacto y a la derecha
 - ✅ **Por defecto cerrado** - mejor experiencia inicial
 - ✅ **Iconos universales** compatibles con todos los navegadores
+
+---
+
+## Versión 2.0 - Implementación WFS para Pedidos (2024-12-19)
+
+### ✅ Nueva Funcionalidad: Capa WFS de Pedidos
+Se implementó una funcionalidad completa para manejar pedidos a través de servicios WFS (Web Feature Service), permitiendo conectar la capa de pedidos a servidores remotos y agregando funcionalidad de click interactiva.
+
+#### Archivos Agregados:
+- **`pedidos_wfs_tool.py`**: Herramientas principales para manejo de WFS y click
+- **`pedidos_wfs_config_dialog.py`**: Diálogo de configuración WFS  
+- **`FUNCIONALIDAD_WFS_PEDIDOS.md`**: Documentación completa de la funcionalidad
+
+#### Características Implementadas:
+
+1. **PedidosWFSManager**: Clase principal para manejo de capas WFS
+   - ✅ Carga de capas WFS desde servidores externos (GeoServer, MapServer, etc.)
+   - ✅ Configuración de estilos automática
+   - ✅ Filtrado por fechas
+   - ✅ Estadísticas de pedidos
+
+2. **PedidosWFSTool**: Herramienta de click interactiva
+   - ✅ Click en pedidos para mostrar información (ID, nombre, dirección)
+   - ✅ Tolerancia configurable para selección  
+   - ✅ Cursor en cruz para mejor UX
+
+3. **InfoPedidoDialog**: Diálogo de información de pedidos
+   - ✅ Muestra ID, nombre, dirección, cantidad, fecha, observaciones
+   - ✅ Interfaz amigable y responsive
+   - ✅ Datos formateados para fácil lectura
+
+4. **PedidosWFSConfigDialog**: Configuración avanzada
+   - ✅ Configuración de servidor WFS (URL, capa, versión)
+   - ✅ Soporte para autenticación (usuario/contraseña)
+   - ✅ Opciones de visualización personalizables
+   - ✅ Auto-carga de capas al inicio
+   - ✅ Prueba de conexión integrada
+   - ✅ Guardado persistente de configuración en archivo INI
+
+#### Modificaciones en el Plugin Principal (`rancho_tools_plugin.py`):
+- ✅ **Nuevas acciones en toolbar**: 
+  - "Configurar WFS Pedidos" 
+  - "Cargar Pedidos WFS"
+  - "Activar Click Pedidos"
+- ✅ **Métodos implementados**:
+  - `runWFSConfig()`: Abrir configuración WFS
+  - `runWFSLoad()`: Cargar capa WFS con configuración guardada
+  - `runWFSClickTool()`: Activar herramienta de click
+  - `verificarAutoCargarWFS()`: Auto-carga al inicializar QGIS
+- ✅ **Integración completa en menús y toolbars**
+- ✅ **Limpieza adecuada en método `unload()`**
+
+#### Beneficios de la Implementación:
+- ✅ **Independencia de datos locales**: No depende de capas locales en QGIS
+- ✅ **Datos en tiempo real**: Conexión directa a servidores WFS actualizados
+- ✅ **Escalabilidad**: Soporte para grandes volúmenes de datos
+- ✅ **Interoperabilidad**: Compatible con estándares WFS
+- ✅ **Seguridad**: Soporte para autenticación en servidores seguros
+- ✅ **Usabilidad**: Interface gráfica intuitiva para configuración
+- ✅ **Flexibilidad**: Configuración personalizable por usuario
+
+#### Compatibilidad Técnica:
+- **Servidores WFS**: GeoServer 2.18+, MapServer 7.0+, QGIS Server 3.16+, ArcGIS Server 10.8+
+- **Versiones WFS**: 1.0.0, 1.1.0, 2.0.0
+- **Formatos**: GeoJSON, GML 2.0/3.1/3.2, KML (solo lectura)
+- **QGIS**: 3.16 LTR+, 3.22 LTR (recomendado), 3.28 LTR
+
+### 🎯 Flujo de Trabajo de Usuario:
+1. **Configurar**: Usar "Configurar WFS Pedidos" para establecer conexión
+2. **Probar**: Verificar conexión con botón "Probar Conexión"
+3. **Cargar**: Usar "Cargar Pedidos WFS" para agregar la capa al mapa
+4. **Interactuar**: Activar "Activar Click Pedidos" y hacer click en cualquier pedido
+5. **Visualizar**: Ver información detallada en diálogo emergente
+
+### 📁 Estructura de Datos Requerida:
+Para usar la funcionalidad WFS, la capa de pedidos debe contener:
+- **Campos obligatorios**: `id`/`id_pedido`, `nombre`, `direccion`
+- **Campos opcionales**: `cantidad`, `fecha`, `observaciones`, `telefono`, `horario`  
+- **Geometría**: Point (cualquier sistema de coordenadas - se reproyecta automáticamente)
+
+Esta implementación cumple completamente con el requerimiento del usuario: **"que la capa de pedidos sea una capa wfs y que al hacer click sobre un pedido pueda visualizar la informacion de id, nombre y direccion"**.
