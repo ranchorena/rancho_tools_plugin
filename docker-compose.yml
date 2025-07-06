@@ -48,6 +48,20 @@ services:
     volumes:
       - ./raapi:/app # Opcional: para desarrollo, montar el código local en el contenedor
 
+  rageoserver-proxy:
+    build:
+      context: ./rageoserver-proxy
+      dockerfile: Dockerfile
+    image: rageoserver-proxy:qa
+    container_name: rageoserver-proxy-qa
+    ports:
+      - "8086:80"
+    networks:
+      - raweb-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+
   db:
     image: postgres:13-alpine
     container_name: raweb-db-qa
