@@ -1,7 +1,14 @@
 // raweb/src/config.js
 
+// Estas variables serán reemplazadas por Rollup durante el proceso de build
+// con los valores de las variables de entorno correspondientes.
+// Ver rollup.config.js para la configuración del plugin 'replace'.
+
 // URL base para la API del backend
-export const API_BASE_URL = "http://localhost:5000";
+export const API_BASE_URL = '__API_URL__';
+
+// URL base para el servicio WMS de GeoServer
+export const GEOSERVER_BASE_URL = '__GEOSERVER_URL__';
 
 // Coordenadas iniciales para el mapa
 export const INITIAL_COORDINATES = {

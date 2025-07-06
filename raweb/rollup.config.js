@@ -5,8 +5,13 @@ import terser from '@rollup/plugin-terser';
 import resolve from '@rollup/plugin-node-resolve';
 import livereload from 'rollup-plugin-livereload';
 import css from 'rollup-plugin-css-only';
+import replace from '@rollup/plugin-replace';
+import dotenv from 'dotenv';
 
 const production = !process.env.ROLLUP_WATCH;
+
+// Cargar variables de entorno desde .env
+dotenv.config();
 
 function serve() {
 	let server;
@@ -47,6 +52,15 @@ export default {
 		// we'll extract any component CSS out into
 		// a separate file - better for performance
 		css({ output: 'bundle.css' }),
+
+		// Reemplazar variables de entorno en el código
+		replace({
+			preventAssignment: true,
+			values: {
+				'__API_URL__': JSON.stringify(process.env.API_URL || 'http://localhost:7070/api'), // Valor por defecto si no está definida
+				'__GEOSERVER_URL__': JSON.stringify(process.env.GEOSERVER_URL || 'http://localhost:8087/geoserver/wms') // Valor por defecto
+			}
+		}),
 
 		// If you have external dependencies installed from
 		// npm, you'll most likely need these plugins. In

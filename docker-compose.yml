@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./raweb
+      dockerfile: Dockerfile
+      args:
+        API_URL: ${API_URL:-http://backend:5000} # Valor por defecto si no está en .env o entorno
+        GEOSERVER_URL: ${GEOSERVER_URL:-http://localhost:8087/geoserver/wms} # Asume que GeoServer corre en el host o es accesible
+    image: raweb:qa
+    container_name: raweb-qa
+    ports:
+      - "8080:8080"
+    networks:
+      - raweb-network
+    depends_on:
+      - backend
+    environment:
+      # Estas variables también se pasan al entorno de ejecución del contenedor,
+      # aunque para Svelte/Rollup, los valores importantes son los usados en tiempo de BUILD (ver build.args).
+      # Podrían ser útiles si el entrypoint del contenedor las usara para alguna tarea (no es el caso aquí).
+      - API_URL=${API_URL:-http://backend:5000}
+      - GEOSERVER_URL=${GEOSERVER_URL:-http://localhost:8087/geoserver/wms} # Esta URL es para el cliente. Si GeoServer está en Docker, sería http://geoserver:8080/...
+
+  backend:
+    build:
+      context: ./raapi
+      dockerfile: Dockerfile
+    image: raweb-api:qa      
+    container_name: raweb-api-qa
+    ports:
+      - "5000:5000"
+    networks:
+      - raweb-network
+    depends_on:
+      db:
+        condition: service_healthy # Esperar a que la base de datos esté lista
+    environment:
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-postgres}
+      - FLASK_APP=server.py
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_ENV=${FLASK_ENV:-production} # o development
+    volumes:
+      - ./raapi:/app # Opcional: para desarrollo, montar el código local en el contenedor
+
+  db:
+    image: postgres:13-alpine
+    container_name: raweb-db-qa
+    ports:
+      - "5433:5432" # Exponer puerto de la BD al host (5433) para evitar conflicto con local 5432
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Montar el archivo dump y el script de restauración
+      - ./generalbelgrano.dump:/docker-entrypoint-initdb.d/generalbelgrano.dump
+      - ./db_init/restore_dump.sh:/docker-entrypoint-initdb.d/restore_dump.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - raweb-network
+
+networks:
+  raweb-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

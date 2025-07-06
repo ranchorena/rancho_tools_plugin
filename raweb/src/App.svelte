@@ -18,7 +18,7 @@
   import Icon from 'ol/style/Icon.js'; // Sigue siendo para el markerLayer
 
   // Importar configuración
-  import { API_BASE_URL, INITIAL_COORDINATES } from './config.js';
+  import { API_BASE_URL, INITIAL_COORDINATES, GEOSERVER_BASE_URL } from './config.js';
 
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
@@ -101,7 +101,7 @@
     // Se asigna a la variable global para que el watcher pueda accederla
     pedidosLayer = new ImageLayer({
       source: new ImageWMS({
-        url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
+        url: GEOSERVER_BASE_URL, // Usar la variable importada
         params: {
           'LAYERS': 'GeneralBelgrano:Pedidos',
           'VERSION': '1.1.0',
@@ -116,7 +116,7 @@
     // Se asigna a la variable global para que el watcher pueda accederla
     clientesLayer = new ImageLayer({
       source: new ImageWMS({
-        url: 'http://localhost:8087/geoserver/GeneralBelgrano/wms',
+        url: GEOSERVER_BASE_URL, // Usar la variable importada
         params: {
           'LAYERS': 'GeneralBelgrano:Clientes',
           'VERSION': '1.1.0',
