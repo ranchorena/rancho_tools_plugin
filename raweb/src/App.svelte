@@ -6,6 +6,7 @@
   import ImageLayer from 'ol/layer/Image.js'; // Descomentado temporalmente
   import ImageWMS from 'ol/source/ImageWMS.js'; // Descomentado temporalmente
   import OSM from 'ol/source/OSM.js';
+  import XYZ from 'ol/source/XYZ.js'; // Para Google Satellite
   // import Overlay from 'ol/Overlay.js'; // Asegurarse que está comentado o eliminado
   import { fromLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
@@ -34,19 +35,32 @@
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
 
+  // Variables para las capas base
+  let osmLayer;
+  let satelliteLayer;
+
   // Variables para las capas Vectoriales (WFS)
   let pedidosLayer; // Será VectorLayer
   let clientesLayer; // Será VectorLayer
 
   // Estado para los checkboxes del Layer Switcher
+  let baseLayerType = 'osm'; // 'osm' o 'satellite'
   let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
   let showClientesLayer = false;  // Por defecto: Clientes APAGADA
+
+  // Variables computadas para las capas base
+  $: showOSMLayer = baseLayerType === 'osm';
+  $: showSatelliteLayer = baseLayerType === 'satellite';
+
+  // Estado para el toolbar de capas
+  let showLayerToolbar = false;
 
   // Estado para el menú móvil
   let mobileMenuOpen = false;
 
   // Reacciones para actualizar la visibilidad de las capas cuando cambian los checkboxes
-  // Esto seguirá funcionando igual para VectorLayer
+  $: if (osmLayer) osmLayer.setVisible(showOSMLayer);
+  $: if (satelliteLayer) satelliteLayer.setVisible(showSatelliteLayer);
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
   $: if (clientesLayer) clientesLayer.setVisible(showClientesLayer);
 
@@ -84,6 +98,10 @@
     mobileMenuOpen = false;
   }
 
+  function toggleLayerToolbar() {
+    showLayerToolbar = !showLayerToolbar;
+  }
+
   onMount(() => {
     markerSource = new VectorSource();
     const markerLayer = new VectorLayer({
@@ -107,6 +125,20 @@
     //     },
     //   },
     // });
+
+    // Definición de las capas base
+    osmLayer = new TileLayer({
+      source: new OSM(),
+      visible: showOSMLayer
+    });
+
+    satelliteLayer = new TileLayer({
+      source: new XYZ({
+        url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+        maxZoom: 20
+      }),
+      visible: showSatelliteLayer
+    });
 
     // Definición de la capa de Pedidos (WMS)
     // Se asigna a la variable global para que el watcher pueda accederla
@@ -141,9 +173,8 @@
     map = new Map({
       target: mapElement,
       layers: [
-        new TileLayer({
-          source: new OSM() // Capa base de OpenStreetMap
-        }),
+        osmLayer, // Capa base OSM
+        satelliteLayer, // Capa base Satelital
         clientesLayer,
         pedidosLayer, // Los pedidos ahora van encima de los clientes
         markerLayer // Capa para los marcadores (debe estar encima de las WMS)
@@ -285,15 +316,7 @@
       </button>
     </div>
 
-    <!-- Layer switcher desktop -->
-    <div class="layer-switcher d-mobile-none">
-      <label>
-        <input type="checkbox" bind:checked={showClientesLayer} /> Clientes
-      </label>
-      <label>
-        <input type="checkbox" bind:checked={showPedidosLayer} /> Pedidos
-      </label>
-    </div>
+
 
     <!-- Botón hamburguesa para móviles -->
     <button class="mobile-menu-toggle d-mobile-block" on:click={toggleMobileMenu} aria-label="Menú">
@@ -319,15 +342,7 @@
           </button>
         </div>
         
-        <div class="mobile-layer-switcher">
-          <h3>Capas del Mapa</h3>
-          <label>
-            <input type="checkbox" bind:checked={showClientesLayer} /> Clientes
-          </label>
-          <label>
-            <input type="checkbox" bind:checked={showPedidosLayer} /> Pedidos
-          </label>
-        </div>
+
       </div>
     </div>
   {/if}
@@ -339,6 +354,48 @@
 
   <div class="map-container" bind:this={mapElement}>
     <!-- El mapa siempre está presente en el DOM -->
+    
+    <!-- Toolbar de capas flotante -->
+    {#if showLayerToolbar}
+      <div class="layer-toolbar">
+                 <div class="layer-toolbar-header">
+           <span class="layer-toolbar-title">▣ Capas</span>
+           <button class="layer-toolbar-toggle" on:click={toggleLayerToolbar} title="Cerrar panel de capas">
+             ✕
+           </button>
+         </div>
+        
+        <div class="layer-toolbar-content">
+          <div class="layer-group">
+            <div class="layer-group-title">Capas de Datos</div>
+            <label class="layer-item">
+              <input type="checkbox" bind:checked={showClientesLayer} />
+              <span class="layer-name">● Clientes</span>
+            </label>
+            <label class="layer-item">
+              <input type="checkbox" bind:checked={showPedidosLayer} />
+              <span class="layer-name">▪ Pedidos</span>
+            </label>
+          </div>
+          
+          <div class="layer-group">
+            <div class="layer-group-title">Capas Base</div>
+            <label class="layer-item">
+              <input type="radio" bind:group={baseLayerType} value="osm" />
+              <span class="layer-name">○ OpenStreetMap</span>
+            </label>
+            <label class="layer-item">
+              <input type="radio" bind:group={baseLayerType} value="satellite" />
+              <span class="layer-name">◉ Satelital</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    {:else}
+             <button class="layer-toolbar-show-btn" on:click={toggleLayerToolbar} title="Mostrar panel de capas">
+         ▣
+       </button>
+    {/if}
   </div>
 
   {#if showBuscarDireccionDialog}
@@ -432,32 +489,139 @@
     color: #fff;
   }
 
-  /* Layer switcher desktop */
-  .layer-switcher {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  /* Toolbar de capas flotante */
+  .layer-toolbar {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 250px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 1000;
     font-size: 0.875rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
   }
 
-  .layer-switcher label {
+  .layer-toolbar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(248, 249, 250, 0.8);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .layer-toolbar-title {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+  }
+
+  .layer-toolbar-toggle {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+  }
+
+  .layer-toolbar-toggle:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #495057;
+  }
+
+  .layer-toolbar-content {
+    padding: 1rem;
+  }
+
+  .layer-group {
+    margin-bottom: 1rem;
+  }
+
+  .layer-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .layer-group-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .layer-item {
     display: flex;
     align-items: center;
     cursor: pointer;
-    margin: 0;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+    margin: 0 0 0.5rem 0;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
   }
 
-  .layer-switcher label:hover {
-    background-color: rgba(0,123,255,0.1);
+  .layer-item:hover {
+    background: rgba(0, 123, 255, 0.05);
+    border-color: rgba(0, 123, 255, 0.2);
   }
 
-  .layer-switcher input[type="checkbox"] {
-    margin-right: 0.5rem;
+  .layer-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .layer-item input[type="checkbox"],
+  .layer-item input[type="radio"] {
+    margin-right: 0.75rem;
     margin-bottom: 0;
     width: auto;
+    transform: scale(1.1);
+  }
+
+  .layer-name {
+    color: #495057;
+    font-weight: 500;
+  }
+
+  .layer-toolbar-show-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #495057;
+    transition: all 0.2s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .layer-toolbar-show-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   /* Botón hamburguesa móvil */
@@ -560,40 +724,7 @@
     color: #fff;
   }
 
-  /* Layer switcher móvil */
-  .mobile-layer-switcher {
-    border-top: 1px solid #dee2e6;
-    padding-top: 1rem;
-  }
 
-  .mobile-layer-switcher h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1rem;
-    color: #495057;
-    font-weight: 600;
-  }
-
-  .mobile-layer-switcher label {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem;
-    margin-bottom: 0.5rem;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
-
-  .mobile-layer-switcher label:hover {
-    background-color: #f8f9fa;
-  }
-
-  .mobile-layer-switcher input[type="checkbox"] {
-    margin-right: 0.75rem;
-    margin-bottom: 0;
-    width: auto;
-    transform: scale(1.2);
-  }
 
   /* Contenedor del mapa */
   .map-container {
@@ -618,7 +749,7 @@
 
   :global(.ol-zoom) {
     top: 0.5rem;
-    left: 0.5rem;
+    left: 0.5rem; /* Volver a la posición original, toolbar ahora está a la derecha */
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.8);
@@ -661,7 +792,7 @@
 
   :global(.ol-rotate) {
     top: 0.5rem;
-    left: 3rem;
+    left: 3rem; /* Volver a la posición original junto al zoom */
     background: rgba(255, 255, 255, 0.8);
     border-radius: 4px;
   }
@@ -693,16 +824,18 @@
     border: none !important;
   }
 
+
+
   /* Ajustes para móviles - mantener controles pequeños */
   @media (max-width: 768px) {
     :global(.ol-zoom) {
       top: 0.25rem;
-      left: 0.25rem;
+      left: 0.25rem; /* En móviles, volver a la posición original */
     }
 
     :global(.ol-rotate) {
       top: 0.25rem;
-      left: 2.25rem;
+      left: 2.25rem; /* En móviles, volver a la posición original */
     }
 
     :global(.ol-zoom button),
@@ -739,6 +872,22 @@
       top: 56px;
     }
 
+    /* Toolbar responsivo en móviles */
+    .layer-toolbar {
+      width: 280px;
+      max-width: calc(100vw - 4rem);
+      top: 0.5rem;
+      right: 0.5rem;
+      left: auto; /* Eliminar left para que solo use right */
+    }
+
+    .layer-toolbar-show-btn {
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 40px;
+      height: 40px;
+    }
+
     /* Ajustes para pantallas muy pequeñas */
     @media (max-width: 480px) {
       .navbar {
@@ -755,6 +904,21 @@
 
       .mobile-nav-buttons button {
         padding: 0.875rem;
+      }
+
+      /* Toolbar aún más compacto en pantallas muy pequeñas */
+      .layer-toolbar {
+        width: 260px;
+        max-width: calc(100vw - 6rem);
+      }
+
+      .layer-toolbar-content {
+        padding: 0.75rem;
+      }
+
+      .layer-item {
+        padding: 0.375rem;
+        margin-bottom: 0.375rem;
       }
     }
   }
@@ -774,9 +938,9 @@
       font-size: 0.8rem;
     }
 
-    .layer-switcher {
-      gap: 0.75rem;
-      font-size: 0.8rem;
+    .layer-toolbar {
+      width: 280px;
+      right: 1rem;
     }
   }
 
