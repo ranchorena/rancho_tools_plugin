@@ -9,7 +9,7 @@ from qgis.core import (
 )
 from qgis.gui import QgsMapTool, QgsMapCanvas
 from qgis.utils import iface
-from PyQt5.QtCore import Qt, QUrl, QNetworkRequest, QNetworkReply
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QLabel, QPushButton, QTextEdit
 from PyQt5.QtGui import QCursor
 import requests
