@@ -388,6 +388,118 @@ def actualizar_cliente_api(cliente_id):
     finally:
         session.close()
 
+@app.route("/api/clientes/pedidos", methods=["GET"])
+def get_cliente_con_pedidos():
+    """
+    Obtiene un cliente específico por su ID que tenga pedidos.
+    ---
+    tags:
+      - Clientes
+    parameters:
+      - name: id_cliente
+        in: query
+        required: true
+        description: ID del cliente a buscar que tenga pedidos
+        schema:
+          type: integer
+          example: 123
+    responses:
+      200:
+        description: Cliente encontrado con pedidos.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: ID único del cliente
+                nombre:
+                  type: string
+                  description: Nombre del cliente
+                direccion:
+                  type: string
+                  description: Dirección del cliente
+                calle:
+                  type: string
+                  description: Nombre de la calle
+                altura:
+                  type: integer
+                  description: Altura de la dirección
+                cantidad:
+                  type: number
+                  format: float
+                  description: Cantidad de docenas pedidas
+                nro_pao:
+                  type: integer
+                  description: Número de paó
+                tiene_pedido:
+                  type: integer
+                  description: Indica si tiene pedido (1=sí, 0=no)
+                es_regalo:
+                  type: integer
+                  description: Indica si es regalo (1=sí, 0=no)
+                observacion:
+                  type: string
+                  description: Observaciones adicionales
+                horario:
+                  type: string
+                  format: time
+                  description: Horario de entrega preferido
+      400:
+        description: Parámetro id_cliente requerido o inválido.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ERROR:
+                  type: string
+                  example: "Se requiere el parámetro id_cliente"
+      404:
+        description: Cliente no encontrado o sin pedidos.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ERROR:
+                  type: string
+                  example: "No se encontró el cliente especificado"
+      500:
+        description: Error interno del servidor.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ERROR:
+                  type: string
+                  example: "Error interno del servidor"
+    """
+    with Session.begin() as session:
+        try:
+            # Obtener el parámetro id_cliente del query string
+            id_cliente = request.args.get('id_cliente')
+            
+            if not id_cliente:
+                return {"ERROR": "Se requiere el parámetro id_cliente"}, 400
+            
+            # Validar que id_cliente sea un número entero
+            try:
+                id_cliente = int(id_cliente)
+            except ValueError:
+                return {"ERROR": "El parámetro id_cliente debe ser un número entero válido"}, 400
+            
+            cliente = API.getClienteById(session, id_cliente)
+            
+            if cliente is None:
+                return {"ERROR": "No se encontró el cliente especificado"}, 404
+            else:
+                return jsonify(cliente), 200
+        except Exception as e:
+            return {"ERROR": str(e)}, 500
+
 if __name__ == '__main__':
     # Habilitar logging para ver errores de Flask y SQLAlchemy
     import logging
