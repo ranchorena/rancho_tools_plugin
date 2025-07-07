@@ -436,6 +436,49 @@
     }
   }
 
+  function handleZoomToClient(event) {
+    const { clientId } = event.detail;
+    if (map && clientesLayer && clientId) {
+      // Buscar el cliente en la capa WFS de clientes
+      const source = clientesLayer.getSource();
+      const features = source.getFeatures();
+      
+      // Buscar el feature con el ID del cliente
+      const clientFeature = features.find(feature => {
+        const props = feature.getProperties();
+        return props.id == clientId || props.id_cliente == clientId;
+      });
+      
+      if (clientFeature) {
+        // Obtener las coordenadas del feature
+        const geometry = clientFeature.getGeometry();
+        if (geometry && geometry.getType() === 'Point') {
+          const coordinates = geometry.getCoordinates();
+          
+          // Animar el zoom al cliente encontrado
+          map.getView().animate({
+            center: coordinates,
+            zoom: 18, // Zoom cercano para ver el cliente
+            duration: 1000 // Duración de la animación en ms
+          });
+          
+          console.log(`Cliente ${clientId} encontrado y zoom realizado`);
+        } else {
+          console.warn(`Cliente ${clientId} encontrado pero sin geometría Point válida`);
+        }
+      } else {
+        console.warn(`Cliente ${clientId} no encontrado en la capa de clientes. Asegúrate de que la capa esté cargada.`);
+        // Mostrar mensaje al usuario
+        handleShowGlobalNotification({
+          detail: {
+            message: 'Cliente actualizado, pero no se pudo encontrar su ubicación en el mapa. Asegúrate de que la capa de clientes esté activa.',
+            type: 'warning'
+          }
+        });
+      }
+    }
+  }
+
   function closeFeatureTooltip() {
     showFeatureTooltip = false;
     selectedFeatureData = null;
@@ -560,7 +603,7 @@
       on:close={closeDialogs}
       on:showGlobalNotification={handleShowGlobalNotification}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
-      on:zoomToLocation={handleZoomToLocation}
+      on:zoomToClient={handleZoomToClient}
     />
   {/if}
 
