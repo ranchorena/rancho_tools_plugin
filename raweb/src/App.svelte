@@ -89,7 +89,9 @@
       const source = pedidosLayer.getSource();
       if (source && typeof source.clear === 'function') {
         source.clear();
-        console.log("Capa Pedidos WFS recargada");
+        // Forzar recarga de la fuente WFS después del clear
+        source.refresh();
+        console.log("Capa Pedidos WFS recargada y refrescada");
       }
     }
   }
@@ -99,7 +101,9 @@
       const source = clientesLayer.getSource();
       if (source && typeof source.clear === 'function') {
         source.clear();
-        console.log("Capa Clientes WFS recargada");
+        // Forzar recarga de la fuente WFS después del clear
+        source.refresh();
+        console.log("Capa Clientes WFS recargada y refrescada");
       }
     }
   }
