@@ -105,7 +105,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 1.5rem;
     border-bottom: 1px solid #e5e7eb;
     flex-shrink: 0;
   }
@@ -222,7 +222,7 @@
     }
 
     .modal-header {
-      padding: 0.5rem 1rem;
+      padding: 0.375rem 1rem;
     }
 
     .modal-header h2 {
@@ -271,7 +271,7 @@
     }
 
     .modal-header {
-      padding: 0.5rem 0.875rem;
+      padding: 0.375rem 0.875rem;
     }
 
     .modal-body {
