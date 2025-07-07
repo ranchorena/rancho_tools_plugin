@@ -18,30 +18,26 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 60 * 60 * 6 # 6 horas
 jwt = JWTManager(app)
 CORS(app)
 
+# Configuración simple de Swagger
 swagger_config = {
-    "headers": [
-    ],
-    "specs": [
-        {
-            "endpoint": 'apispec',
-            "route": '/apispec.json',
-            "rule_filter": lambda rule: True,
-            "model_filter": lambda tag: True,
-        }
-    ],
+    "headers": [],
+    "specs": [{
+        "endpoint": 'apispec',
+        "route": '/apispec.json',
+        "rule_filter": lambda rule: True,
+        "model_filter": lambda tag: True,
+    }],
     "static_url_path": "/flasgger_static",
     "swagger_ui": True,
     "specs_route": "/swagger/",
-    # Configuración del título, versión y OpenAPI
-    "openapi": "3.0.0",  # Versión de OpenAPI
     "info": {
-        "title": "RAApi",    # Título personalizado
-        "version": "3.0.1",    # Versión personalizada
-        # "description": "RA API"  # Opcional
+        "title": "RAApi",
+        "version": "1.0.0",
+        "description": "API para gestión de clientes y direcciones"
     }
 }
 
-Swagger(app, config=swagger_config)  # Aplica la configuración
+Swagger(app, config=swagger_config)
 
 @app.route("/")
 def root():
@@ -74,50 +70,38 @@ def parse_direccion(direccion_str):
 def buscar_direccion():
     """
     Busca una dirección (calle y altura) y devuelve el punto medio del tramo correspondiente.
-    El punto medio se calcula como el centroide de la geometría del tramo, transformado a EPSG:4326 (lat/lon).
     ---
     tags:
       - Direcciones
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              direccion:
-                type: string
-                description: La dirección a buscar (ej. "SAN MARTIN 123").
-                example: "SARMIENTO 550"
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            direccion:
+              type: string
+              description: La dirección a buscar
+              example: "SARMIENTO 550"
     responses:
       200:
-        description: Coordenadas del punto medio del tramo en EPSG:4326.
+        description: Coordenadas del punto medio del tramo
         schema:
           type: object
           properties:
             latitud:
               type: number
-              format: float
             longitud:
               type: number
-              format: float
             tramo_info:
               type: object
-              properties:
-                id:
-                  type: integer
-                nombre_calle:
-                  type: string
-                desde:
-                  type: integer
-                hasta:
-                  type: integer
       400:
-        description: Error en la solicitud (ej. dirección no proporcionada o formato incorrecto).
+        description: Error en la solicitud
       404:
-        description: Dirección no encontrada o altura fuera de rango para la calle especificada.
+        description: Dirección no encontrada
       500:
-        description: Error interno del servidor.
+        description: Error interno del servidor
     """
     data = request.get_json()
     if not data or "direccion" not in data:
@@ -200,57 +184,56 @@ def buscar_clientes_api():
     ---
     tags:
       - Clientes
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              criterio:
-                type: string
-                description: "Criterio de búsqueda: 'nombre', 'direccion', o 'calle_altura'"
-                example: "nombre"
-              nombre_cliente:
-                type: string
-                description: "Nombre del cliente a buscar (si criterio es 'nombre')"
-                example: "Juan Perez"
-              direccion:
-                type: string
-                description: "Dirección a buscar (si criterio es 'direccion')"
-                example: "Av. Siempreviva 742"
-              calle:
-                type: string
-                description: "Nombre de la calle (si criterio es 'calle_altura')"
-                example: "SARMIENTO"
-              altura:
-                type: string # Se recibe como string, API.py lo convierte a int si es necesario
-                description: "Altura de la calle (opcional, si criterio es 'calle_altura')"
-                example: "550"
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            criterio:
+              type: string
+              description: "Criterio de búsqueda: 'nombre', 'direccion', o 'calle_altura'"
+            nombre_cliente:
+              type: string
+              description: "Nombre del cliente a buscar"
+            direccion:
+              type: string
+              description: "Dirección a buscar"
+            calle:
+              type: string
+              description: "Nombre de la calle"
+            altura:
+              type: string
+              description: "Altura de la calle"
     responses:
       200:
-        description: Lista de clientes encontrados.
-        content:
-          application/json:
-            schema:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  nombre:
-                    type: string
-                  direccion:
-                    type: string
-                  calle:
-                    type: string
-                  altura:
-                    type: integer
+        description: Lista de clientes encontrados con coordenadas geográficas
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              nombre:
+                type: string
+              direccion:
+                type: string
+              calle:
+                type: string
+              altura:
+                type: integer
+              longitud:
+                type: number
+                description: Longitud en grados decimales (EPSG:4326)
+              latitud:
+                type: number
+                description: Latitud en grados decimales (EPSG:4326)
       400:
-        description: Parámetros inválidos o faltantes.
+        description: Parámetros inválidos
       500:
-        description: Error interno del servidor.
+        description: Error interno del servidor
     """
     data = request.get_json()
     if not data or "criterio" not in data:
@@ -299,54 +282,40 @@ def actualizar_cliente_api(cliente_id):
       - name: cliente_id
         in: path
         required: true
-        description: ID del cliente a actualizar.
+        description: ID del cliente a actualizar
+        type: integer
+      - name: body
+        in: body
+        required: true
         schema:
-          type: integer
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              docenas:
-                type: number
-                format: float
-                nullable: true
-              nro_pao:
-                type: integer
-                nullable: true
-              tiene_pedido:
-                type: boolean # En JSON es true/false, API.py lo convierte a 1/0
-                nullable: true
-              es_regalo:
-                type: boolean # En JSON es true/false, API.py lo convierte a 1/0
-                nullable: true
-              observaciones:
-                type: string
-                nullable: true
-              horario:
-                type: string
-                format: time # HH:MM:SS
-                nullable: true
-                example: "10:30:00"
+          type: object
+          properties:
+            docenas:
+              type: number
+            nro_pao:
+              type: integer
+            tiene_pedido:
+              type: boolean
+            es_regalo:
+              type: boolean
+            observaciones:
+              type: string
+            horario:
+              type: string
     responses:
       200:
-        description: Cliente actualizado con éxito.
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                mensaje:
-                  type: string
-                  example: "Cliente actualizado correctamente."
+        description: Cliente actualizado con éxito
+        schema:
+          type: object
+          properties:
+            mensaje:
+              type: string
       400:
-        description: Datos de entrada inválidos.
+        description: Datos de entrada inválidos
       404:
-        description: Cliente no encontrado.
+        description: Cliente no encontrado
       500:
-        description: Error interno del servidor.
+        description: Error interno del servidor
     """
     datos_actualizados = request.get_json()
     if not datos_actualizados:
@@ -389,116 +358,66 @@ def actualizar_cliente_api(cliente_id):
         session.close()
 
 @app.route("/api/clientes/pedidos", methods=["GET"])
-def get_cliente_con_pedidos():
+def get_clientes_con_pedidos():
     """
-    Obtiene un cliente específico por su ID que tenga pedidos.
+    Obtiene todos los clientes que tengan pedidos con coordenadas geográficas.
     ---
     tags:
       - Clientes
-    parameters:
-      - name: id_cliente
-        in: query
-        required: true
-        description: ID del cliente a buscar que tenga pedidos
-        schema:
-          type: integer
-          example: 123
     responses:
       200:
-        description: Cliente encontrado con pedidos.
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id:
-                  type: integer
-                  description: ID único del cliente
-                nombre:
-                  type: string
-                  description: Nombre del cliente
-                direccion:
-                  type: string
-                  description: Dirección del cliente
-                calle:
-                  type: string
-                  description: Nombre de la calle
-                altura:
-                  type: integer
-                  description: Altura de la dirección
-                cantidad:
-                  type: number
-                  format: float
-                  description: Cantidad de docenas pedidas
-                nro_pao:
-                  type: integer
-                  description: Número de paó
-                tiene_pedido:
-                  type: integer
-                  description: Indica si tiene pedido (1=sí, 0=no)
-                es_regalo:
-                  type: integer
-                  description: Indica si es regalo (1=sí, 0=no)
-                observacion:
-                  type: string
-                  description: Observaciones adicionales
-                horario:
-                  type: string
-                  format: time
-                  description: Horario de entrega preferido
-      400:
-        description: Parámetro id_cliente requerido o inválido.
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                ERROR:
-                  type: string
-                  example: "Se requiere el parámetro id_cliente"
-      404:
-        description: Cliente no encontrado o sin pedidos.
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                ERROR:
-                  type: string
-                  example: "No se encontró el cliente especificado"
+        description: Lista de clientes con pedidos incluyendo coordenadas
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              nombre:
+                type: string
+              direccion:
+                type: string
+              calle:
+                type: string
+              altura:
+                type: integer
+              tiene_pedido:
+                type: integer
+              telefono:
+                type: string
+              cantidad:
+                type: number
+              horario:
+                type: string
+              nro_pao:
+                type: integer
+              observacion:
+                type: string
+              es_regalo:
+                type: integer
+              longitud:
+                type: number
+                description: Longitud en grados decimales (EPSG:4326)
+              latitud:
+                type: number
+                description: Latitud en grados decimales (EPSG:4326)
       500:
-        description: Error interno del servidor.
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                ERROR:
-                  type: string
-                  example: "Error interno del servidor"
+        description: Error interno del servidor
     """
-    with Session.begin() as session:
-        try:
-            # Obtener el parámetro id_cliente del query string
-            id_cliente = request.args.get('id_cliente')
-            
-            if not id_cliente:
-                return {"ERROR": "Se requiere el parámetro id_cliente"}, 400
-            
-            # Validar que id_cliente sea un número entero
-            try:
-                id_cliente = int(id_cliente)
-            except ValueError:
-                return {"ERROR": "El parámetro id_cliente debe ser un número entero válido"}, 400
-            
-            cliente = API.getClienteById(session, id_cliente)
-            
-            if cliente is None:
-                return {"ERROR": "No se encontró el cliente especificado"}, 404
-            else:
-                return jsonify(cliente), 200
-        except Exception as e:
-            return {"ERROR": str(e)}, 500
+    session = Session()
+    try:         
+        clientes = API.getClientesConPedidos(session)
+        
+        if clientes is None or len(clientes) == 0:
+            return jsonify({"message": "No se encontraron clientes con pedidos"}), 200
+        else:
+            return jsonify(clientes), 200
+    except Exception as e:
+        app.logger.error(f"Error en /api/clientes/pedidos: {e}")
+        return jsonify({"error": "Error interno del servidor al obtener clientes con pedidos."}), 500
+    finally:
+        session.close()
 
 if __name__ == '__main__':
     # Habilitar logging para ver errores de Flask y SQLAlchemy
