@@ -169,10 +169,10 @@
       dispatch('showGlobalNotification', { message: result.mensaje || 'Cliente actualizado correctamente.', type: 'success' });
       dispatch('refreshPedidosLayer');
       
-      // Ir a la ubicación del cliente buscándolo en la capa WFS
-      if (selectedClient && selectedClient.id) {
-        dispatch('zoomToClient', { 
-          clientId: selectedClient.id 
+      // Ir a la ubicación del cliente usando su dirección para geocodificación
+      if (selectedClient && selectedClient.direccion) {
+        dispatch('buscarDireccionCliente', { 
+          direccion: selectedClient.direccion
         });
       }
       

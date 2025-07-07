@@ -436,46 +436,54 @@
     }
   }
 
-  function handleZoomToClient(event) {
-    const { clientId } = event.detail;
-    if (map && clientesLayer && clientId) {
-      // Buscar el cliente en la capa WFS de clientes
-      const source = clientesLayer.getSource();
-      const features = source.getFeatures();
-      
-      // Buscar el feature con el ID del cliente
-      const clientFeature = features.find(feature => {
-        const props = feature.getProperties();
-        return props.id == clientId || props.id_cliente == clientId;
+  async function handleBuscarDireccionCliente(event) {
+    const direccion = event.detail.direccion;
+    console.log("Buscando dirección del cliente:", direccion);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/buscar_direccion`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ direccion: direccion }),
       });
-      
-      if (clientFeature) {
-        // Obtener las coordenadas del feature
-        const geometry = clientFeature.getGeometry();
-        if (geometry && geometry.getType() === 'Point') {
-          const coordinates = geometry.getCoordinates();
-          
-          // Animar el zoom al cliente encontrado
-          map.getView().animate({
-            center: coordinates,
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Respuesta del backend para cliente:", data);
+
+      if (data.latitud && data.longitud) {
+        // Centrar el mapa en la ubicación del cliente sin agregar marcador
+        map.getView().animate({
+            center: fromLonLat([data.longitud, data.latitud]),
             zoom: 18, // Zoom cercano para ver el cliente
             duration: 1000 // Duración de la animación en ms
-          });
-          
-          console.log(`Cliente ${clientId} encontrado y zoom realizado`);
-        } else {
-          console.warn(`Cliente ${clientId} encontrado pero sin geometría Point válida`);
-        }
+        });
+        
+        console.log(`Cliente ubicado en: ${data.latitud}, ${data.longitud}`);
       } else {
-        console.warn(`Cliente ${clientId} no encontrado en la capa de clientes. Asegúrate de que la capa esté cargada.`);
-        // Mostrar mensaje al usuario
+        console.warn("No se recibieron coordenadas válidas para el cliente.");
         handleShowGlobalNotification({
           detail: {
-            message: 'Cliente actualizado, pero no se pudo encontrar su ubicación en el mapa. Asegúrate de que la capa de clientes esté activa.',
+            message: 'Cliente actualizado, pero no se pudo geocodificar su dirección.',
             type: 'warning'
           }
         });
       }
+
+    } catch (error) {
+      console.error('Error al buscar dirección del cliente:', error);
+      handleShowGlobalNotification({
+        detail: {
+          message: 'Cliente actualizado, pero hubo un error al buscar su ubicación.',
+          type: 'warning'
+        }
+      });
     }
   }
 
@@ -603,7 +611,7 @@
       on:close={closeDialogs}
       on:showGlobalNotification={handleShowGlobalNotification}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
-      on:zoomToClient={handleZoomToClient}
+      on:buscarDireccionCliente={handleBuscarDireccionCliente}
     />
   {/if}
 
