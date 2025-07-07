@@ -902,10 +902,12 @@
     z-index: 999;
     transform: translateY(-100%);
     transition: transform 0.3s ease;
+    display: none; /* Oculto por defecto */
   }
 
   .mobile-menu.open {
     transform: translateY(0);
+    display: block;
   }
 
   .mobile-menu-content {
@@ -1071,8 +1073,25 @@
     }
   }
 
+  /* Clases de utilidad responsivas */
+  .d-mobile-none {
+    display: flex;
+  }
+
+  .d-mobile-block {
+    display: none;
+  }
+
   /* Media queries responsivas */
   @media (max-width: 768px) {
+    .d-mobile-none {
+      display: none;
+    }
+
+    .d-mobile-block {
+      display: flex;
+    }
+
     .navbar {
       padding: 0.5rem 1rem;
       min-height: 56px;
@@ -1088,6 +1107,11 @@
 
     .mobile-menu {
       top: 56px;
+      display: none; /* Asegurar que esté oculto por defecto en móvil */
+    }
+
+    .mobile-menu.open {
+      display: block; /* Mostrar cuando esté abierto */
     }
 
     /* Toolbar responsivo en móviles */
