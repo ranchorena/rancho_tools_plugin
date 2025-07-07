@@ -388,6 +388,97 @@ def actualizar_cliente_api(cliente_id):
     finally:
         session.close()
 
+@app.route("/api/clientes/<int:cliente_id>", methods=["GET"])
+# @jwt_required() # Descomentar si se necesita protección JWT
+def get_cliente_by_id(cliente_id):
+    """
+    Obtiene un cliente específico por su ID.
+    ---
+    tags:
+      - Clientes
+    parameters:
+      - name: cliente_id
+        in: path
+        required: true
+        description: ID del cliente a obtener.
+        schema:
+          type: integer
+          example: 1
+    responses:
+      200:
+        description: Datos del cliente encontrado.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: ID único del cliente
+                  example: 1
+                nombre:
+                  type: string
+                  description: Nombre del cliente
+                  example: "Juan Pérez"
+                direccion:
+                  type: string
+                  description: Dirección completa del cliente
+                  example: "Av. Siempreviva 742"
+                calle:
+                  type: string
+                  description: Nombre de la calle
+                  example: "AV SIEMPREVIVA"
+                altura:
+                  type: integer
+                  description: Número de altura
+                  example: 742
+                cantidad:
+                  type: number
+                  format: float
+                  description: Cantidad/docenas pedidas
+                  example: 2.5
+                nro_pao:
+                  type: integer
+                  description: Número de PAO
+                  example: 123
+                tiene_pedido:
+                  type: integer
+                  description: Indica si tiene pedido (0=No, 1=Sí)
+                  example: 1
+                es_regalo:
+                  type: integer
+                  description: Indica si es regalo (0=No, 1=Sí)
+                  example: 0
+                observacion:
+                  type: string
+                  description: Observaciones del cliente
+                  example: "Cliente preferencial"
+                horario:
+                  type: string
+                  format: time
+                  description: Horario de entrega preferido
+                  example: "10:30:00"
+      400:
+        description: Parámetros inválidos (ID requerido).
+      404:
+        description: Cliente no encontrado.
+      500:
+        description: Error interno del servidor.
+    """
+    with Session.begin() as session:
+        try:           
+            if not cliente_id:
+                return {"ERROR": "Se requiere el parámetro cliente_id"}, 400
+            
+            cliente = API.getClienteById(session, cliente_id)
+            
+            if cliente is None:
+                return {"ERROR": "No se encontró el cliente especificado"}, 404
+            else:
+                return jsonify(cliente), 200
+        except Exception as e:
+            return {"ERROR": str(e)}, 500
+
 if __name__ == '__main__':
     # Habilitar logging para ver errores de Flask y SQLAlchemy
     import logging

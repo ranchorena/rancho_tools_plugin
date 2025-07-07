@@ -127,3 +127,19 @@ class API: # Clase contenedora renombrada a API
             session.rollback()
             print(f"Error al actualizar cliente: {e}")
             return False
+
+    @staticmethod
+    def getClienteById(session, cliente_id):
+        """
+        Obtiene un cliente específico por su ID.
+        Retorna un diccionario con todos los datos del cliente o None si no existe.
+        """
+        query = text("""
+            SELECT id, nombre, direccion, calle, altura, cantidad, nro_pao, 
+                   tiene_pedido, es_regalo, observacion, horario
+            FROM generalbelgrano.clientes
+            WHERE id = :cliente_id
+        """)
+        result = session.execute(query, {"cliente_id": cliente_id})
+        row = result.fetchone()
+        return API.to_dict(row) if row else None
