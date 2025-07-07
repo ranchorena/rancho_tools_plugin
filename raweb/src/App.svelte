@@ -741,7 +741,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 1rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.8);
     border-radius: 8px 8px 0 0;

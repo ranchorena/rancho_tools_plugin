@@ -72,6 +72,8 @@
         longitude: pedido.longitud,
         latitude: pedido.latitud
       });
+      // Cerrar el formulario para permitir visualizar el mapa
+      dispatch('close');
     }
   }
 
@@ -125,7 +127,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    padding: 0.75rem 1.5rem;
     border-bottom: 1px solid #e5e7eb;
     flex-shrink: 0;
     background-color: #f8f9fa;
@@ -300,7 +302,7 @@
     }
 
     .modal-header {
-      padding: 1rem;
+      padding: 0.5rem 1rem;
     }
 
     .modal-body {
