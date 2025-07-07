@@ -65,7 +65,12 @@
     });
     if (results) {
       searchResults = results;
-      if (results.length === 0) errorMessage = "No se encontraron clientes con ese nombre.";
+      if (results.length === 0) {
+        errorMessage = "No se encontraron clientes con ese nombre.";
+      } else {
+        // Scroll hacia la grilla de resultados
+        await scrollToResults();
+      }
     }
   }
 
@@ -85,7 +90,12 @@
     });
     if (results) {
       searchResults = results;
-      if (results.length === 0) errorMessage = "No se encontraron clientes con esa dirección.";
+      if (results.length === 0) {
+        errorMessage = "No se encontraron clientes con esa dirección.";
+      } else {
+        // Scroll hacia la grilla de resultados
+        await scrollToResults();
+      }
     }
   }
 
@@ -106,7 +116,12 @@
     });
     if (results) {
       searchResults = results;
-       if (results.length === 0) errorMessage = "No se encontraron clientes con esa calle/altura.";
+      if (results.length === 0) {
+        errorMessage = "No se encontraron clientes con esa calle/altura.";
+      } else {
+        // Scroll hacia la grilla de resultados
+        await scrollToResults();
+      }
     }
   }
 
@@ -131,6 +146,15 @@
       if (selectedClientSection) {
         selectedClientSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
+    }
+  }
+
+  async function scrollToResults() {
+    // Esperar a que el DOM se actualice con los nuevos resultados
+    await tick();
+    const resultsSection = document.getElementById("search-results-section");
+    if (resultsSection) {
+      resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
@@ -168,6 +192,14 @@
       // successMessage = result.mensaje; // Ya no se usa localmente
       dispatch('showGlobalNotification', { message: result.mensaje || 'Cliente actualizado correctamente.', type: 'success' });
       dispatch('refreshPedidosLayer');
+      
+      // Ir a la ubicación del cliente usando su dirección para geocodificación
+      if (selectedClient && selectedClient.direccion) {
+        dispatch('buscarDireccionCliente', { 
+          direccion: selectedClient.direccion
+        });
+      }
+      
       dispatch('close'); // Cerrar el formulario
     }
   }
@@ -820,7 +852,7 @@
       </div>
 
       {#if searchResults.length > 0}
-        <div class="results-grid search-section">
+        <div class="results-grid search-section" id="search-results-section">
           <h3>📋 Resultados de Búsqueda</h3>
           <div class="table-container">
             <table>

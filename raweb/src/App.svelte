@@ -89,7 +89,9 @@
       const source = pedidosLayer.getSource();
       if (source && typeof source.clear === 'function') {
         source.clear();
-        console.log("Capa Pedidos WFS recargada");
+        // Forzar recarga de la fuente WFS después del clear
+        source.refresh();
+        console.log("Capa Pedidos WFS recargada y refrescada");
       }
     }
   }
@@ -99,7 +101,9 @@
       const source = clientesLayer.getSource();
       if (source && typeof source.clear === 'function') {
         source.clear();
-        console.log("Capa Clientes WFS recargada");
+        // Forzar recarga de la fuente WFS después del clear
+        source.refresh();
+        console.log("Capa Clientes WFS recargada y refrescada");
       }
     }
   }
@@ -436,6 +440,57 @@
     }
   }
 
+  async function handleBuscarDireccionCliente(event) {
+    const direccion = event.detail.direccion;
+    console.log("Buscando dirección del cliente:", direccion);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/buscar_direccion`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ direccion: direccion }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("Respuesta del backend para cliente:", data);
+
+      if (data.latitud && data.longitud) {
+        // Centrar el mapa en la ubicación del cliente sin agregar marcador
+        map.getView().animate({
+            center: fromLonLat([data.longitud, data.latitud]),
+            zoom: 18, // Zoom cercano para ver el cliente
+            duration: 1000 // Duración de la animación en ms
+        });
+        
+        console.log(`Cliente ubicado en: ${data.latitud}, ${data.longitud}`);
+      } else {
+        console.warn("No se recibieron coordenadas válidas para el cliente.");
+        handleShowGlobalNotification({
+          detail: {
+            message: 'Cliente actualizado, pero no se pudo geocodificar su dirección.',
+            type: 'warning'
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error('Error al buscar dirección del cliente:', error);
+      handleShowGlobalNotification({
+        detail: {
+          message: 'Cliente actualizado, pero hubo un error al buscar su ubicación.',
+          type: 'warning'
+        }
+      });
+    }
+  }
+
   function closeFeatureTooltip() {
     showFeatureTooltip = false;
     selectedFeatureData = null;
@@ -560,6 +615,7 @@
       on:close={closeDialogs}
       on:showGlobalNotification={handleShowGlobalNotification}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
+      on:buscarDireccionCliente={handleBuscarDireccionCliente}
     />
   {/if}
 
@@ -575,68 +631,34 @@
     <div class="feature-tooltip" 
          style="left: {tooltipPosition.x}px; top: {tooltipPosition.y}px;" 
          on:click|stopPropagation>
-      <div class="feature-tooltip-header">
-        <h4>Información del {tooltipType === 'pedido' ? 'Pedido' : 'Cliente'}</h4>
-        <button class="tooltip-close-btn" on:click={closeFeatureTooltip}>×</button>
-      </div>
       <div class="feature-tooltip-content">
-        <div class="feature-tooltip-row">
-          <span class="label">ID:</span>
-          <span class="value">{selectedFeatureData.id}</span>
-        </div>
-        <div class="feature-tooltip-row">
-          <span class="label">Nombre:</span>
-          <span class="value">{selectedFeatureData.nombre}</span>
-        </div>
-        <div class="feature-tooltip-row">
-          <span class="label">Dirección:</span>
-          <span class="value">{selectedFeatureData.direccion}</span>
-        </div>
+        <div class="feature-tooltip-data">{selectedFeatureData.id}</div>
+        <div class="feature-tooltip-data">{selectedFeatureData.nombre}</div>
+        <div class="feature-tooltip-data">{selectedFeatureData.direccion}</div>
         {#if tooltipType === 'cliente'}
           {#if selectedFeatureData.calle !== 'N/A'}
-            <div class="feature-tooltip-row">
-              <span class="label">Calle:</span>
-              <span class="value">{selectedFeatureData.calle}</span>
-            </div>
+            <div class="feature-tooltip-data">{selectedFeatureData.calle}</div>
           {/if}
           {#if selectedFeatureData.altura !== 'N/A'}
-            <div class="feature-tooltip-row">
-              <span class="label">Altura:</span>
-              <span class="value">{selectedFeatureData.altura}</span>
-            </div>
+            <div class="feature-tooltip-data">{selectedFeatureData.altura}</div>
           {/if}
         {/if}
         {#if tooltipType === 'pedido'}
           {#if selectedFeatureData.cantidad !== 'N/A'}
-            <div class="feature-tooltip-row">
-              <span class="label">Cantidad:</span>
-              <span class="value">{selectedFeatureData.cantidad}</span>
-            </div>
+            <div class="feature-tooltip-data">{selectedFeatureData.cantidad}</div>
           {/if}
           {#if selectedFeatureData.fecha !== 'N/A'}
-            <div class="feature-tooltip-row">
-              <span class="label">Fecha:</span>
-              <span class="value">{selectedFeatureData.fecha}</span>
-            </div>
+            <div class="feature-tooltip-data">{selectedFeatureData.fecha}</div>
           {/if}
         {/if}
         {#if selectedFeatureData.telefono !== 'N/A'}
-          <div class="feature-tooltip-row">
-            <span class="label">Teléfono:</span>
-            <span class="value">{selectedFeatureData.telefono}</span>
-          </div>
+          <div class="feature-tooltip-data">{selectedFeatureData.telefono}</div>
         {/if}
         {#if selectedFeatureData.horario !== 'N/A'}
-          <div class="feature-tooltip-row">
-            <span class="label">Horario:</span>
-            <span class="value">{selectedFeatureData.horario}</span>
-          </div>
+          <div class="feature-tooltip-data">{selectedFeatureData.horario}</div>
         {/if}
         {#if selectedFeatureData.observaciones !== 'N/A'}
-          <div class="feature-tooltip-row">
-            <span class="label">Observaciones:</span>
-            <span class="value">{selectedFeatureData.observaciones}</span>
-          </div>
+          <div class="feature-tooltip-data">{selectedFeatureData.observaciones}</div>
         {/if}
       </div>
     </div>
@@ -1206,155 +1228,73 @@
 
   /* Estilos para el tooltip de información de pedidos y clientes */
   .feature-tooltip {
-    position: absolute;
+    position: fixed;
     background-color: rgba(255, 255, 255, 0.95);
     color: #333;
     border: 1px solid #ccc;
-    padding: 10px;
     border-radius: 6px;
     font-size: 0.85em;
     pointer-events: auto; /* Permitir que el tooltip pueda ser clickeado */
     display: block; /* Mostrar siempre */
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    min-width: 250px;
-    max-width: 300px;
+    min-width: 180px;
+    max-width: 250px;
     backdrop-filter: blur(5px);
     z-index: 10000; /* Asegurar que esté encima de todo */
   }
 
-  .feature-tooltip-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #eee;
-  }
-
-  .feature-tooltip-header h4 {
-    margin: 0;
-    font-size: 1rem;
-    color: #495057;
-  }
-
-  .tooltip-close-btn {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    color: #6c757d;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-  }
-
-  .tooltip-close-btn:hover {
-    background: #f8f9fa;
-    color: #495057;
-  }
-
   .feature-tooltip-content {
+    padding: 0.75rem;
     font-size: 0.9em;
   }
 
-  .feature-tooltip-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.3rem;
-  }
-
-  .label {
-    font-weight: 500;
-    color: #6c757d;
-  }
-
-  .value {
-    font-weight: 600;
+  .feature-tooltip-data {
+    margin-bottom: 0.4rem;
+    font-size: 0.9rem;
     color: #495057;
+    line-height: 1.3;
+    word-break: break-word;
+    font-weight: 500;
+  }
+
+  .feature-tooltip-data:last-child {
+    margin-bottom: 0;
   }
 
   /* Estilos responsive para el tooltip */
   @media (max-width: 768px) {
     .feature-tooltip {
-      min-width: 280px;
+      min-width: 200px;
       max-width: calc(100vw - 20px);
       font-size: 0.9em;
-      padding: 12px;
     }
 
-    .feature-tooltip-header {
-      margin-bottom: 0.75rem;
+    .feature-tooltip-content {
+      padding: 1rem;
     }
 
-    .feature-tooltip-header h4 {
-      font-size: 1.1rem;
-    }
-
-    .tooltip-close-btn {
-      width: 32px;
-      height: 32px;
-      font-size: 1.4rem;
-    }
-
-    .feature-tooltip-row {
+    .feature-tooltip-data {
       margin-bottom: 0.5rem;
-    }
-
-    .label {
-      min-width: 90px;
-      font-size: 0.9rem;
-    }
-
-    .value {
-      font-size: 0.9rem;
+      font-size: 1rem;
       line-height: 1.4;
     }
   }
 
   @media (max-width: 480px) {
     .feature-tooltip {
-      min-width: 260px;
+      min-width: 180px;
       max-width: calc(100vw - 16px);
       font-size: 0.85em;
-      padding: 10px;
     }
 
-    .feature-tooltip-header {
-      margin-bottom: 0.5rem;
+    .feature-tooltip-content {
+      padding: 0.75rem;
     }
 
-    .feature-tooltip-header h4 {
-      font-size: 1rem;
-    }
-
-    .tooltip-close-btn {
-      width: 28px;
-      height: 28px;
-      font-size: 1.2rem;
-    }
-
-    .feature-tooltip-row {
+    .feature-tooltip-data {
       margin-bottom: 0.4rem;
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .label {
-      min-width: auto;
-      margin-bottom: 0.2rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .value {
-      font-size: 0.85rem;
-      margin-left: 0;
-      word-break: break-word;
+      font-size: 0.9rem;
+      line-height: 1.3;
     }
   }
 
@@ -1366,7 +1306,7 @@
     }
 
     .feature-tooltip-content {
-      max-height: calc(100vh - 120px);
+      max-height: calc(100vh - 80px);
       overflow-y: auto;
     }
   }
