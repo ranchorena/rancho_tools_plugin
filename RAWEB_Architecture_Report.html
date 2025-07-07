@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquitectura de la Aplicación RAWEB - Reporte Técnico</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2196F3;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #1976D2;
+            font-size: 2.5em;
+            margin: 0;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+            margin: 10px 0 0 0;
+        }
+        
+        .section {
+            margin: 40px 0;
+        }
+        
+        .section h2 {
+            color: #1976D2;
+            border-left: 4px solid #2196F3;
+            padding-left: 15px;
+            font-size: 1.8em;
+        }
+        
+        .section h3 {
+            color: #424242;
+            font-size: 1.4em;
+            margin-top: 30px;
+        }
+        
+        .diagram {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .diagram h4 {
+            color: #1976D2;
+            margin-top: 0;
+            font-size: 1.2em;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f0f7ff;
+            color: #1976D2;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .component-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 1px solid #2196F3;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .tech-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .tech-item h4 {
+            color: #1976D2;
+            margin: 0 0 10px 0;
+        }
+        
+        .emoji {
+            font-size: 2em;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .flow-step {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .note {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .note strong {
+            color: #e65100;
+        }
+        
+        @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+            .diagram { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ Arquitectura de la Aplicación RAWEB</h1>
+            <p>Sistema de Gestión GIS con Svelte, Flask y GeoServer</p>
+            <p><strong>Fecha:</strong> <script>document.write(new Date().toLocaleDateString('es-ES'));</script></p>
+        </div>
+
+        <div class="section">
+            <h2>📋 Resumen Ejecutivo</h2>
+            <p>RAWEB es una aplicación web GIS completa que combina una interfaz moderna desarrollada en <strong>Svelte</strong> con <strong>OpenLayers</strong>, un backend robusto en <strong>Flask</strong>, y servicios geoespaciales proporcionados por <strong>GeoServer</strong>. La aplicación está completamente containerizada usando <strong>Docker Compose</strong> y permite la gestión, búsqueda y visualización de datos de clientes y pedidos en un mapa interactivo.</p>
+        </div>
+
+        <div class="section">
+            <h2>🏢 Componentes Principales</h2>
+            
+            <div class="tech-stack">
+                <div class="tech-item">
+                    <span class="emoji">🌐</span>
+                    <h4>Frontend (Svelte)</h4>
+                    <p><strong>Puerto:</strong> 8080</p>
+                    <p><strong>Tecnología:</strong> Svelte + OpenLayers</p>
+                    <p>Interfaz web responsive con mapa interactivo</p>
+                </div>
+                
+                <div class="tech-item">
+                    <span class="emoji">🔧</span>
+                    <h4>Backend (Flask)</h4>
+                    <p><strong>Puerto:</strong> 5000</p>
+                    <p><strong>Tecnología:</strong> Flask + SQLAlchemy</p>
+                    <p>API REST y lógica de negocio</p>
+                </div>
+                
+                <div class="tech-item">
+                    <span class="emoji">🔄</span>
+                    <h4>Proxy (Nginx)</h4>
+                    <p><strong>Puerto:</strong> 8086</p>
+                    <p><strong>Tecnología:</strong> Nginx</p>
+                    <p>Proxy CORS para GeoServer</p>
+                </div>
+                
+                <div class="tech-item">
+                    <span class="emoji">🗄️</span>
+                    <h4>Database (PostgreSQL)</h4>
+                    <p><strong>Puerto:</strong> 5433</p>
+                    <p><strong>Tecnología:</strong> PostgreSQL 13</p>
+                    <p>Almacenamiento de datos</p>
+                </div>
+                
+                <div class="tech-item">
+                    <span class="emoji">🗺️</span>
+                    <h4>GeoServer</h4>
+                    <p><strong>Puerto:</strong> 8087</p>
+                    <p><strong>Tecnología:</strong> GeoServer</p>
+                    <p>Servicios WMS/WFS</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Diagrama 1: Arquitectura General</h2>
+            <div class="diagram">
+                <h4>🏗️ Vista General de Componentes y Conexiones</h4>
+                <div class="mermaid">
+graph TB
+    subgraph "Docker Container Network (raweb-network)"
+        subgraph "Frontend Layer"
+            FE["🌐 Frontend (Svelte)<br/>raweb-qa<br/>Port: 8080<br/>Image: raweb:qa"]
+        end
+        
+        subgraph "API Layer"
+            BE["🔧 Backend (Flask)<br/>raweb-api-qa<br/>Port: 5000<br/>Image: raweb-api:qa"]
+        end
+        
+        subgraph "Proxy Layer"
+            PROXY["🔄 GeoServer Proxy (Nginx)<br/>rageoserver-proxy-qa<br/>Port: 8086<br/>Image: rageoserver-proxy:qa"]
+        end
+        
+        subgraph "Database Layer"
+            DB["🗄️ PostgreSQL Database<br/>raweb-db-qa<br/>Port: 5433<br/>Image: postgres:13-alpine<br/>Volume: postgres_data"]
+        end
+    end
+    
+    subgraph "External Services"
+        GS["🗺️ GeoServer<br/>External Container<br/>Port: 8087<br/>WMS/WFS Services"]
+    end
+    
+    subgraph "Client Layer"
+        USER["👤 Usuario<br/>Web Browser"]
+        QGIS["🖥️ QGIS Desktop<br/>Plugin Python"]
+    end
+    
+    %% User connections
+    USER -->|"HTTP :8080<br/>UI Interactions"| FE
+    QGIS -->|"HTTP :5000<br/>API Calls"| BE
+    
+    %% Frontend connections
+    FE -->|"HTTP :5000<br/>REST API<br/>/api/clientes/*<br/>/buscar_direccion"| BE
+    FE -->|"HTTP :8086<br/>WMS/WFS Requests<br/>Proxy to GeoServer"| PROXY
+    
+    %% Backend connections
+    BE -->|"PostgreSQL :5432<br/>SQL Queries<br/>Clientes, Pedidos"| DB
+    
+    %% Proxy connections
+    PROXY -->|"HTTP :8087<br/>Proxied WMS/WFS<br/>GeneralBelgrano:Clientes<br/>GeneralBelgrano:Pedidos"| GS
+    
+    %% Dependencies
+    BE -.->|depends_on| DB
+    FE -.->|depends_on| BE
+    PROXY -.->|depends_on| BE
+    
+    %% Styling
+    classDef container fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef database fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef client fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef proxy fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    
+    class FE,BE container
+    class DB database
+    class GS external
+    class USER,QGIS client
+    class PROXY proxy
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⚙️ Diagrama 2: Detalles Técnicos</h2>
+            <div class="diagram">
+                <h4>🔧 Tecnologías Específicas y Flujo de Datos</h4>
+                <div class="mermaid">
+graph LR
+    subgraph "Client Side"
+        B[👤 Browser]
+        Q[🖥️ QGIS Plugin]
+    end
+    
+    subgraph "Docker Compose Stack"
+        subgraph "Frontend Container"
+            F1[📱 Svelte App]
+            F2[🗺️ OpenLayers Map]
+            F3[🔧 Rollup Bundler]
+        end
+        
+        subgraph "Backend Container"
+            B1[🐍 Flask API]
+            B2[🔌 SQLAlchemy ORM]
+            B3[📊 Business Logic]
+        end
+        
+        subgraph "Proxy Container"  
+            P1[🔄 Nginx Proxy]
+            P2[🌐 CORS Headers]
+        end
+        
+        subgraph "Database Container"
+            D1[🗄️ PostgreSQL 13]
+            D2[📋 generalbelgrano.dump]
+            D3[💾 Volume Mount]
+        end
+    end
+    
+    subgraph "External"
+        G1[🗺️ GeoServer]
+        G2[📊 WMS Service]
+        G3[🗂️ WFS Service]
+    end
+    
+    %% Client interactions
+    B -->|"GET /:8080<br/>Static Files"| F1
+    B -->|"POST /api/clientes/buscar<br/>POST /buscar_direccion"| B1
+    B -->|"GET /ows?service=WFS<br/>GET /wms"| P1
+    Q -->|"HTTP REST<br/>Python requests"| B1
+    
+    %% Frontend internal flow
+    F1 --> F2
+    F3 --> F1
+    F2 -->|"WMS Layers (Clientes)<br/>WFS Layers (Pedidos)"| P1
+    
+    %% Backend internal flow
+    B1 --> B2
+    B2 --> B3
+    B2 -->|"SQL Queries"| D1
+    
+    %% Proxy flow
+    P1 --> P2
+    P1 -->|"Proxied Requests<br/>CORS Enabled"| G1
+    
+    %% GeoServer internal
+    G1 --> G2
+    G1 --> G3
+    G2 -->|"GeneralBelgrano:Clientes<br/>Image Tiles"| P1
+    G3 -->|"GeneralBelgrano:Pedidos<br/>Vector Features"| P1
+    
+    %% Database setup
+    D2 --> D1
+    D1 --> D3
+    
+    %% Environment Variables Flow
+    ENV[🔧 .env / Environment<br/>API_URL=http://backend:5000<br/>GEOSERVER_URL=http://localhost:8086/geoserver<br/>DB_USER, DB_PASSWORD, etc.]
+    ENV -.->|Build Args| F3
+    ENV -.->|Runtime Env| B1
+    ENV -.->|Runtime Env| D1
+    
+    %% Styling
+    classDef frontend fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef backend fill:#f1f8e9,stroke:#388e3c,stroke-width:2px
+    classDef database fill:#fce4ec,stroke:#ad1457,stroke-width:2px
+    classDef proxy fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef external fill:#efebe9,stroke:#5d4037,stroke-width:2px
+    classDef client fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef config fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class F1,F2,F3 frontend
+    class B1,B2,B3 backend
+    class D1,D2,D3 database
+    class P1,P2 proxy
+    class G1,G2,G3 external
+    class B,Q client
+    class ENV config
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔄 Diagrama 3: Flujo de Operaciones</h2>
+            <div class="diagram">
+                <h4>📝 Secuencia de Búsqueda de Cliente y Visualización</h4>
+                <div class="mermaid">
+sequenceDiagram
+    participant U as 👤 Usuario
+    participant F as 🌐 Frontend (Svelte)
+    participant B as 🔧 Backend (Flask)
+    participant D as 🗄️ Database (PostgreSQL)
+    participant P as 🔄 Proxy (Nginx)
+    participant G as 🗺️ GeoServer
+
+    Note over U,G: Flujo de Búsqueda de Cliente y Visualización
+
+    %% Cargar aplicación
+    U->>F: GET http://localhost:8080
+    F-->>U: Aplicación Svelte + OpenLayers
+    
+    %% Cargar capas iniciales
+    F->>P: GET /geoserver/ows?service=WFS (Pedidos)
+    P->>G: GET /geoserver/ows?service=WFS
+    G-->>P: GeoJSON Features (Pedidos)
+    P-->>F: GeoJSON Features (Pedidos)
+    
+    F->>P: GET /geoserver/ows?service=WFS (Clientes)
+    P->>G: GET /geoserver/ows?service=WFS  
+    G-->>P: GeoJSON Features (Clientes)
+    P-->>F: GeoJSON Features (Clientes)
+    
+    Note over F: Capas WFS cargadas en mapa
+    
+    %% Búsqueda de cliente
+    U->>F: Click "Buscar Cliente"
+    F-->>U: Modal de búsqueda
+    
+    U->>F: Ingresa nombre cliente
+    U->>F: Click "Buscar"
+    
+    F->>B: POST /api/clientes/buscar<br/>{"criterio": "nombre", "nombre_cliente": "Casa"}
+    B->>D: SELECT * FROM clientes<br/>WHERE nombre ILIKE '%Casa%'
+    D-->>B: Resultados de búsqueda
+    B-->>F: JSON con lista de clientes
+    
+    F-->>U: Grilla con resultados
+    
+    %% Selección y edición
+    U->>F: Click en cliente (ID: 3)
+    F-->>U: Formulario de edición
+    
+    U->>F: Modifica datos (docenas, horario, etc.)
+    U->>F: Click "Guardar Cambios"
+    
+    F->>B: PUT /api/clientes/actualizar/3<br/>{"docenas": 1.5, "horario": "14:30:00"}
+    B->>D: UPDATE clientes<br/>SET docenas=1.5, horario='14:30:00'<br/>WHERE id=3
+    D-->>B: Confirmación UPDATE
+    B-->>F: {"mensaje": "Cliente actualizado"}
+    
+    F-->>U: Notificación "Cliente actualizado"
+    F->>F: Refresh capa de Pedidos (WFS)
+    
+    %% Visualización de tooltip
+    U->>F: Click en punto del mapa
+    Note over F: Detectar feature en píxel
+    F-->>U: Tooltip con información<br/>(Pedido o Cliente)
+    
+    %% Búsqueda de dirección
+    U->>F: Click "Buscar Dirección"
+    U->>F: Ingresa "Dr Ortiz 938"
+    
+    F->>B: POST /buscar_direccion<br/>{"direccion": "Dr Ortiz 938"}
+    B->>B: Geocodificación (servicio externo)
+    B-->>F: {"latitud": -35.768, "longitud": -58.494}
+    
+    F->>F: Agregar marcador en mapa
+    F->>F: Animar zoom a ubicación
+    F-->>U: Mapa centrado en dirección
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Especificaciones Técnicas</h2>
+            
+            <h3>🔗 Puertos y Conectividad</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Componente</th>
+                        <th>Puerto Host</th>
+                        <th>Puerto Container</th>
+                        <th>Protocolo</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Frontend (Svelte)</td>
+                        <td>8080</td>
+                        <td>8080</td>
+                        <td>HTTP</td>
+                        <td>Interfaz web principal</td>
+                    </tr>
+                    <tr>
+                        <td>Backend (Flask)</td>
+                        <td>5000</td>
+                        <td>5000</td>
+                        <td>HTTP</td>
+                        <td>API REST</td>
+                    </tr>
+                    <tr>
+                        <td>Proxy (Nginx)</td>
+                        <td>8086</td>
+                        <td>80</td>
+                        <td>HTTP</td>
+                        <td>Proxy para GeoServer</td>
+                    </tr>
+                    <tr>
+                        <td>Database (PostgreSQL)</td>
+                        <td>5433</td>
+                        <td>5432</td>
+                        <td>TCP</td>
+                        <td>Base de datos</td>
+                    </tr>
+                    <tr>
+                        <td>GeoServer</td>
+                        <td>8087</td>
+                        <td>8080</td>
+                        <td>HTTP</td>
+                        <td>Servicios GIS</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>🌐 Endpoints Principales</h3>
+            <div class="component-box">
+                <h4>Backend API (Flask)</h4>
+                <ul>
+                    <li><strong>POST</strong> <code>/api/clientes/buscar</code> - Búsqueda de clientes</li>
+                    <li><strong>PUT</strong> <code>/api/clientes/actualizar/{id}</code> - Actualización de cliente</li>
+                    <li><strong>POST</strong> <code>/buscar_direccion</code> - Geocodificación de direcciones</li>
+                </ul>
+            </div>
+
+            <div class="component-box">
+                <h4>GeoServer Services (WMS/WFS)</h4>
+                <ul>
+                    <li><strong>GET</strong> <code>/geoserver/ows?service=WFS</code> - Datos vectoriales (Features)</li>
+                    <li><strong>GET</strong> <code>/geoserver/wms</code> - Capas raster (Tiles)</li>
+                    <li><strong>Layers:</strong> GeneralBelgrano:Clientes, GeneralBelgrano:Pedidos</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Variables de Entorno</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Valor por Defecto</th>
+                        <th>Descripción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>API_URL</td>
+                        <td>http://backend:5000</td>
+                        <td>URL del backend para el frontend</td>
+                    </tr>
+                    <tr>
+                        <td>GEOSERVER_URL</td>
+                        <td>http://localhost:8086/geoserver</td>
+                        <td>URL de GeoServer via proxy</td>
+                    </tr>
+                    <tr>
+                        <td>DB_USER</td>
+                        <td>postgres</td>
+                        <td>Usuario de PostgreSQL</td>
+                    </tr>
+                    <tr>
+                        <td>DB_PASSWORD</td>
+                        <td>postgres</td>
+                        <td>Contraseña de PostgreSQL</td>
+                    </tr>
+                    <tr>
+                        <td>DB_NAME</td>
+                        <td>postgres</td>
+                        <td>Nombre de la base de datos</td>
+                    </tr>
+                    <tr>
+                        <td>DB_PORT</td>
+                        <td>5432</td>
+                        <td>Puerto interno de PostgreSQL</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Funcionalidades Principales</h2>
+            
+            <div class="flow-step">
+                <strong>🔍 Búsqueda de Clientes:</strong> Búsqueda por nombre, dirección, calle y altura con resultados en grilla interactiva.
+            </div>
+            
+            <div class="flow-step">
+                <strong>✏️ Edición de Datos:</strong> Formulario modal para actualizar información de clientes (docenas, horario, observaciones, etc.).
+            </div>
+            
+            <div class="flow-step">
+                <strong>🗺️ Visualización GIS:</strong> Mapa interactivo con capas WFS/WMS de clientes y pedidos usando OpenLayers.
+            </div>
+            
+            <div class="flow-step">
+                <strong>📍 Geocodificación:</strong> Búsqueda de direcciones con marcadores y zoom automático en el mapa.
+            </div>
+            
+            <div class="flow-step">
+                <strong>💬 Tooltips Interactivos:</strong> Click en features del mapa para mostrar información detallada con posicionamiento inteligente.
+            </div>
+            
+            <div class="flow-step">
+                <strong>📱 Responsive Design:</strong> Interfaz adaptable para desktop, tablet y móvil con menú hamburguesa y controles táctiles.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔒 Consideraciones de Seguridad</h2>
+            <div class="note">
+                <strong>🔐 Proxy CORS:</strong> El proxy Nginx maneja automáticamente los headers CORS para permitir acceso seguro a GeoServer desde el frontend.
+                <br><br>
+                <strong>🌐 Red Docker:</strong> Todos los servicios están aislados en una red Docker privada (raweb-network) con comunicación interna.
+                <br><br>
+                <strong>🗄️ Persistencia:</strong> Los datos de PostgreSQL se almacenan en un volumen Docker persistente (postgres_data).
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Métricas y Rendimiento</h2>
+            <ul>
+                <li><strong>Frontend:</strong> Aplicación Svelte compilada y optimizada con Rollup</li>
+                <li><strong>Backend:</strong> API Flask con SQLAlchemy ORM para optimización de consultas</li>
+                <li><strong>GIS:</strong> Capas WFS para interactividad y WMS para visualización rápida</li>
+                <li><strong>Database:</strong> PostgreSQL 13 con Alpine Linux para menor footprint</li>
+                <li><strong>Proxy:</strong> Nginx para balanceo de carga y manejo de CORS</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Próximos Pasos</h2>
+            <ol>
+                <li>Implementar autenticación y autorización de usuarios</li>
+                <li>Agregar funcionalidades de reporting y exportación</li>
+                <li>Optimizar rendimiento con cache Redis</li>
+                <li>Implementar monitoreo con Prometheus/Grafana</li>
+                <li>Agregar backup automatizado de la base de datos</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666;">
+            <p><strong>Documento generado automáticamente</strong><br>
+            RAWEB - Sistema de Gestión GIS<br>
+            <script>document.write(new Date().toLocaleDateString('es-ES'));</script></p>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#e3f2fd',
+                primaryTextColor: '#1976d2',
+                primaryBorderColor: '#2196f3',
+                lineColor: '#1976d2',
+                secondaryColor: '#f1f8e9',
+                tertiaryColor: '#fff3e0'
+            }
+        });
+    </script>
+</body>
+</html> 
