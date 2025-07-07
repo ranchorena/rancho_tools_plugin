@@ -105,3 +105,49 @@ Then, from within your project folder:
 npm run build
 surge public my-project.surge.sh
 ```
+
+---
+
+Read file: raweb/package.json
+
+Según tu archivo `package.json`, estás utilizando:
+
+## **Svelte**
+- **Versión**: `3.59.2`
+- Se encuentra en `devDependencies`
+
+## **OpenLayers**
+- **Versión**: `10.6.1` 
+- Se encuentra en `dependencies` (como `"ol"`)
+
+### **Información adicional:**
+
+**Svelte 3.59.2**: 
+- Es una versión estable y madura de Svelte 3
+- Compatible con la mayoría de plugins y herramientas del ecosistema
+- Buena performance y estabilidad
+
+**OpenLayers 10.6.1**:
+- Es una versión bastante reciente de OpenLayers
+- Incluye soporte completo para WMS, WFS, y otras funcionalidades GIS
+- Buena compatibilidad con navegadores modernos
+
+### **Otras dependencias relevantes:**
+- **Rollup**: `4.9.0` (bundler)
+- **Rollup Plugin Svelte**: `7.1.6`
+- **Sirv**: `2.0.0` (servidor de desarrollo)
+
+---
+
+### TODO
+
+- El tooltip de Pedidos y Clientes solo deberian tener los datos o sea sin los textos de la izquierda.
+
+- Luego de actualizar el cliente que vaya a la ubicacion del cliente
+
+- Necesito que cuando de click en la opcion del menu de Pedidos se muestre un formulario con los mismos estilos que Buscar Clientes y que muestre todos los clientes que tienen pedidos o sea debe llamar a la raapi al endpoint ...
+  - Mostrar Grilla con todos los pedidos
+  - Click sobre el row de la grilla que haga zoom en el mapa a la posicion del cliente
+  
+- Agregar capa de google maps
+
