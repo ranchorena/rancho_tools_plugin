@@ -127,10 +127,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 1.5rem;
+    padding: 0.375rem 1.5rem;
     border-bottom: 1px solid #e5e7eb;
     flex-shrink: 0;
     background-color: #f8f9fa;
+    min-height: 40px;
   }
 
   .modal-body {
@@ -142,15 +143,15 @@
   .close-button {
     background: transparent;
     border: none;
-    font-size: 1.75rem;
+    font-size: 1.25rem;
     cursor: pointer;
     padding: 0.25rem;
     line-height: 1;
     color: #6b7280;
     font-weight: normal;
     border-radius: 50%;
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -165,8 +166,9 @@
   h2 {
     color: #1f2937;
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1rem;
     font-weight: 600;
+    line-height: 1.2;
   }
 
   h3 {
@@ -302,7 +304,8 @@
     }
 
     .modal-header {
-      padding: 0.375rem 1rem;
+      padding: 0.25rem 1rem;
+      min-height: 36px;
     }
 
     .modal-body {
@@ -324,6 +327,57 @@
 
     .estadisticas-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  /* Móvil pequeño */
+  @media (max-width: 480px) {
+    .modal-backdrop {
+      padding: 0.25rem;
+      padding-top: 0.5rem;
+    }
+
+    .modal-content {
+      max-height: calc(100vh - 1rem);
+      border-radius: 6px;
+    }
+
+    .modal-header {
+      padding: 0.25rem 0.875rem;
+      min-height: 32px;
+    }
+
+    .modal-body {
+      padding: 0.625rem 0.875rem 0.875rem 0.875rem;
+    }
+
+    .pedidos-section, .estadisticas-section {
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-size: 0.9rem;
+    }
+
+    h3 {
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .close-button {
+      width: 24px;
+      height: 24px;
+      font-size: 1rem;
+    }
+
+    table {
+      font-size: 0.8rem;
+      min-width: 600px;
+    }
+
+    th, td {
+      padding: 0.375rem;
     }
   }
 

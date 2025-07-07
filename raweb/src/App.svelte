@@ -741,32 +741,34 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.375rem 1rem;
+    padding: 0.3rem 1rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.8);
     border-radius: 8px 8px 0 0;
+    min-height: 32px;
   }
 
   .layer-toolbar-title {
     font-weight: 600;
     color: #495057;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
   }
 
   .layer-toolbar-toggle {
     background: none;
     border: none;
-    font-size: 1rem;
+    font-size: 0.875rem;
     color: #6c757d;
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 0.125rem;
     border-radius: 4px;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
   }
 
   .layer-toolbar-toggle:hover {
