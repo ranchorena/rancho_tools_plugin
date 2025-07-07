@@ -22,6 +22,7 @@
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
+  import Pedidos from './Pedidos.svelte'; // Importar el componente Pedidos
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
@@ -30,6 +31,7 @@
 
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
+  let showPedidosDialog = false;
 
   // Variables para las capas base
   let osmLayer;
@@ -331,19 +333,29 @@
 
   function openBuscarDireccion() {
     showBuscarDireccionDialog = true;
-    showBuscarClienteDialog = false; // Asegurar que el otro diálogo esté cerrado
+    showBuscarClienteDialog = false; // Asegurar que los otros diálogos estén cerrados
+    showPedidosDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
   function openBuscarCliente() {
     showBuscarClienteDialog = true;
-    showBuscarDireccionDialog = false; // Asegurar que el otro diálogo esté cerrado
+    showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
+    showPedidosDialog = false;
+    closeMobileMenu(); // Cerrar menú móvil si está abierto
+  }
+
+  function openPedidos() {
+    showPedidosDialog = true;
+    showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
+    showBuscarClienteDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
   function closeDialogs() {
     showBuscarDireccionDialog = false;
     showBuscarClienteDialog = false;
+    showPedidosDialog = false;
     if (map) {
       // Pequeño delay para asegurar que el DOM está actualizado si se re-renderiza el mapa
       setTimeout(() => {
@@ -353,8 +365,7 @@
   }
 
   function handlePedidosAction() {
-    alert('Funcionalidad "Pedidos" no implementada.');
-    closeMobileMenu();
+    openPedidos();
   }
 
   async function handleBuscarDireccion(event) {
@@ -410,6 +421,21 @@
     markerSource.addFeature(marker);
   }
 
+  function handleZoomToLocation(event) {
+    const { longitude, latitude } = event.detail;
+    if (map && longitude && latitude) {
+      // Animar el zoom al cliente seleccionado
+      map.getView().animate({
+        center: fromLonLat([longitude, latitude]),
+        zoom: 18, // Zoom cercano para ver el cliente
+        duration: 1000 // Duración de la animación en ms
+      });
+      
+      // Opcionalmente agregar un marcador temporal
+      addMarker(longitude, latitude);
+    }
+  }
+
   function closeFeatureTooltip() {
     showFeatureTooltip = false;
     selectedFeatureData = null;
@@ -435,7 +461,7 @@
       <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
         👤 Buscar Cliente
       </button>
-      <button on:click={handlePedidosAction}>
+      <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
         📦 Pedidos
       </button>
     </div>
@@ -461,7 +487,7 @@
           <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
             👤 Buscar Cliente
           </button>
-          <button on:click={handlePedidosAction}>
+          <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
             📦 Pedidos
           </button>
         </div>
@@ -534,6 +560,13 @@
       on:close={closeDialogs}
       on:showGlobalNotification={handleShowGlobalNotification}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
+    />
+  {/if}
+
+  {#if showPedidosDialog}
+    <Pedidos
+      on:close={closeDialogs}
+      on:zoomToLocation={handleZoomToLocation}
     />
   {/if}
 
