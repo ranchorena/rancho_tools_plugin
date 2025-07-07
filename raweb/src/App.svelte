@@ -22,6 +22,7 @@
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
+  import Pedidos from './Pedidos.svelte'; // Importar el componente Pedidos
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
@@ -30,6 +31,7 @@
 
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
+  let showPedidosDialog = false;
 
   // Variables para las capas base
   let osmLayer;
@@ -331,19 +333,29 @@
 
   function openBuscarDireccion() {
     showBuscarDireccionDialog = true;
-    showBuscarClienteDialog = false; // Asegurar que el otro diálogo esté cerrado
+    showBuscarClienteDialog = false; // Asegurar que los otros diálogos estén cerrados
+    showPedidosDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
   function openBuscarCliente() {
     showBuscarClienteDialog = true;
-    showBuscarDireccionDialog = false; // Asegurar que el otro diálogo esté cerrado
+    showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
+    showPedidosDialog = false;
+    closeMobileMenu(); // Cerrar menú móvil si está abierto
+  }
+
+  function openPedidos() {
+    showPedidosDialog = true;
+    showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
+    showBuscarClienteDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
   function closeDialogs() {
     showBuscarDireccionDialog = false;
     showBuscarClienteDialog = false;
+    showPedidosDialog = false;
     if (map) {
       // Pequeño delay para asegurar que el DOM está actualizado si se re-renderiza el mapa
       setTimeout(() => {
@@ -353,8 +365,7 @@
   }
 
   function handlePedidosAction() {
-    alert('Funcionalidad "Pedidos" no implementada.');
-    closeMobileMenu();
+    openPedidos();
   }
 
   async function handleBuscarDireccion(event) {
@@ -410,6 +421,21 @@
     markerSource.addFeature(marker);
   }
 
+  function handleZoomToLocation(event) {
+    const { longitude, latitude } = event.detail;
+    if (map && longitude && latitude) {
+      // Animar el zoom al cliente seleccionado
+      map.getView().animate({
+        center: fromLonLat([longitude, latitude]),
+        zoom: 18, // Zoom cercano para ver el cliente
+        duration: 1000 // Duración de la animación en ms
+      });
+      
+      // Opcionalmente agregar un marcador temporal
+      addMarker(longitude, latitude);
+    }
+  }
+
   function closeFeatureTooltip() {
     showFeatureTooltip = false;
     selectedFeatureData = null;
@@ -435,7 +461,7 @@
       <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
         👤 Buscar Cliente
       </button>
-      <button on:click={handlePedidosAction}>
+      <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
         📦 Pedidos
       </button>
     </div>
@@ -461,7 +487,7 @@
           <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
             👤 Buscar Cliente
           </button>
-          <button on:click={handlePedidosAction}>
+          <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
             📦 Pedidos
           </button>
         </div>
@@ -534,6 +560,13 @@
       on:close={closeDialogs}
       on:showGlobalNotification={handleShowGlobalNotification}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
+    />
+  {/if}
+
+  {#if showPedidosDialog}
+    <Pedidos
+      on:close={closeDialogs}
+      on:zoomToLocation={handleZoomToLocation}
     />
   {/if}
 
@@ -708,32 +741,34 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
+    padding: 0.3rem 1rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     background: rgba(248, 249, 250, 0.8);
     border-radius: 8px 8px 0 0;
+    min-height: 32px;
   }
 
   .layer-toolbar-title {
     font-weight: 600;
     color: #495057;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
   }
 
   .layer-toolbar-toggle {
     background: none;
     border: none;
-    font-size: 1rem;
+    font-size: 0.875rem;
     color: #6c757d;
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 0.125rem;
     border-radius: 4px;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
   }
 
   .layer-toolbar-toggle:hover {
@@ -869,10 +904,12 @@
     z-index: 999;
     transform: translateY(-100%);
     transition: transform 0.3s ease;
+    display: none; /* Oculto por defecto */
   }
 
   .mobile-menu.open {
     transform: translateY(0);
+    display: block;
   }
 
   .mobile-menu-content {
@@ -1038,8 +1075,25 @@
     }
   }
 
+  /* Clases de utilidad responsivas */
+  .d-mobile-none {
+    display: flex;
+  }
+
+  .d-mobile-block {
+    display: none;
+  }
+
   /* Media queries responsivas */
   @media (max-width: 768px) {
+    .d-mobile-none {
+      display: none;
+    }
+
+    .d-mobile-block {
+      display: flex;
+    }
+
     .navbar {
       padding: 0.5rem 1rem;
       min-height: 56px;
@@ -1055,6 +1109,11 @@
 
     .mobile-menu {
       top: 56px;
+      display: none; /* Asegurar que esté oculto por defecto en móvil */
+    }
+
+    .mobile-menu.open {
+      display: block; /* Mostrar cuando esté abierto */
     }
 
     /* Toolbar responsivo en móviles */
