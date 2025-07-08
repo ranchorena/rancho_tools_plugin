@@ -1,0 +1,22 @@
+<layer>
+  <name>Pedidos</name>
+  <id>LayerInfoImpl--3510f91:18a5c3b29ee:-7ff9</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--70033ed6:18a6135a575:-8000</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl--70033ed6:18a6135a575:-8000</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--3510f91:18a5c3b29ee:-7ffa</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2023-09-03 18:57:03.689 UTC</dateCreated>
+  <dateModified>2025-07-05 20:30:45.112 UTC</dateModified>
+</layer>

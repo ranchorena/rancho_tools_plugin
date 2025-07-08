@@ -1,0 +1,22 @@
+<layer>
+  <name>Clientes</name>
+  <id>LayerInfoImpl--3510f91:18a5c3b29ee:-7ffb</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-4f2c0a7a:197dc0b9ab1:-7ffa</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-4f2c0a7a:197dc0b9ab1:-7ffa</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--3510f91:18a5c3b29ee:-7ffc</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2023-09-03 18:50:30.623 UTC</dateCreated>
+  <dateModified>2025-07-06 13:02:01.455 UTC</dateModified>
+</layer>

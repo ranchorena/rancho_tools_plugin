@@ -1,0 +1,22 @@
+<layer>
+  <name>Barrios</name>
+  <id>LayerInfoImpl--27ad9885:18adcd1209a:-7ffe</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--27ad9885:18adcd1209a:-7ffd</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl--27ad9885:18adcd1209a:-7ffd</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--27ad9885:18adcd1209a:-7fff</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2023-09-28 17:23:40.975 UTC</dateCreated>
+  <dateModified>2023-09-28 17:42:19.956 UTC</dateModified>
+</layer>
