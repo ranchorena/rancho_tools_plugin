@@ -554,7 +554,12 @@
 
   <!-- Overlay para cerrar menú móvil -->
   {#if mobileMenuOpen}
-    <div class="mobile-menu-overlay" on:click={closeMobileMenu}></div>
+    <div class="mobile-menu-overlay" 
+         on:click={closeMobileMenu}
+         on:keydown={(e) => e.key === 'Escape' && closeMobileMenu()}
+         role="button"
+         tabindex="0"
+         aria-label="Cerrar menú móvil"></div>
   {/if}
 
   <div class="map-container" bind:this={mapElement}>
@@ -630,7 +635,10 @@
   {#if showFeatureTooltip && selectedFeatureData}
     <div class="feature-tooltip" 
          style="left: {tooltipPosition.x}px; top: {tooltipPosition.y}px;" 
-         on:click|stopPropagation>
+         on:click|stopPropagation
+         on:keydown|stopPropagation
+         role="dialog"
+         aria-label="Información del elemento seleccionado">
       <div class="feature-tooltip-content">
         <div class="feature-tooltip-data">{selectedFeatureData.id}</div>
         <div class="feature-tooltip-data">{selectedFeatureData.nombre}</div>
@@ -1210,21 +1218,7 @@
     }
   }
 
-  /* Estilos para el tooltip original (mantenido por compatibilidad) */
-  .ol-tooltip {
-    position: absolute;
-    background-color: white;
-    color: black;
-    border: 1px solid #cccccc;
-    padding: 8px;
-    border-radius: 4px;
-    font-size: 0.9em;
-    pointer-events: none;
-    display: none;
-    white-space: nowrap;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 1010;
-  }
+
 
   /* Estilos para el tooltip de información de pedidos y clientes */
   .feature-tooltip {

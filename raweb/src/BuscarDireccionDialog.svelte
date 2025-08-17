@@ -28,10 +28,19 @@
   }
 </script>
 
-<div class="modal-backdrop" on:click={handleCancelar}>
-  <div class="modal-content" on:click|stopPropagation>
+<div class="modal-backdrop" 
+     on:click={handleCancelar}
+     on:keydown={(e) => e.key === 'Escape' && handleCancelar()}
+     role="button"
+     tabindex="0"
+     aria-label="Cerrar modal">
+  <div class="modal-content" 
+       on:click|stopPropagation
+       on:keydown|stopPropagation
+       role="dialog"
+       aria-labelledby="direccion-title">
     <div class="modal-header">
-      <h2>📍 Buscar Dirección</h2>
+      <h2 id="direccion-title">📍 Buscar Dirección</h2>
       <button class="close-button" on:click={handleCancelar} aria-label="Cerrar">
         &times;
       </button>
@@ -46,7 +55,6 @@
           bind:value={direccionInput}
           placeholder="Ej: SARMIENTO 550"
           on:keydown={handleKeydown}
-          autofocus
         />
       </div>
     </div>

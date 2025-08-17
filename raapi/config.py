@@ -8,9 +8,18 @@ from sqlalchemy.ext.declarative import declarative_base
 # Por favor, reemplaza con tus credenciales reales
 DB_USER = os.environ.get('DB_USER', 'postgres')
 DB_PASSWORD = os.environ.get('DB_PASSWORD', 'postgres')
+# Detectar si estamos en Docker o desarrollo local
 DB_HOST = os.environ.get('DB_HOST', 'localhost')
+# Si no estamos en Docker (no hay /app o similar), forzar localhost
+if DB_HOST == 'db' and not os.path.exists('/app'):
+    DB_HOST = 'localhost'
 DB_PORT = os.environ.get('DB_PORT', '5432')
 DB_NAME = os.environ.get('DB_NAME', 'postgres')
+
+schema = os.environ.get('DB_SCHEMA', 'generalbelgrano')
+
+# Log para debugging
+print(f"DEBUG: Configuración de BD - HOST: {DB_HOST}, PORT: {DB_PORT}, USER: {DB_USER}, DB: {DB_NAME}")
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 

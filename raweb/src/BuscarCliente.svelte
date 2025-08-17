@@ -807,10 +807,19 @@
   }
 </style>
 
-<div class="modal-backdrop" on:click={() => dispatch('close')}>
-  <div class="modal-content" on:click|stopPropagation>
+<div class="modal-backdrop" 
+     on:click={() => dispatch('close')}
+     on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
+     role="button"
+     tabindex="0"
+     aria-label="Cerrar modal">
+  <div class="modal-content" 
+       on:click|stopPropagation
+       on:keydown|stopPropagation
+       role="dialog"
+       aria-labelledby="modal-title">
     <div class="modal-header">
-      <h2>👤 Buscar Cliente</h2>
+      <h2 id="modal-title">👤 Buscar Cliente</h2>
       <button class="close-button" on:click={() => dispatch('close')} aria-label="Cerrar">&times;</button>
     </div>
 
@@ -842,10 +851,10 @@
         </div>
 
         <div class="form-group centered-search">
-          <label>Buscar por calle y altura:</label>
+          <label for="searchTermCalle">Buscar por calle y altura:</label>
           <div class="input-group">
-            <input type="text" bind:value={searchTermCalle} placeholder="Nombre de la calle">
-            <input type="text" bind:value={searchTermAltura} placeholder="Altura">
+            <input id="searchTermCalle" type="text" bind:value={searchTermCalle} placeholder="Nombre de la calle" aria-label="Nombre de la calle">
+            <input type="text" bind:value={searchTermAltura} placeholder="Altura" aria-label="Altura de la calle">
             <button on:click={searchByStreetHeight}>Buscar</button>
           </div>
         </div>

@@ -391,10 +391,19 @@
   }
 </style>
 
-<div class="modal-backdrop" on:click={() => dispatch('close')}>
-  <div class="modal-content" on:click|stopPropagation>
+<div class="modal-backdrop" 
+     on:click={() => dispatch('close')}
+     on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
+     role="button"
+     tabindex="0"
+     aria-label="Cerrar modal">
+  <div class="modal-content" 
+       on:click|stopPropagation
+       on:keydown|stopPropagation
+       role="dialog"
+       aria-labelledby="pedidos-title">
     <div class="modal-header">
-      <h2>📦 Pedidos</h2>
+      <h2 id="pedidos-title">📦 Pedidos</h2>
       <button class="close-button" on:click={() => dispatch('close')} aria-label="Cerrar">&times;</button>
     </div>
 
