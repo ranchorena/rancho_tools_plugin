@@ -5,7 +5,7 @@
   import TileLayer from 'ol/layer/Tile.js';
   import OSM from 'ol/source/OSM.js';
   import XYZ from 'ol/source/XYZ.js'; // Para Google Satellite
-  import { fromLonLat } from 'ol/proj.js';
+  import { fromLonLat, toLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
   import VectorLayer from 'ol/layer/Vector.js';
@@ -23,6 +23,7 @@
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
   import Pedidos from './Pedidos.svelte'; // Importar el componente Pedidos
+  import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
 
   let mapElement;
@@ -32,6 +33,11 @@
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
   let showPedidosDialog = false;
+  let showAgregarClienteDialog = false;
+
+  // Variables para agregar cliente
+  let modoSeleccionPunto = false;
+  let coordenadasSeleccionadas = null;
 
   // Variables para las capas base
   let osmLayer;
@@ -233,6 +239,28 @@
 
     // Evento de click para mostrar información de pedidos y clientes (WFS)
     map.on('singleclick', function(evt) {
+      // Si estamos en modo selección de punto para agregar cliente
+      if (modoSeleccionPunto) {
+        const coordinate = evt.coordinate;
+        // Convertir las coordenadas del mapa (EPSG:3857) a WGS84 (EPSG:4326)
+        const [lon, lat] = toLonLat(coordinate);
+        
+        // Establecer las coordenadas seleccionadas
+        coordenadasSeleccionadas = {
+          lat: lat,
+          lon: lon
+        };
+        
+        // Agregar un marcador temporal en la ubicación seleccionada
+        addMarker(lon, lat);
+        
+        // Restaurar cursor normal
+        map.getViewport().style.cursor = '';
+        modoSeleccionPunto = false;
+        
+        return; // Salir temprano para no procesar clicks de features
+      }
+      
       let foundFeature = null;
       let foundLayer = null;
       
@@ -339,6 +367,7 @@
     showBuscarDireccionDialog = true;
     showBuscarClienteDialog = false; // Asegurar que los otros diálogos estén cerrados
     showPedidosDialog = false;
+    showAgregarClienteDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
@@ -346,6 +375,7 @@
     showBuscarClienteDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showPedidosDialog = false;
+    showAgregarClienteDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
@@ -353,6 +383,15 @@
     showPedidosDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
+    showAgregarClienteDialog = false;
+    closeMobileMenu(); // Cerrar menú móvil si está abierto
+  }
+
+  function openAgregarCliente() {
+    showAgregarClienteDialog = true;
+    showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
+    showBuscarClienteDialog = false;
+    showPedidosDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
@@ -360,6 +399,9 @@
     showBuscarDireccionDialog = false;
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
+    showAgregarClienteDialog = false;
+    modoSeleccionPunto = false;
+    coordenadasSeleccionadas = null;
     if (map) {
       // Pequeño delay para asegurar que el DOM está actualizado si se re-renderiza el mapa
       setTimeout(() => {
@@ -370,6 +412,52 @@
 
   function handlePedidosAction() {
     openPedidos();
+  }
+
+  // Funciones para agregar cliente
+  function handleSeleccionarUbicacion() {
+    // Activar modo de selección de punto
+    modoSeleccionPunto = true;
+    coordenadasSeleccionadas = null;
+    
+    // Cambiar cursor del mapa
+    if (map) {
+      map.getViewport().style.cursor = 'crosshair';
+    }
+  }
+
+  function handleClienteAgregado(event) {
+    const { cliente, message } = event.detail;
+    
+    // Mostrar notificación de éxito
+    handleShowGlobalNotification({
+      detail: {
+        message: message,
+        type: 'success'
+      }
+    });
+
+    // Refrescar la capa de clientes para mostrar el nuevo cliente
+    if (clientesLayer) {
+      clientesLayer.getSource().refresh();
+    }
+
+    // Hacer zoom al nuevo cliente si tiene coordenadas
+    if (cliente.longitud && cliente.latitud) {
+      setTimeout(() => {
+        map.getView().animate({
+          center: fromLonLat([cliente.longitud, cliente.latitud]),
+          zoom: 18,
+          duration: 1000
+        });
+        
+        // Agregar un marcador temporal
+        addMarker(cliente.longitud, cliente.latitud);
+      }, 500);
+    }
+
+    // Cerrar el diálogo
+    closeDialogs();
   }
 
   async function handleBuscarDireccion(event) {
@@ -516,6 +604,9 @@
       <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
         👤 Buscar Cliente
       </button>
+      <button on:click={openAgregarCliente} class:active={showAgregarClienteDialog}>
+        ➕ Agregar Cliente
+      </button>
       <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
         📦 Pedidos
       </button>
@@ -541,6 +632,9 @@
           </button>
           <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
             👤 Buscar Cliente
+          </button>
+          <button on:click={openAgregarCliente} class:active={showAgregarClienteDialog}>
+            ➕ Agregar Cliente
           </button>
           <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
             📦 Pedidos
@@ -606,6 +700,11 @@
          ▣
        </button>
     {/if}
+
+    <!-- Botón flotante para agregar cliente -->
+    <button class="add-client-floating-btn" on:click={openAgregarCliente} title="Agregar nuevo cliente">
+      ➕
+    </button>
   </div>
 
   {#if showBuscarDireccionDialog}
@@ -628,6 +727,15 @@
     <Pedidos
       on:close={closeDialogs}
       on:zoomToLocation={handleZoomToLocation}
+    />
+  {/if}
+
+  {#if showAgregarClienteDialog}
+    <AgregarCliente
+      coordenadas={coordenadasSeleccionadas}
+      on:close={closeDialogs}
+      on:seleccionarUbicacion={handleSeleccionarUbicacion}
+      on:clienteAgregado={handleClienteAgregado}
     />
   {/if}
 
@@ -885,6 +993,38 @@
     background: rgba(255, 255, 255, 1);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Botón flotante para agregar cliente */
+  .add-client-floating-btn {
+    position: absolute;
+    top: 5rem; /* Debajo del botón de capas */
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: white;
+    transition: all 0.2s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+
+  .add-client-floating-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  }
+
+  .add-client-floating-btn:active {
+    transform: translateY(-1px) scale(1.02);
   }
 
   /* Botón hamburguesa móvil */
@@ -1160,6 +1300,14 @@
       right: 0.5rem;
       width: 40px;
       height: 40px;
+    }
+
+    .add-client-floating-btn {
+      top: 4rem; /* Ajustar posición en móviles */
+      right: 0.5rem;
+      width: 40px;
+      height: 40px;
+      font-size: 1.3rem;
     }
 
     /* Ajustes para pantallas muy pequeñas */

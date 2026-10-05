@@ -24,7 +24,7 @@
 ---
 # Deberia correr esto 
 # docker build -t k8sgeosystems/rageoserver:2.26.2 .
-# docker run -d --restart=always -p 8087:8080 --name rageoserver-qa -v /c/docker/volumes/geoserver_data_ra:/opt/geoserver_data k8sgeosystems/rageoserver:2.26.2
+# docker run -d --restart=always -p 8087:8080 --name rageoserver-qa -v /c/docker/volumes/geoserver_data:/opt/geoserver_data k8sgeosystems/rageoserver:2.26.2
 # Copiar el workspace a mano
 # Resetear pwd
 # Entrar a geoserver y conectar al data store para que se setee la pwd

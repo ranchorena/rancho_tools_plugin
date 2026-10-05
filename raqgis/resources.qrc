@@ -1,0 +1,6 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+<qresource prefix="/plugins/rancho_tools_plugin">
+    <file>buscar.png</file>
+</qresource>
+</RCC>

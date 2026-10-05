@@ -1,7 +1,7 @@
 # raapi/API.py
 # coding=utf-8
 
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func, and_, or_, text
 from decimal import Decimal
 import datetime
 import json
@@ -218,6 +218,73 @@ class API: # Clase contenedora renombrada a API
         )
         
         return API.to_dict(result) if result else None
+
+    @staticmethod
+    def agregarCliente(session, datos_cliente):
+        """
+        Agrega un nuevo cliente a la base de datos.
+        Retorna una tupla (resultado, mensaje/cliente_data) donde:
+        - resultado: 'success', 'error', 'validation_error'
+        - datos: diccionario con información del cliente creado o mensaje de error
+        """
+        try:
+            # Validar campos requeridos
+            if not datos_cliente.get('nombre'):
+                return "validation_error", "El nombre del cliente es requerido."
+            
+            if not datos_cliente.get('direccion'):
+                return "validation_error", "La dirección del cliente es requerida."
+                
+            if not datos_cliente.get('latitud') or not datos_cliente.get('longitud'):
+                return "validation_error", "Las coordenadas (latitud y longitud) son requeridas."
+
+            # Preparar datos para inserción
+            nuevo_cliente = {
+                'nombre': datos_cliente['nombre'].strip(),
+                'direccion': datos_cliente['direccion'].strip(),
+                'calle': datos_cliente.get('calle', '').strip() if datos_cliente.get('calle') else None,
+                'altura': int(datos_cliente['altura']) if datos_cliente.get('altura') and str(datos_cliente['altura']).strip() else None,
+                'tiene_pedido': 1 if datos_cliente.get('tiene_pedido') else 0,
+                'telefono': datos_cliente.get('telefono', '').strip() if datos_cliente.get('telefono') else None,
+                'cantidad': float(datos_cliente['cantidad']) if datos_cliente.get('cantidad') else 0.0,
+                'horario': datos_cliente.get('horario') if datos_cliente.get('horario') else None,
+                'nro_pao': int(datos_cliente['nro_pao']) if datos_cliente.get('nro_pao') and str(datos_cliente['nro_pao']).strip() else None,
+                'observacion': datos_cliente.get('observacion', '').strip() if datos_cliente.get('observacion') else None,
+                'es_regalo': 1 if datos_cliente.get('es_regalo') else 0
+            }
+            
+            # Crear la geometría a partir de las coordenadas (convertir de EPSG:4326 a EPSG:5347)
+            latitud = float(datos_cliente['latitud'])
+            longitud = float(datos_cliente['longitud'])
+            
+            # Insertar el cliente usando SQL directo con la geometría
+            insert_query = """
+                INSERT INTO generalbelgrano.clientes 
+                (nombre, direccion, calle, altura, tiene_pedido, telefono, cantidad, horario, nro_pao, observacion, es_regalo, geometria)
+                VALUES 
+                (:nombre, :direccion, :calle, :altura, :tiene_pedido, :telefono, :cantidad, :horario, :nro_pao, :observacion, :es_regalo, 
+                 ST_Transform(ST_SetSRID(ST_MakePoint(:longitud, :latitud), 4326), 5347))
+                RETURNING id, nombre, direccion, calle, altura, 
+                         ST_X(ST_Transform(geometria, 4326)) as longitud,
+                         ST_Y(ST_Transform(geometria, 4326)) as latitud
+            """
+            
+            # Agregar coordenadas al diccionario de datos
+            nuevo_cliente['latitud'] = latitud
+            nuevo_cliente['longitud'] = longitud
+            
+            result = session.execute(text(insert_query), nuevo_cliente).fetchone()
+            
+            if result:
+                cliente_creado = API.to_dict(result)
+                return "success", cliente_creado
+            else:
+                return "error", "No se pudo crear el cliente."
+                
+        except ValueError as e:
+            return "validation_error", f"Error en los datos proporcionados: {str(e)}"
+        except Exception as e:
+            raise e  # Dejar que el contexto superior maneje la excepción
 
     @staticmethod
     def getClientesConPedidos(session):

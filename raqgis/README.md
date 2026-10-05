@@ -24,3 +24,9 @@ Now you should see a "Go!" button in your "Plugins" toolbar (make sure it is ena
 
 The next step is to change the metadata (e.g. plugin title and description) in ```metadata.txt``` and
 start adding your own code to ```__init__.py```. Have fun!
+
+---
+
+mklink /D "C:\Users\ranch\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\rancho_tools_plugin" "C:\GIT\github\rancho_tools_plugin"
+
+mklink /D "C:\Users\ranch\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\rancho_tools_plugin" "C:\GIT\github\rancho_tools_plugin\raqgis"

@@ -1,4 +1,4 @@
-FROM docker.osgeo.org/geoserver:2.26.2 as geoserver
+FROM docker.osgeo.org/geoserver:2.26.2 AS geoserver
 
 # Puerto default de Tomcat. Cambiar en caso de exponerlo por medio de un Proxy
 EXPOSE 8080

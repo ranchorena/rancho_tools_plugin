@@ -367,6 +367,219 @@ def actualizar_cliente_api(cliente_id):
             app.logger.error(f"Error en /api/clientes/actualizar/{cliente_id}: {e}")
             return jsonify({"error": "Error interno del servidor al actualizar el cliente."}), 500
 
+@app.route("/api/clientes/agregar", methods=["POST"])
+# @jwt_required() # Descomentar si se necesita protección JWT
+def agregar_cliente_api():
+    """
+    Agrega un nuevo cliente a la base de datos.
+    ---
+    tags:
+      - Clientes
+    summary: Agregar nuevo cliente
+    description: |
+      Crea un nuevo cliente en la base de datos con los datos proporcionados.
+      Las coordenadas deben estar en formato EPSG:4326 (WGS84) y serán convertidas automáticamente al sistema de coordenadas local.
+      
+      **Campos requeridos:**
+      - nombre: Nombre del cliente
+      - direccion: Dirección completa del cliente
+      - latitud: Latitud en grados decimales (EPSG:4326)
+      - longitud: Longitud en grados decimales (EPSG:4326)
+    parameters:
+      - name: body
+        in: body
+        required: true
+        description: Datos del nuevo cliente
+        schema:
+          type: object
+          required:
+            - nombre
+            - direccion
+            - latitud
+            - longitud
+          properties:
+            nombre:
+              type: string
+              description: "Nombre completo del cliente"
+              example: "Juan Pérez"
+              maxLength: 60
+            direccion:
+              type: string
+              description: "Dirección completa del cliente"
+              example: "San Martín 1250"
+              maxLength: 50
+            calle:
+              type: string
+              description: "Nombre de la calle (opcional, se puede extraer de dirección)"
+              example: "San Martín"
+              maxLength: 50
+            altura:
+              type: integer
+              description: "Altura de la calle (opcional)"
+              example: 1250
+            telefono:
+              type: string
+              description: "Número de teléfono del cliente"
+              example: "+54 11 1234-5678"
+              maxLength: 30
+            tiene_pedido:
+              type: boolean
+              description: "Si el cliente tiene pedido activo"
+              example: false
+            cantidad:
+              type: number
+              format: float
+              description: "Cantidad de productos pedidos"
+              example: 2.5
+            horario:
+              type: string
+              format: time
+              description: "Horario preferido de entrega (HH:MM)"
+              example: "14:30"
+            nro_pao:
+              type: integer
+              description: "Número de PAO"
+              example: 123
+            observacion:
+              type: string
+              description: "Observaciones adicionales"
+              example: "Casa con portón azul"
+              maxLength: 200
+            es_regalo:
+              type: boolean
+              description: "Si el pedido es un regalo"
+              example: false
+            latitud:
+              type: number
+              format: float
+              description: "Latitud en grados decimales (EPSG:4326/WGS84)"
+              example: -34.6118
+            longitud:
+              type: number
+              format: float
+              description: "Longitud en grados decimales (EPSG:4326/WGS84)"
+              example: -58.4173
+          examples:
+            cliente_basico:
+              summary: "Cliente básico"
+              value:
+                nombre: "Juan Pérez"
+                direccion: "San Martín 1250"
+                latitud: -34.6118
+                longitud: -58.4173
+            cliente_completo:
+              summary: "Cliente con todos los datos"
+              value:
+                nombre: "María González"
+                direccion: "Av. Rivadavia 2540"
+                calle: "Av. Rivadavia"
+                altura: 2540
+                telefono: "+54 11 1234-5678"
+                tiene_pedido: true
+                cantidad: 3.0
+                horario: "15:00"
+                nro_pao: 456
+                observacion: "Timbre roto, golpear puerta"
+                es_regalo: false
+                latitud: -34.6037
+                longitud: -58.3816
+    responses:
+      201:
+        description: Cliente creado exitosamente
+        schema:
+          type: object
+          properties:
+            mensaje:
+              type: string
+              description: "Mensaje de éxito"
+            cliente:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: "ID único del cliente creado"
+                nombre:
+                  type: string
+                direccion:
+                  type: string
+                calle:
+                  type: string
+                altura:
+                  type: integer
+                longitud:
+                  type: number
+                  format: float
+                latitud:
+                  type: number
+                  format: float
+        examples:
+          cliente_creado:
+            summary: "Cliente creado exitosamente"
+            value:
+              mensaje: "Cliente agregado correctamente."
+              cliente:
+                id: 789
+                nombre: "Juan Pérez"
+                direccion: "San Martín 1250"
+                calle: "San Martín"
+                altura: 1250
+                longitud: -58.4173
+                latitud: -34.6118
+      400:
+        description: Datos de entrada inválidos
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: "Descripción del error de validación"
+        examples:
+          datos_faltantes:
+            summary: "Datos requeridos faltantes"
+            value:
+              error: "El nombre del cliente es requerido."
+          coordenadas_invalidas:
+            summary: "Coordenadas inválidas"
+            value:
+              error: "Las coordenadas (latitud y longitud) son requeridas."
+      500:
+        description: Error interno del servidor
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              description: "Descripción del error interno"
+        examples:
+          error_interno:
+            summary: "Error de servidor"
+            value:
+              error: "Error interno del servidor al agregar el cliente."
+    """
+    datos_cliente = request.get_json()
+    if not datos_cliente:
+        return jsonify({"error": "No se proporcionaron datos del cliente."}), 400
+
+    with Session.begin() as session:
+        try:
+            resultado, datos = API.agregarCliente(session, datos_cliente)
+            
+            if resultado == "success":
+                return jsonify({
+                    "mensaje": "Cliente agregado correctamente.",
+                    "cliente": datos
+                }), 201
+            elif resultado == "validation_error":
+                return jsonify({"error": datos}), 400
+            elif resultado == "error":
+                return jsonify({"error": datos}), 400
+            else:
+                return jsonify({"error": "Error inesperado al agregar el cliente."}), 500
+
+        except Exception as e:
+            app.logger.error(f"Error en /api/clientes/agregar: {e}")
+            return jsonify({"error": "Error interno del servidor al agregar el cliente."}), 500
+
 @app.route("/api/clientes/pedidos", methods=["GET"])
 def get_clientes_con_pedidos():
     """
