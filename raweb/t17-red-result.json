@@ -1,0 +1,152 @@
+{
+  "checks": [
+    "Clic y Enter seleccionan el mismo cliente exactamente una vez",
+    "Espacio selecciona una vez y no desplaza la página",
+    "El teclado de un control descendiente no activa la fila",
+    "Ancho mínimo, cinco columnas y desplazamiento horizontal efectivo se conservan"
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/",
+      "body": null,
+      "controlled": false
+    },
+    {
+      "method": "GET",
+      "path": "/global.css",
+      "body": null,
+      "controlled": false
+    },
+    {
+      "method": "GET",
+      "path": "/design-system.css",
+      "body": null,
+      "controlled": false
+    },
+    {
+      "method": "GET",
+      "path": "/build/bundle.css",
+      "body": null,
+      "controlled": false
+    },
+    {
+      "method": "GET",
+      "path": "/build/bundle.js",
+      "body": null,
+      "controlled": false
+    },
+    {
+      "method": "GET",
+      "path": "/favicon.png",
+      "body": null,
+      "controlled": false
+    },
+    {
+      "method": "GET",
+      "path": "/geoserver/ows",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11059/19874.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11060/19874.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11059/19873.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11059/19875.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11058/19874.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11060/19873.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11060/19875.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11058/19873.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11058/19875.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11061/19874.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11061/19873.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "GET",
+      "path": "/15/11061/19875.png",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/api/clientes/buscar",
+      "body": null,
+      "controlled": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/clientes/buscar",
+      "body": "{\"criterio\":\"nombre\",\"nombre_cliente\":\"FICTICIO\"}",
+      "controlled": true
+    }
+  ],
+  "initial": {
+    "tabindex": "0",
+    "minWidth": "600px",
+    "scrollWidth": 672,
+    "clientWidth": 672,
+    "cells": 5
+  },
+  "narrow": {
+    "scrollWidth": 600,
+    "clientWidth": 258,
+    "minWidth": "600px",
+    "overflowX": "auto",
+    "cells": 5
+  },
+  "result": "pasa"
+}

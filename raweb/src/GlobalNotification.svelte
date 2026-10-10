@@ -68,11 +68,12 @@
   }
 
   .global-notification-content {
-    background-color: #333;
-    color: white;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
     padding: 15px 30px;
     border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 1px solid var(--ds-border);
+    box-shadow: var(--ds-shadow-panel);
     text-align: center;
     min-width: 250px;
     max-width: 80%;
@@ -80,11 +81,13 @@
   }
 
   .global-notification-content.success {
-    background-color: #4CAF50; /* Verde para éxito */
+    background-color: var(--ds-success-surface);
+    color: var(--ds-success);
   }
 
   .global-notification-content.error {
-    background-color: #f44336; /* Rojo para error */
+    background-color: var(--ds-error-surface);
+    color: var(--ds-error);
   }
 
   .global-notification-content p {

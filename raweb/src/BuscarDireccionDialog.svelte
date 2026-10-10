@@ -1,5 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import DialogHeader from './design-system/DialogHeader.svelte';
+  import { dialogFocus } from './design-system/dialog-focus.mjs';
 
   const dispatch = createEventDispatcher();
 
@@ -35,15 +37,18 @@
      tabindex="0"
      aria-label="Cerrar modal">
   <div class="modal-content" 
+       use:dialogFocus
        on:click|stopPropagation
        on:keydown|stopPropagation
        role="dialog"
        aria-labelledby="direccion-title">
     <div class="modal-header">
-      <h2 id="direccion-title">📍 Buscar Dirección</h2>
-      <button class="close-button" on:click={handleCancelar} aria-label="Cerrar">
+      <DialogHeader titleId="direccion-title">
+        📍 Buscar Dirección
+      <button slot="close" type="button" class="close-button ds-focus" on:click={handleCancelar} aria-label="Cerrar">
         &times;
       </button>
+      </DialogHeader>
     </div>
 
     <div class="modal-body">
@@ -51,6 +56,8 @@
         <label for="direccion-input">Ingrese la dirección a buscar:</label>
         <input
           id="direccion-input"
+          data-dialog-initial-focus
+          class="ds-field"
           type="text"
           bind:value={direccionInput}
           placeholder="Ej: SARMIENTO 550"
@@ -60,7 +67,7 @@
     </div>
 
     <div class="modal-footer">
-      <button class="btn-primary" on:click={handleBuscar}>
+      <button type="button" class="btn-primary ds-button ds-button--primary" on:click={handleBuscar}>
         🔍 Buscar
       </button>
     </div>
@@ -85,7 +92,8 @@
   }
 
   .modal-content {
-    background-color: #fff;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     width: 100%;
@@ -110,31 +118,22 @@
   }
 
   .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.375rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ds-border);
     flex-shrink: 0;
-    min-height: 40px;
-  }
-
-  .modal-header h2 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1f2937;
-    line-height: 1.2;
+    color: var(--ds-text);
   }
 
   .close-button {
+    box-sizing: border-box;
+    min-height: 32px;
+    margin: 0;
     background: transparent;
     border: none;
     font-size: 1.25rem;
     cursor: pointer;
     padding: 0.25rem;
     line-height: 1;
-    color: #6b7280;
+    color: var(--ds-text-muted);
     font-weight: normal;
     border-radius: 50%;
     width: 28px;
@@ -146,8 +145,8 @@
   }
 
   .close-button:hover {
-    color: #374151;
-    background-color: #f3f4f6;
+    color: var(--ds-on-secondary);
+    background-color: var(--ds-secondary-hover);
   }
 
   .modal-body {
@@ -164,14 +163,14 @@
 
   label {
     font-weight: 500;
-    color: #374151;
+    color: var(--ds-text);
     font-size: 0.9rem;
   }
 
   input[type="text"] {
     width: 100%;
     padding: 0.875rem 1rem;
-    border: 2px solid #d1d5db;
+    border: 2px solid var(--ds-border);
     border-radius: 8px;
     font-size: 1rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -180,9 +179,10 @@
   }
 
   input[type="text"]:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
+    border-color: var(--ds-focus);
+    box-shadow: none;
   }
 
   .modal-footer {
@@ -190,16 +190,16 @@
     justify-content: center;
     gap: 0.75rem;
     padding: 1rem 1.5rem 1.5rem 1.5rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ds-border);
     flex-shrink: 0;
   }
 
   .btn-primary {
     padding: 0.625rem 1.25rem;
-    border: 1px solid #3b82f6;
+    border: 1px solid var(--ds-primary);
     border-radius: 6px;
-    background-color: #3b82f6;
-    color: #fff;
+    background-color: var(--ds-primary);
+    color: var(--ds-on-primary);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -208,13 +208,19 @@
   }
 
   .btn-primary:hover {
-    background-color: #2563eb;
-    border-color: #2563eb;
+    background-color: var(--ds-primary-hover);
+    border-color: var(--ds-primary-hover);
   }
 
   .btn-primary:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
+    border-color: var(--ds-focus);
+    box-shadow: none;
+  }
+
+  .btn-primary:active {
+    background-color: var(--ds-primary-active);
   }
 
   /* Responsive breakpoints */
@@ -229,15 +235,6 @@
       max-width: 100%;
       border-radius: 8px;
       max-height: calc(100vh - 3rem);
-    }
-
-    .modal-header {
-      padding: 0.25rem 1rem;
-      min-height: 36px;
-    }
-
-    .modal-header h2 {
-      font-size: 1.125rem;
     }
 
     .close-button {
@@ -279,11 +276,6 @@
     .modal-content {
       border-radius: 6px;
       max-height: calc(100vh - 1.5rem);
-    }
-
-    .modal-header {
-      padding: 0.25rem 0.875rem;
-      min-height: 32px;
     }
 
     .modal-body {

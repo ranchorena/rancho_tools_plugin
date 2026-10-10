@@ -1,11 +1,14 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { API_BASE_URL } from './config.js';
+  import DialogHeader from './design-system/DialogHeader.svelte';
+  import { dialogFocus } from './design-system/dialog-focus.mjs';
 
   const dispatch = createEventDispatcher();
 
   // Props
   export let coordenadas = null; // { lat, lon } - coordenadas seleccionadas en el mapa
+  export let seleccionandoUbicacion = false;
 
   // Estado del formulario
   let formData = {
@@ -131,7 +134,8 @@
   }
 
   .modal-content {
-    background: white;
+    background: var(--ds-surface);
+    color: var(--ds-text);
     border-radius: 12px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     width: 90%;
@@ -143,28 +147,28 @@
   }
 
   .modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    box-shadow: inset 0 -1px var(--ds-border);
+    padding: 0;
   }
 
-  .modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
+  .modal-header :global(.ds-dialog-header) {
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   .close-button {
+    box-sizing: border-box;
+    min-height: 32px;
+    margin: 0;
     background: none;
     border: none;
-    color: white;
-    font-size: 1.5rem;
+    color: var(--ds-text-muted);
+    font-size: 1rem;
     cursor: pointer;
     padding: 0.25rem;
-    border-radius: 4px;
+    border-radius: 50%;
     transition: background-color 0.2s;
     width: 2rem;
     height: 2rem;
@@ -174,7 +178,21 @@
   }
 
   .close-button:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--ds-secondary-hover);
+    color: var(--ds-on-secondary);
+  }
+
+  .close-button:active {
+    background: var(--ds-secondary-hover);
+    color: var(--ds-on-secondary);
+  }
+
+  @media (max-width: 768px) {
+    .close-button {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
+    }
   }
 
   .modal-body {
@@ -190,10 +208,10 @@
   .section-title {
     font-size: 1.1rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ds-text);
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid var(--ds-border);
   }
 
   .form-row {
@@ -214,7 +232,7 @@
 
   .form-group label {
     font-weight: 500;
-    color: #374151;
+    color: var(--ds-text);
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
   }
@@ -222,17 +240,33 @@
   .form-group input,
   .form-group textarea {
     padding: 0.75rem;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--ds-border);
     border-radius: 8px;
     font-size: 0.9rem;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
 
+  .form-group input.ds-field,
+  .form-group textarea.ds-field {
+    color: var(--ds-text);
+    background-color: var(--ds-surface);
+    border-color: var(--ds-border);
+  }
+  /* Mantener el anillo compartido en controles y observación. */
   .form-group input:focus,
   .form-group textarea:focus {
-    outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
+    border-color: var(--ds-focus);
+    box-shadow: none;
+  }
+
+  .form-group input.ds-field:focus,
+  .form-group textarea.ds-field:focus {
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
+    border-color: var(--ds-focus);
+    box-shadow: none;
   }
 
   .form-group textarea {
@@ -250,11 +284,13 @@
   .checkbox-group input[type="checkbox"] {
     width: auto;
     margin: 0;
+    outline: 1px solid var(--ds-border);
+    outline-offset: 0;
   }
 
   .coordenadas-section {
-    background: #f8fafc;
-    border: 2px dashed #cbd5e1;
+    background: var(--ds-surface);
+    border: 2px dashed var(--ds-border);
     border-radius: 8px;
     padding: 1rem;
     text-align: center;
@@ -263,13 +299,13 @@
   .coordenadas-info {
     font-family: 'Courier New', monospace;
     font-size: 0.9rem;
-    color: #64748b;
+    color: var(--ds-text-muted);
     margin-bottom: 1rem;
   }
 
   .btn-seleccionar {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: white;
+    background: var(--ds-location);
+    color: var(--ds-on-location);
     border: none;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
@@ -279,8 +315,20 @@
   }
 
   .btn-seleccionar:hover {
+    background: var(--ds-location-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+    box-shadow: var(--ds-shadow-panel);
+  }
+
+  .btn-seleccionar:active {
+    background: var(--ds-location-active);
+  }
+
+  .btn-seleccionar:focus,
+  .close-button:focus,
+  .checkbox-group input[type="checkbox"]:focus {
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
   }
 
   .alert {
@@ -291,27 +339,29 @@
   }
 
   .alert-error {
-    background-color: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
+    background-color: var(--ds-error-surface);
+    color: var(--ds-error);
+    border: 1px solid var(--ds-error);
   }
 
   .alert-success {
-    background-color: #f0fdf4;
-    color: #16a34a;
-    border: 1px solid #bbf7d0;
+    background-color: var(--ds-success-surface);
+    color: var(--ds-success);
+    border: 1px solid var(--ds-success);
   }
 
   .modal-footer {
     padding: 1.5rem 2rem;
-    background: #f8fafc;
+    background: var(--ds-surface);
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ds-border);
   }
 
   .btn {
+    min-width: 0;
+    overflow-wrap: anywhere;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-weight: 500;
@@ -322,28 +372,72 @@
   }
 
   .btn-secondary {
-    background: #f1f5f9;
-    color: #64748b;
-    border: 1px solid #cbd5e1;
+    background: var(--ds-secondary);
+    color: var(--ds-on-secondary);
+    border: 1px solid var(--ds-border);
   }
 
   .btn-secondary:hover {
-    background: #e2e8f0;
-    color: #475569;
+    background: var(--ds-secondary-hover);
+    color: var(--ds-on-secondary);
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--ds-primary);
+    color: var(--ds-on-primary);
+    border: 1px solid var(--ds-primary);
   }
 
   .btn-primary:hover:not(:disabled) {
+    background: var(--ds-primary-hover);
+    border-color: var(--ds-primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
   }
 
-  .btn-primary:disabled {
-    opacity: 0.6;
+  .btn-primary:active:not(:disabled) {
+    background: var(--ds-primary-active);
+    border-color: var(--ds-primary-active);
+  }
+
+  .btn-secondary.ds-button {
+    color: var(--ds-on-secondary);
+    background: var(--ds-secondary);
+    border: 1px solid var(--ds-border);
+  }
+
+  .btn-secondary.ds-button:hover:not(:disabled) {
+    background: var(--ds-secondary-hover);
+    color: var(--ds-on-secondary);
+  }
+
+  .btn-secondary.ds-button:active:not(:disabled) {
+    background: var(--ds-secondary-active);
+  }
+
+  .btn-primary.ds-button--primary:focus,
+  .btn-secondary.ds-button:focus {
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
+  }
+
+  /* Al seleccionar un punto, retirar temporalmente el diálogo del hit-testing
+     para que el clic físico llegue al viewport de OpenLayers. */
+  .modal-backdrop.seleccionando-ubicacion {
+    pointer-events: none;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .modal-backdrop.seleccionando-ubicacion .modal-content {
+    visibility: hidden;
+  }
+
+  .btn-primary:disabled,
+  .btn-secondary:disabled {
+    color: var(--ds-on-disabled);
+    background: var(--ds-disabled);
+    border-color: var(--ds-border);
+    opacity: 1;
     cursor: not-allowed;
   }
 
@@ -370,10 +464,13 @@
       margin: 1rem;
     }
 
-    .modal-header,
     .modal-body,
     .modal-footer {
       padding: 1rem;
+    }
+
+    .modal-header {
+      padding: 0;
     }
 
     .form-row {
@@ -382,22 +479,26 @@
   }
 </style>
 
-<div class="modal-backdrop" 
+<div class="modal-backdrop"
+     class:seleccionando-ubicacion={seleccionandoUbicacion}
      on:click={handleCancel}
      on:keydown={(e) => e.key === 'Escape' && handleCancel()}
      role="button"
      tabindex="0"
      aria-label="Cerrar modal">
-  <div class="modal-content" 
+  <div class="modal-content"
+       use:dialogFocus
        on:click|stopPropagation
        on:keydown|stopPropagation
        role="dialog"
        aria-labelledby="agregar-cliente-title">
     <div class="modal-header">
-      <h2 id="agregar-cliente-title">➕ Agregar Nuevo Cliente</h2>
-      <button class="close-button" on:click={handleCancel} aria-label="Cerrar">
-        &times;
-      </button>
+      <DialogHeader titleId="agregar-cliente-title">
+        ➕ Agregar Nuevo Cliente
+        <button slot="close" type="button" class="close-button ds-focus" on:click={handleCancel} aria-label="Cerrar">
+          &times;
+        </button>
+      </DialogHeader>
     </div>
 
     <div class="modal-body">
@@ -423,7 +524,9 @@
               <label for="nombre">Nombre *</label>
               <input
                 id="nombre"
+                data-dialog-initial-focus
                 type="text"
+                class="ds-field"
                 bind:value={formData.nombre}
                 placeholder="Nombre completo del cliente"
                 maxlength="60"
@@ -436,6 +539,7 @@
               <input
                 id="telefono"
                 type="tel"
+                class="ds-field"
                 bind:value={formData.telefono}
                 placeholder="+54 11 1234-5678"
                 maxlength="30"
@@ -448,6 +552,7 @@
             <input
               id="direccion"
               type="text"
+              class="ds-field"
               bind:value={formData.direccion}
               placeholder="Dirección completa"
               maxlength="50"
@@ -461,6 +566,7 @@
               <input
                 id="calle"
                 type="text"
+                class="ds-field"
                 bind:value={formData.calle}
                 placeholder="Nombre de la calle"
                 maxlength="50"
@@ -472,6 +578,7 @@
               <input
                 id="altura"
                 type="number"
+                class="ds-field"
                 bind:value={formData.altura}
                 placeholder="Número de altura"
               />
@@ -488,7 +595,7 @@
             </div>
             <button 
               type="button" 
-              class="btn-seleccionar"
+               class="btn-seleccionar ds-button ds-button--location"
               on:click={handleSeleccionarUbicacion}
             >
               📍 Seleccionar en Mapa
@@ -506,6 +613,7 @@
               <input
                 id="cantidad"
                 type="number"
+                class="ds-field"
                 step="0.5"
                 bind:value={formData.cantidad}
                 placeholder="0"
@@ -517,6 +625,7 @@
               <input
                 id="horario"
                 type="time"
+                class="ds-field"
                 bind:value={formData.horario}
               />
             </div>
@@ -528,6 +637,7 @@
               <input
                 id="nro_pao"
                 type="number"
+                class="ds-field"
                 bind:value={formData.nro_pao}
                 placeholder="Número de PAO"
               />
@@ -538,6 +648,7 @@
                 <input
                   id="tiene_pedido"
                   type="checkbox"
+                  class="ds-choice"
                   bind:checked={formData.tiene_pedido}
                 />
                 <label for="tiene_pedido">Tiene pedido activo</label>
@@ -547,6 +658,7 @@
                 <input
                   id="es_regalo"
                   type="checkbox"
+                  class="ds-choice"
                   bind:checked={formData.es_regalo}
                 />
                 <label for="es_regalo">Es un regalo</label>
@@ -558,6 +670,7 @@
             <label for="observacion">Observaciones</label>
             <textarea
               id="observacion"
+              class="ds-field"
               bind:value={formData.observacion}
               placeholder="Observaciones adicionales..."
               maxlength="200"
@@ -570,7 +683,7 @@
     <div class="modal-footer">
       <button 
         type="button" 
-        class="btn btn-secondary" 
+        class="btn btn-secondary ds-button"
         on:click={handleCancel}
         disabled={isLoading}
       >
@@ -579,7 +692,7 @@
       
       <button 
         type="button" 
-        class="btn btn-primary" 
+        class="btn btn-primary ds-button ds-button--primary"
         on:click={handleSubmit}
         disabled={isLoading || !coordenadas}
       >

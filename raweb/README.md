@@ -151,3 +151,33 @@ Según tu archivo `package.json`, estás utilizando:
   
 - Agregar capa de google maps
 
+---
+
+cd ruta\al\proyecto\raweb
+npm ci
+npm run dev
+
+---
+
+El comando npm ci (siglas de Clean Install) sirve para instalar las dependencias de un proyecto de Node.js, pero a diferencia de npm install, está diseñado específicamente para entornos automatizados como pipelines de CI/CD (Integración Continua), servidores de despliegue o cuando quieres asegurarte de que tu entorno local sea exactamente igual al de tus compañeros.
+Aquí tienes los 3 comportamientos clave que lo hacen diferente:
+
+* Es estrictamente exacto: npm ci ignora los rangos de actualización del archivo package.json (como los símbolos ^ o ~) y lee únicamente el archivo package-lock.json. Esto garantiza que se instalen exactamente las mismas versiones de librerías cada vez.
+* Borra todo antes de empezar: Antes de descargar nada, el comando elimina por completo la carpeta node_modules existente. Así se asegura de que no quede ningún rastro de archivos viejos o corruptos.
+* Bloquea los cambios accidentales: Si el archivo package-lock.json no coincide exactamente con el package.json, el comando falla inmediatamente con un error en lugar de modificar tus archivos.
+
+------------------------------
+## 📊 Comparativa rápida: ¿Cuándo usar cada uno?
+
+| Característica | npm install (npm i) | npm ci |
+|---|---|---|
+| Uso principal | Desarrollo diario (agregar o actualizar librerías). | Servidores, producción, pipelines y entornos limpios. |
+| Borra node_modules | No, solo añade o actualiza lo que falta. | Sí, borra la carpeta por completo antes de instalar. |
+| Modifica archivos | Sí, puede crear o actualizar el package-lock.json. | Nunca, es de solo lectura para los archivos de configuración. |
+| Velocidad | Más lento la primera vez, rápido si ya hay caché. | Muy rápido, ya que no tiene que calcular versiones ni resolver conflictos. |
+
+## 💡 Consejo para tu flujo con tus agentes de OpenCode
+Si tu agente coordinator o implementer alguna vez corrompe las dependencias del proyecto al editar el archivo package.json, o notas que los tests fallan por problemas de versiones, ejecutar npm ci manualmente en tu terminal limpiará por completo el entorno y lo dejará en un estado idóneo y estable.
+Si te interesa saber más, cuéntame: ¿estás experimentando algún error de dependencias en tu proyecto actual raweb o raapi?
+
+---

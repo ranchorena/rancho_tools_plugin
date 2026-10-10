@@ -1,6 +1,9 @@
 <script>
   import { API_BASE_URL } from './config.js';
   import { createEventDispatcher, tick } from 'svelte'; // Importar dispatcher y tick
+  import DialogHeader from './design-system/DialogHeader.svelte';
+  import { dialogFocus } from './design-system/dialog-focus.mjs';
+  import { shouldActivateRow } from './design-system/keyboard.mjs';
   const dispatch = createEventDispatcher(); // Inicializar dispatcher
 
   // Variables de estado para los campos de búsqueda
@@ -158,6 +161,12 @@
     }
   }
 
+  function handleResultRowKeydown(event, client) {
+    if (!shouldActivateRow(event.key, event.repeat, event.target === event.currentTarget)) return;
+    if (event.key === ' ') event.preventDefault();
+    selectClient(client);
+  }
+
   function isValidTimeFormat(timeStr) {
     if (!timeStr) return true;
     return /^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(timeStr);
@@ -223,7 +232,8 @@
   }
 
   .modal-content {
-    background-color: #fff;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     width: 100%;
@@ -248,14 +258,18 @@
   }
 
   .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.375rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    box-shadow: inset 0 -1px var(--ds-border);
     flex-shrink: 0;
-    background-color: #f8f9fa;
-    min-height: 40px;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
+  }
+
+  .modal-header :global(.close-button) {
+    min-height: 32px;
+  }
+
+  .modal-header :global(.ds-dialog-header) {
+    padding-block: 0;
   }
 
   .modal-body {
@@ -265,13 +279,16 @@
   }
 
   .close-button {
+    box-sizing: border-box;
+    min-height: 32px;
+    margin: 0;
     background: transparent;
     border: none;
-    font-size: 1.25rem;
+    font-size: 1rem;
     cursor: pointer;
     padding: 0.25rem;
     line-height: 1;
-    color: #6b7280;
+    color: var(--ds-text-muted);
     font-weight: normal;
     border-radius: 50%;
     width: 28px;
@@ -283,33 +300,31 @@
   }
 
   .close-button:hover {
-    color: #374151;
-    background-color: #e5e7eb;
+    color: var(--ds-on-secondary);
+    background-color: var(--ds-secondary-hover);
   }
 
-  h2 {
-    color: #1f2937;
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.2;
+  .close-button:active {
+    color: var(--ds-on-secondary);
+    background-color: var(--ds-secondary-hover);
   }
 
   h3 {
-    color: #374151;
+    color: var(--ds-text);
     margin: 0 0 1rem 0;
     font-size: 1.1rem;
     font-weight: 600;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid var(--ds-border);
     padding-bottom: 0.5rem;
   }
 
   .search-section, .selected-client-section {
     margin-bottom: 2rem;
-    background-color: #f8f9fa;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
     padding: 1.5rem;
     border-radius: 8px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--ds-border);
   }
 
   .search-section:last-child, .selected-client-section:last-child {
@@ -329,19 +344,20 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: #374151;
+    color: var(--ds-text);
     font-size: 0.9rem;
   }
 
   input[type="text"], input[type="number"], textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 2px solid #d1d5db;
+    border: 2px solid var(--ds-border);
     border-radius: 6px;
     font-size: 1rem;
     box-sizing: border-box;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    background-color: #fff;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
     margin-bottom: 0;
   }
 
@@ -350,14 +366,15 @@
   }
 
   input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
+    border-color: var(--ds-focus);
+    box-shadow: none;
   }
 
   input[readonly] {
-    background-color: #f3f4f6;
-    color: #6b7280;
+    background-color: var(--ds-background);
+    color: var(--ds-text-muted);
     cursor: not-allowed;
   }
 
@@ -394,10 +411,10 @@
   button {
     padding: 0.75rem 1.25rem;
     cursor: pointer;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ds-border);
     border-radius: 6px;
-    background-color: #fff;
-    color: #374151;
+    background-color: var(--ds-secondary);
+    color: var(--ds-on-secondary);
     font-size: 0.9rem;
     font-weight: 500;
     transition: all 0.2s ease;
@@ -408,30 +425,38 @@
   }
 
   button:hover {
-    background-color: #f9fafb;
-    border-color: #9ca3af;
+    background-color: var(--ds-secondary-hover);
+    border-color: var(--ds-border);
     transform: translateY(-1px);
   }
 
   button:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
+    border-color: var(--ds-focus);
+    box-shadow: none;
+  }
+
+  .input-group button.ds-button:focus {
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
+    border-color: var(--ds-focus);
+    box-shadow: none;
   }
 
   button.primary,
-  .input-group button,
+  .input-group button.ds-button--primary,
   .selected-client-section button {
-    background-color: #3b82f6;
-    color: #fff;
-    border-color: #3b82f6;
+    background-color: var(--ds-primary);
+    color: var(--ds-on-primary);
+    border-color: var(--ds-primary);
   }
 
   button.primary:hover,
-  .input-group button:hover,
+  .input-group button.ds-button--primary:hover,
   .selected-client-section button:hover {
-    background-color: #2563eb;
-    border-color: #2563eb;
+    background-color: var(--ds-primary-hover);
+    border-color: var(--ds-primary-hover);
     transform: translateY(-1px);
   }
 
@@ -446,13 +471,21 @@
     margin-top: 1rem;
   }
 
+  .results-hint {
+    font-size: 0.8rem;
+    color: var(--ds-text-muted);
+    margin-top: 0.5rem;
+    text-align: center;
+  }
+
   .table-container {
     max-height: 300px;
     overflow: auto;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ds-border);
     border-radius: 8px;
     margin-top: 1rem;
-    background-color: #fff;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
   }
 
   table {
@@ -462,16 +495,16 @@
   }
 
   th, td {
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ds-border);
     padding: 0.75rem;
     text-align: left;
     vertical-align: middle;
   }
 
   th {
-    background-color: #f8f9fa;
+    background-color: var(--ds-background);
     font-weight: 600;
-    color: #374151;
+    color: var(--ds-text);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -482,12 +515,19 @@
   }
 
   tbody tr:hover {
-    background-color: #f0f9ff;
+    background-color: var(--ds-secondary-hover);
     cursor: pointer;
   }
 
   tbody tr.selected {
-    background-color: #dbeafe;
+    background-color: var(--ds-selected);
+    color: var(--ds-on-selected);
+    box-shadow: inset 3px 0 var(--ds-on-selected);
+  }
+
+  tbody tr:focus {
+    outline: 3px solid var(--ds-focus);
+    outline-offset: -3px;
   }
 
   .checkbox-group {
@@ -496,7 +536,8 @@
     margin-bottom: 0.75rem;
     padding: 0.5rem;
     border-radius: 6px;
-    background-color: #f3f4f6;
+    background-color: var(--ds-background);
+    color: var(--ds-text);
   }
 
   .checkbox-group input[type="checkbox"] {
@@ -520,17 +561,17 @@
   }
 
   .error-message {
-    background-color: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
+    background-color: var(--ds-error-surface);
+    color: var(--ds-error);
+    border: 1px solid var(--ds-error);
   }
 
   .loading-indicator {
     text-align: center;
     padding: 2rem;
     font-style: italic;
-    color: #6b7280;
-    background-color: #f9fafb;
+    color: var(--ds-text-muted);
+    background-color: var(--ds-background);
     border-radius: 8px;
     margin: 1rem 0;
   }
@@ -563,8 +604,8 @@
     }
 
     .modal-header {
-      padding: 0.25rem 1rem;
-      min-height: 36px;
+      padding: 0;
+      min-height: 0;
     }
 
     .modal-body {
@@ -576,8 +617,14 @@
       margin-bottom: 1.5rem;
     }
 
-    h2 {
+    .modal-header :global(h2) {
       font-size: 1.125rem;
+    }
+
+    .modal-header :global(.close-button) {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
     }
 
     h3 {
@@ -662,11 +709,6 @@
       border-radius: 6px;
     }
 
-    .modal-header {
-      padding: 0.25rem 0.875rem;
-      min-height: 32px;
-    }
-
     .modal-body {
       padding: 0.625rem 0.875rem 0.875rem 0.875rem;
     }
@@ -676,7 +718,7 @@
       margin-bottom: 1rem;
     }
 
-    h2 {
+    .modal-header :global(h2) {
       font-size: 1rem;
     }
 
@@ -686,9 +728,9 @@
     }
 
     .close-button {
-      width: 32px;
-      height: 32px;
-      font-size: 1.5rem;
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
     }
 
     button {
@@ -764,47 +806,6 @@
     }
   }
 
-  /* Modo oscuro (preparado para futuro) */
-  @media (prefers-color-scheme: dark) {
-    .modal-content {
-      background-color: #1f2937;
-      color: #f9fafb;
-    }
-
-    .search-section, .selected-client-section {
-      background-color: #374151;
-      border-color: #4b5563;
-    }
-
-    h2, h3 {
-      color: #f9fafb;
-    }
-
-    input[type="text"], input[type="number"], textarea {
-      background-color: #374151;
-      border-color: #4b5563;
-      color: #f9fafb;
-    }
-
-    input[readonly] {
-      background-color: #4b5563;
-      color: #9ca3af;
-    }
-
-    .checkbox-group {
-      background-color: #4b5563;
-    }
-
-    th {
-      background-color: #374151;
-      color: #f9fafb;
-    }
-
-    .table-container {
-      border-color: #4b5563;
-      background-color: #1f2937;
-    }
-  }
 </style>
 
 <div class="modal-backdrop" 
@@ -814,13 +815,16 @@
      tabindex="0"
      aria-label="Cerrar modal">
   <div class="modal-content" 
+       use:dialogFocus
        on:click|stopPropagation
        on:keydown|stopPropagation
        role="dialog"
        aria-labelledby="modal-title">
     <div class="modal-header">
-      <h2 id="modal-title">👤 Buscar Cliente</h2>
-      <button class="close-button" on:click={() => dispatch('close')} aria-label="Cerrar">&times;</button>
+      <DialogHeader titleId="modal-title">
+        👤 Buscar Cliente
+        <button slot="close" type="button" class="close-button ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar">&times;</button>
+      </DialogHeader>
     </div>
 
     <div class="modal-body">
@@ -837,25 +841,25 @@
         <div class="form-group centered-search">
           <label for="search-cliente">Buscar por nombre:</label>
           <div class="input-group">
-            <input type="text" id="search-cliente" bind:value={searchTermCliente} placeholder="Nombre del cliente">
-            <button on:click={searchByName}>Buscar</button>
+            <input type="text" class="ds-field" id="search-cliente" data-dialog-initial-focus bind:value={searchTermCliente} placeholder="Nombre del cliente">
+            <button type="button" class="ds-button ds-button--primary" on:click={searchByName}>Buscar</button>
           </div>
         </div>
 
         <div class="form-group centered-search">
           <label for="search-direccion">Buscar por dirección:</label>
           <div class="input-group">
-            <input type="text" id="search-direccion" bind:value={searchTermDireccion} placeholder="Parte de la dirección">
-            <button on:click={searchByAddress}>Buscar</button>
+            <input type="text" class="ds-field" id="search-direccion" bind:value={searchTermDireccion} placeholder="Parte de la dirección">
+            <button type="button" class="ds-button ds-button--primary" on:click={searchByAddress}>Buscar</button>
           </div>
         </div>
 
         <div class="form-group centered-search">
           <label for="searchTermCalle">Buscar por calle y altura:</label>
           <div class="input-group">
-            <input id="searchTermCalle" type="text" bind:value={searchTermCalle} placeholder="Nombre de la calle" aria-label="Nombre de la calle">
-            <input type="text" bind:value={searchTermAltura} placeholder="Altura" aria-label="Altura de la calle">
-            <button on:click={searchByStreetHeight}>Buscar</button>
+            <input id="searchTermCalle" type="text" class="ds-field" bind:value={searchTermCalle} placeholder="Nombre de la calle" aria-label="Nombre de la calle">
+            <input type="text" class="ds-field" bind:value={searchTermAltura} placeholder="Altura" aria-label="Altura de la calle">
+            <button type="button" class="ds-button ds-button--primary" on:click={searchByStreetHeight}>Buscar</button>
           </div>
         </div>
       </div>
@@ -876,7 +880,7 @@
               </thead>
               <tbody>
                 {#each searchResults as client (client.id)}
-                  <tr on:click={() => selectClient(client)} class:selected={selectedClient && selectedClient.id === client.id}>
+                  <tr tabindex="0" on:click={() => selectClient(client)} on:keydown={(event) => handleResultRowKeydown(event, client)} class:selected={selectedClient && selectedClient.id === client.id}>
                     <td>{client.id}</td>
                     <td>{client.nombre}</td>
                     <td>{client.direccion}</td>
@@ -887,7 +891,7 @@
               </tbody>
             </table>
           </div>
-          <p style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem; text-align: center;">
+          <p class="results-hint">
             💡 Desliza horizontalmente para ver todas las columnas
           </p>
         </div>
@@ -901,13 +905,13 @@
             <div class="form-column">
               <div class="form-group">
                 <label for="selected-client-id">ID Cliente:</label>
-                <input type="text" id="selected-client-id" value={selectedClient.id} readonly>
+                <input type="text" class="ds-field" id="selected-client-id" value={selectedClient.id} readonly>
               </div>
             </div>
             <div class="form-column">
               <div class="form-group">
                 <label for="selected-client-nombre">Nombre:</label>
-                <input type="text" id="selected-client-nombre" value={selectedClient.nombre} readonly>
+                <input type="text" class="ds-field" id="selected-client-nombre" value={selectedClient.nombre} readonly>
               </div>
             </div>
           </div>
@@ -916,13 +920,13 @@
             <div class="form-column">
               <div class="form-group">
                 <label for="docenas">Docenas (Cantidad):</label>
-                <input type="number" class="narrow-number" id="docenas" bind:value={editableFields.docenas} placeholder="Ej: 1.5" step="0.5">
+                <input type="number" class="ds-field narrow-number" id="docenas" bind:value={editableFields.docenas} placeholder="Ej: 1.5" step="0.5">
               </div>
             </div>
             <div class="form-column">
               <div class="form-group">
                 <label for="nro_pao">Nro. PaO:</label>
-                <input type="number" class="narrow-number" id="nro_pao" bind:value={editableFields.nro_pao} placeholder="Ej: 123">
+                <input type="number" class="ds-field narrow-number" id="nro_pao" bind:value={editableFields.nro_pao} placeholder="Ej: 123">
               </div>
             </div>
           </div>
@@ -931,16 +935,16 @@
             <div class="form-column">
                <div class="form-group">
                 <label for="horario">Horario (HH:MM:SS):</label>
-                <input type="text" id="horario" bind:value={editableFields.horario} placeholder="Ej: 14:30:00">
+                <input type="text" class="ds-field" id="horario" bind:value={editableFields.horario} placeholder="Ej: 14:30:00">
               </div>
             </div>
              <div class="form-column">
                 <div class="checkbox-group">
-                  <input type="checkbox" id="tiene_pedido" bind:checked={editableFields.tiene_pedido}>
+                  <input type="checkbox" class="ds-choice" id="tiene_pedido" bind:checked={editableFields.tiene_pedido}>
                   <label for="tiene_pedido">Tiene Pedido</label>
                 </div>
                 <div class="checkbox-group">
-                  <input type="checkbox" id="es_regalo" bind:checked={editableFields.es_regalo}>
+                  <input type="checkbox" class="ds-choice" id="es_regalo" bind:checked={editableFields.es_regalo}>
                   <label for="es_regalo">Es Regalo</label>
                 </div>
             </div>
@@ -948,11 +952,11 @@
 
           <div class="form-group">
             <label for="observaciones">Observaciones:</label>
-            <textarea id="observaciones" bind:value={editableFields.observaciones} placeholder="Ingrese observaciones adicionales..."></textarea>
+            <textarea class="ds-field" id="observaciones" bind:value={editableFields.observaciones} placeholder="Ingrese observaciones adicionales..."></textarea>
           </div>
 
           <div class="form-actions">
-            <button class="primary" on:click={saveChanges}>💾 Guardar Cambios</button>
+            <button type="button" class="ds-button ds-button--primary primary" on:click={saveChanges}>💾 Guardar Cambios</button>
           </div>
         </div>
       {/if}

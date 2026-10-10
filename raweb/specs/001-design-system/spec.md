@@ -1,14 +1,14 @@
 # Spec 001 — Design system de raweb
 
-Estado: aprobada
+Estado: aprobada — spec y enmienda RF-24 aprobadas explícitamente; revisión vigente de plan/tareas T56 pendiente de aprobación
 
-QA: LISTA PARA APROBACIÓN tras las dos correcciones aceptadas. Aprobación global del usuario: respuesta exacta «si». Autoriza preparar plan y tareas; su aprobación separada sigue siendo necesaria antes de implementar.
+QA de la versión anterior: LISTA PARA APROBACIÓN tras las dos correcciones aceptadas. La versión anterior recibió aprobación global («si»). RF-24 y la revisión correspondiente del plan/tareas recibieron aprobación explícita («si»). Siguiente fase: ejecución prioritaria T51–T55.
 
 ## Contexto y objetivo
 
 Petición original exacta del usuario: «construir el design system de raweb».
 
-El objetivo es disponer de un lenguaje de interfaz compartido que mantenga coherencia entre las experiencias de raweb y reduzca decisiones de presentación repetidas. La entrega incluye fundaciones visuales, componentes reutilizables, documentación/ejemplos y migración de la interfaz existente. Conserva y unifica la identidad actual en claro y oscuro, con ajustes cromáticos, cabeceras compactas, selector de tema y accesibilidad acotada. Se preservan flujos, distribución y comportamiento salvo las excepciones expresamente aprobadas en RF-16. Los requisitos siguientes constituyen la spec aprobada globalmente tras QA.
+El objetivo es disponer de un lenguaje de interfaz compartido que mantenga coherencia entre las experiencias de raweb y reduzca decisiones de presentación repetidas. La entrega incluye fundaciones visuales, componentes reutilizables, documentación/ejemplos y migración de la interfaz existente. Se conservan los flujos y la estructura/tamaños existentes; las superficies, títulos, campos, acciones y estados de los cuatro diálogos adoptan uniformemente el patrón visual de Buscar Dirección, en claro y oscuro, sin degradado exclusivo en el diálogo de alta. Se mantienen las cabeceras compactas, el selector de tema, los criterios de contraste y la accesibilidad acotada. Este cambio requiere aprobación explícita.
 
 ### Estado existente observado
 
@@ -42,6 +42,9 @@ Inspección estática de la interfaz y sus estilos; estas observaciones no const
 - **Respuesta exacta sobre inventario y límite de entrega:** «si continua». Se confirman las fundaciones y el catálogo de la sección Cobertura, con variantes existentes y estados aplicables. Se conservan mensajes, animaciones, cierre, convivencia de paneles, tamaños interactivos y reglas de funcionamiento salvo tema, accesibilidad y cabeceras aprobados; sin nuevas validaciones, estados funcionales ni políticas de notificaciones. RF-6 a RF-9 se acotan a ese límite.
 - **Alcance de las aprobaciones:** decisiones particulares de clarificación; no aprobación global de spec/plan. Los valores visuales y las soluciones técnicas podrán definirse dentro de estos criterios en el futuro plan.
 - **Aprobación global posterior:** respuesta exacta «si» tras el veredicto QA LISTA PARA APROBACIÓN. Las decisiones particulares anteriores quedan consolidadas; no implica aprobación del plan ni de las tareas.
+- **Cambio de requisitos solicitado literalmente:** «todos lo formularios deben visualizarse como el de buscar direccion no preserves el degradado de alta ya que el design system es para que todo se vea uniforme».
+- **Decisión propuesta para aprobación:** los cuatro diálogos/formularios —Buscar Dirección, Buscar Cliente/edición, Agregar Cliente y Pedidos— alinean superficies, títulos, campos, acciones y estados al patrón visual de Buscar Dirección, en Claro y Oscuro. Se elimina el degradado exclusivo del alta. Se preservan flujos y estructura/tamaños, cabeceras compactas aprobadas, tokens y criterios de contraste. No se deciden detalles visuales adicionales.
+- **Precedencia y estado:** esta decisión reemplaza únicamente la preservación de identidad diferenciada/degradado del alta y las diferencias visuales de formularios que contradigan la uniformidad solicitada. Las decisiones previas no afectadas permanecen vigentes. Aprobación explícita del usuario recibida con respuesta exacta «si»; plan y tareas requieren aprobación separada.
 
 ## Usuarios
 
@@ -81,7 +84,7 @@ Historias que resumen los requisitos consolidados y aprobados globalmente.
 
 ## Requisitos funcionales
 
-Requisitos consolidados y aprobados globalmente. No añaden comportamientos fuera de la Cobertura y RF-16.
+Requisitos consolidados y aprobados; las decisiones anteriores mantienen su aprobación salvo las modificaciones expresas de RF-24. No añaden comportamientos fuera de la Cobertura y RF-16.
 
 ### Fundaciones
 
@@ -106,13 +109,13 @@ Requisitos consolidados y aprobados globalmente. No añaden comportamientos fuer
 
 ### Identidad, temas y cabeceras — decisiones confirmadas
 
-- RF-13: EL SISTEMA conservará y unificará la identidad visual actual en los elementos incluidos y ofrecerá sus variantes claro y oscuro; los ajustes cromáticos permitidos responderán a legibilidad y coherencia entre ambos temas, y sus combinaciones de texto, fondo y estados se verificarán en ambos conforme a RNF-2. No se fija una paleta concreta.
+- RF-13: EL SISTEMA ofrecerá los elementos incluidos en claro y oscuro; los ajustes cromáticos responderán a legibilidad y coherencia entre ambos temas, y sus combinaciones de texto, fondo y estados se verificarán en ambos conforme a RNF-2. No se fija una paleta concreta ni se conserva una identidad diferenciada del alta que contradiga RF-24.
 - RF-14: CUANDO se muestre un formulario incluido con título de una línea, EL SISTEMA limitará su cabecera a un máximo de 48 px; CUANDO el título ocupe dos líneas en móvil, EL SISTEMA permitirá una altura de hasta 64 px; SI el texto está ampliado, ENTONCES EL SISTEMA permitirá que la cabecera crezca lo necesario para no recortar el título ni el cierre.
 
-### Cobertura de migración — decisión confirmada
+### Cobertura de migración — decisiones confirmadas
 
-- RF-15: EL SISTEMA aplicará la unificación visual en claro y oscuro a la navegación de escritorio y móvil; los formularios de búsqueda de dirección, búsqueda/edición de clientes y alta; las tablas y estadísticas de pedidos; las notificaciones; y los paneles, controles flotantes e información del mapa, con cabeceras compactas en los formularios.
-- RF-16: CUANDO se utilice cualquiera de las experiencias migradas, EL SISTEMA conservará sus flujos, distribución e interacciones actuales, salvo los ajustes de cabecera necesarios para cumplir RF-14, la selección de tema aprobada en RF-17 y las mejoras acotadas de teclado, foco y nombres accesibles de RF-19 a RF-21. La migración visual no autoriza otros rediseños ni cambios de negocio.
+- RF-15: EL SISTEMA aplicará la unificación visual en claro y oscuro a la navegación de escritorio y móvil; los cuatro diálogos de búsqueda de dirección, búsqueda/edición de clientes, alta y pedidos; las tablas y estadísticas de pedidos; las notificaciones; y los paneles, controles flotantes e información del mapa, con cabeceras compactas en los formularios. Para los cuatro diálogos rige además la uniformidad visual de RF-24.
+- RF-16: CUANDO se utilice cualquiera de las experiencias migradas, EL SISTEMA conservará sus flujos, estructura, tamaños e interacciones actuales, salvo la unificación visual de RF-24, los ajustes de cabecera necesarios para cumplir RF-14, la selección de tema aprobada en RF-17 y las mejoras acotadas de teclado, foco y nombres accesibles de RF-19 a RF-21. La migración visual no autoriza otros rediseños ni cambios de negocio.
 
 ### Elección de tema — decisión confirmada
 
@@ -123,12 +126,14 @@ Requisitos consolidados y aprobados globalmente. No añaden comportamientos fuer
 
 - RF-19: CUANDO una persona utilice Tab o Mayús+Tab en la interfaz incluida, EL SISTEMA permitirá recorrer los controles habilitados sin trampas de teclado y activarlos con las teclas correspondientes a su tipo; MIENTRAS un control tenga foco, EL SISTEMA mostrará un indicador de foco visible en claro y oscuro.
 - RF-20: EL SISTEMA proporcionará un nombre accesible que describa la acción de cada botón incluido representado solo mediante iconos.
-- RF-21: CUANDO se abra un diálogo incluido, EL SISTEMA llevará el foco a su interior; CUANDO se cierre un diálogo incluido, EL SISTEMA devolverá el foco al control que lo abrió si sigue presente y visible; SI se abrió desde una acción del menú móvil que desaparece al cerrarse dicho menú, ENTONCES EL SISTEMA devolverá el foco al botón «Menú», manteniendo el menú cerrado. EL SISTEMA permitirá la selección de ubicación en el mapa durante el alta sin que estas reglas la bloqueen. Se excluye de esta entrega la selección de coordenadas mediante teclado; estas mejoras no implican certificación total de accesibilidad.
+- **Enmienda propuesta a RF-21 — pendiente de aprobación explícita; no altera la aprobación global existente de la spec.**
+- RF-21: CUANDO se abra el diálogo Buscar Dirección y el campo de dirección esté disponible, EL SISTEMA llevará el foco real a ese campo para permitir comenzar a escribir; CUANDO se abra el diálogo Buscar Cliente y el campo de búsqueda por nombre esté disponible, EL SISTEMA llevará el foco real a ese campo, no al campo Nombre del cliente seleccionado que sea de solo lectura; CUANDO se abra el diálogo Agregar Cliente y el campo Nombre esté disponible, EL SISTEMA llevará el foco real a ese campo. CUANDO se abra cualquier otro diálogo incluido, EL SISTEMA llevará el foco a su interior. CUANDO se cierre un diálogo incluido, EL SISTEMA devolverá el foco al control que lo abrió si sigue presente y visible; SI se abrió desde una acción del menú móvil que desaparece al cerrarse dicho menú, ENTONCES EL SISTEMA devolverá el foco al botón «Menú», manteniendo el menú cerrado. EL SISTEMA permitirá la selección de ubicación en el mapa durante el alta sin que estas reglas la bloqueen. Se excluye de esta entrega la selección de coordenadas mediante teclado; estas mejoras no implican certificación total de accesibilidad.
 
 ### Consulta y evidencias — decisión confirmada
 
 - RF-22: EL SISTEMA ofrecerá una guía en español y un catálogo visual interactivo de los elementos incluidos, con sus variantes y estados aplicables y ejemplos ficticios en claro y oscuro.
 - RF-23: EL SISTEMA contará con una matriz de cobertura que relacione los elementos y experiencias incluidos con capturas, mediciones de contraste y cabeceras y resultados de verificación de teclado, foco, temas y flujos.
+- RF-24: EL SISTEMA presentará uniformemente las superficies, títulos, campos, acciones y estados de los cuatro diálogos —Buscar Dirección, Buscar Cliente/edición, Agregar Cliente y Pedidos— según el patrón visual de Buscar Dirección, tanto en Claro como en Oscuro; no conservará un degradado exclusivo para el diálogo de alta. Los botones de cierre de los cuatro diálogos compartirán además el patrón de Buscar Dirección: forma circular y dimensiones renderizadas reales de 32×32 px en escritorio y 36×36 px en viewports de hasta 768 px de ancho, con colores y estados interactivos y de foco equivalentes. En cada viewport y tema, cada círculo se verá completo, sin clipping ni sobresalir de forma inconsistente de la cabecera. Se conservarán el nombre accesible, la activación y el cierre actuales de cada botón, así como sus handlers y flujos asociados. Se preservarán el resto de flujos y estructura/tamaños existentes, las cabeceras compactas aprobadas y los tokens/criterios de contraste de esta spec. La unificación no cambia los estilos ni estados de las acciones Cancelar y Guardar. Este requisito no prescribe otros detalles visuales.
 
 ## Requisitos no funcionales
 
@@ -160,13 +165,14 @@ Casos de verificación, no autorización para añadir reglas de negocio o intera
 - **Separación de fases:** la spec fija alcance y comportamiento; las soluciones técnicas y tareas se documentan aparte y requieren aprobación antes de implementar.
 - **Fuera del alcance delimitado:** nuevas operaciones de negocio, validaciones, políticas de mensajes/notificaciones o movimiento; cambios de datos, cálculos o permisos; rediseño de otros productos; reemplazo de cartografía base o simbología del mapa.
 - **Alcance confirmado por bloques:** fundaciones visuales, componentes reutilizables, documentación y ejemplos de uso, y migración de la UI existente.
-- **Presentación confirmada:** conservar y unificar la identidad actual con ajustes cromáticos permitidos; ambos temas claro/oscuro y revisión de sus combinaciones; cabeceras compactas de formularios.
+- **Presentación anterior modificada:** la decisión inicial de conservar/unificar la identidad actual sigue vigente solo donde no contradiga RF-24. La uniformidad de los cuatro diálogos y la eliminación del degradado exclusivo del alta se rigen por RF-24; ambos temas, revisión de combinaciones y cabeceras compactas siguen vigentes.
 - **Criterios aprobados:** contraste según RNF-2 y altura de cabeceras según RF-14, incluidas las excepciones expresamente aceptadas. No se extiende esta aprobación a conformidad completa con WCAG.
 - **Migración confirmada:** las experiencias enumeradas en RF-15; mantener flujos, distribución e interacción salvo las excepciones de RF-16: cabeceras, selección de tema y mejoras acotadas de teclado, foco y nombres accesibles. Otros rediseños quedan fuera del alcance confirmado.
 - **Accesibilidad acotada confirmada:** RF-19 a RF-21; se excluyen selección de coordenadas por teclado y certificación total de accesibilidad.
 - **Elección de tema confirmada:** automático con selector manual Claro/Oscuro/Sistema dentro de raweb, siguiendo el dispositivo por defecto; recordar la opción entre visitas en el mismo navegador y usar Sistema sin elección guardada (RF-18). Selector «Tema» al final de acciones de barra superior en escritorio y debajo de acciones dentro del menú desplegable móvil (RF-17).
 - **Consulta y verificación confirmadas:** guía en español, catálogo visual interactivo y evidencias de RF-22/RF-23; pantallas y texto ampliado de RNF-3.
 - **Inventario confirmado:** la sección Cobertura. Se conservan reglas de funcionamiento, animaciones y mensajes salvo las excepciones expresamente aprobadas. No se solicitan nuevos recursos de marca.
+- El degradado exclusivo del alta y cualquier diferencia de superficie, título, campo, acción o estado entre los cuatro diálogos que contradiga el patrón de Buscar Dirección quedan fuera del diseño objetivo. No se especifican aquí valores, tratamientos o detalles visuales concretos adicionales.
 - Los comportamientos existentes descritos son contexto, no aprobación de su diseño actual ni autorización para corregir cualquier defecto encontrado.
 
 ## Criterios de finalización
@@ -193,8 +199,10 @@ Casos de verificación, no autorización para añadir reglas de negocio o intera
 
 Los dos hallazgos bloqueantes de la revisión QA recibieron aprobación particular «si» y sus correcciones están aplicadas: retorno de foco desde el menú móvil (RF-21/casos límite) y límite de presentación de alertas nativas (Cobertura/RNF-2). No quedan decisiones pendientes sobre esos hallazgos.
 
-**QA completada tras las correcciones:** LISTA PARA APROBACIÓN, sin nuevos bloqueantes ni contradicciones detectadas. Aprobación global posterior del usuario: «si». Si aparece una incompatibilidad que requiera cambiar un criterio aprobado, se consultará al usuario; no se añadirá una excepción automáticamente.
+**QA de la versión anterior:** LISTA PARA APROBACIÓN, con aprobación global posterior «si». RF-24 recibió aprobación explícita posterior «si»; el plan y tareas revisados quedan pendientes de aprobación.
 
-**Aprobaciones pendientes:** plan y tareas, incluida la organización por bloques propuesta para la entrega. No se autoriza implementación hasta obtenerlas.
+**Plan y tareas:** versión anterior aprobada con «si» en cinco bloques de diez. La revisión RF-24 con T51–T55 priorizadas antes de T27–T50 fue aprobada explícitamente. T56 fue aprobada en una revisión previa con tamaño propuesto 28×28 px escritorio/36×36 px móvil; esa dimensión de escritorio y la aprobación de esa revisión quedan sustituidas por la enmienda aprobada de 32×32 px renderizados y por esta revisión vigente de plan/tareas, que espera aprobación explícita. T56 permanece sin ejecutar.
 
 **Detalles para el futuro plan:** valores visuales dentro de los criterios acordados, organización técnica de componentes/catálogo, almacenamiento de preferencia y herramientas de verificación. No constituyen dudas independientes de alcance.
+
+- RF-24, incluida la enmienda aprobada con respuesta exacta «si», queda aprobada. No quedan dudas abiertas de alcance. La revisión actualizada de plan/tareas para T56 está pendiente de aprobación explícita; T56 no queda autorizada para implementación hasta esa aprobación.

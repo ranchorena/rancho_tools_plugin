@@ -1,0 +1,140 @@
+/* Fundaciones RAWEB: azules de acción y verde de ubicación existentes.
+   Las clases solo presentan estados; cada experiencia conserva sus dimensiones.
+   Iconos: conservar símbolos/emojis actuales con texto o nombre accesible.
+   Movimiento: conservar las animaciones locales, sin política global nueva. */
+:root {
+	--ds-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--ds-font-mono: "Courier New", monospace;
+	--ds-text-small: 0.875rem;
+	--ds-text-base: 1rem;
+	--ds-text-large: 1.5rem;
+	--ds-weight-normal: 400;
+	--ds-weight-medium: 500;
+	--ds-weight-heading: 600;
+	--ds-line-body: 1.5;
+	--ds-line-heading: 1.25;
+	--ds-space-1: 0.25rem;
+	--ds-space-2: 0.5rem;
+	--ds-space-3: 0.75rem;
+	--ds-space-4: 1rem;
+	--ds-space-6: 1.5rem;
+	--ds-space-8: 2rem;
+	/* Valores existentes, no mínimos universales para controles particulares. */
+	--ds-control-default: 44px;
+	--ds-control-mobile: 48px;
+	--ds-control-map: 30px;
+	--ds-control-map-mobile: 28px;
+	--ds-border-width: 1px;
+	--ds-border-strong: 2px;
+	--ds-radius-small: 6px;
+	--ds-radius-medium: 8px;
+	--ds-radius-large: 12px;
+	--ds-radius-round: 50%;
+	--ds-shadow-panel: 0 4px 12px rgb(0 0 0 / 15%);
+	--ds-shadow-dialog: 0 20px 25px -5px rgb(0 0 0 / 20%);
+}
+
+/* Claro es el valor de respaldo; el controlador compartido resuelve Sistema. */
+:root, :root[data-theme="light"] {
+	--ds-background: #f8f9fa;
+	--ds-surface: #ffffff;
+	--ds-text: #1f2937;
+	--ds-text-muted: #4b5563;
+	--ds-border: #6b7280;
+	--ds-primary: #2563eb;
+	--ds-primary-hover: #1d4ed8;
+	--ds-primary-active: #1e40af;
+	--ds-on-primary: #ffffff;
+	--ds-secondary: #f8f9fa;
+	--ds-secondary-hover: #e9ecef;
+	--ds-secondary-active: #dee2e6;
+	--ds-on-secondary: #1f2937;
+	--ds-location: #047857;
+	--ds-location-hover: #065f46;
+	--ds-location-active: #064e3b;
+	--ds-on-location: #ffffff;
+	--ds-selected: #dbeafe;
+	--ds-on-selected: #1e40af;
+	--ds-success: #166534;
+	--ds-success-surface: #f0fdf4;
+	--ds-warning: #854d0e;
+	--ds-warning-surface: #fef3c7;
+	--ds-error: #b91c1c;
+	--ds-error-surface: #fef2f2;
+	--ds-disabled: #e5e7eb;
+	--ds-on-disabled: #4b5563;
+	--ds-focus: #1d4ed8;
+}
+
+:root[data-theme="dark"] {
+	--ds-background: #111827;
+	--ds-surface: #1f2937;
+	--ds-text: #f9fafb;
+	--ds-text-muted: #d1d5db;
+	--ds-border: #9ca3af;
+	--ds-primary: #93c5fd;
+	--ds-primary-hover: #bfdbfe;
+	--ds-primary-active: #60a5fa;
+	--ds-on-primary: #111827;
+	--ds-secondary: #374151;
+	--ds-secondary-hover: #4b5563;
+	--ds-secondary-active: #6b7280;
+	--ds-on-secondary: #ffffff;
+	--ds-location: #6ee7b7;
+	--ds-location-hover: #a7f3d0;
+	--ds-location-active: #34d399;
+	--ds-on-location: #111827;
+	--ds-selected: #1e40af;
+	--ds-on-selected: #ffffff;
+	--ds-success: #86efac;
+	--ds-success-surface: #14532d;
+	--ds-warning: #fde68a;
+	--ds-warning-surface: #713f12;
+	--ds-error: #fecaca;
+	--ds-error-surface: #7f1d1d;
+	--ds-disabled: #374151;
+	--ds-on-disabled: #d1d5db;
+	--ds-focus: #93c5fd;
+}
+
+/* Superficie de uso explícito; no cambia el shell antes de su migración. */
+.ds-surface {
+	color: var(--ds-text);
+	background-color: var(--ds-surface);
+}
+
+/* Primario: buscar/guardar. Secundario: cancelar/cerrar.
+   Ubicación: selección del punto; no equivale a un mensaje de éxito. */
+.ds-button {
+	color: var(--ds-on-secondary);
+	background-color: var(--ds-secondary);
+	border-color: var(--ds-border);
+}
+.ds-button:hover:not(:disabled) { background-color: var(--ds-secondary-hover); border-color: var(--ds-border); }
+.ds-button:active:not(:disabled) { background-color: var(--ds-secondary-active); border-color: var(--ds-border); }
+.ds-button--primary { color: var(--ds-on-primary); background-color: var(--ds-primary); border-color: var(--ds-primary); }
+.ds-button--primary:hover:not(:disabled) { background-color: var(--ds-primary-hover); border-color: var(--ds-primary-hover); }
+.ds-button--primary:active:not(:disabled) { background-color: var(--ds-primary-active); border-color: var(--ds-primary-active); }
+.ds-button--location { color: var(--ds-on-location); background-color: var(--ds-location); border-color: var(--ds-location); }
+.ds-button--location:hover:not(:disabled) { background-color: var(--ds-location-hover); border-color: var(--ds-location-hover); }
+.ds-button--location:active:not(:disabled) { background-color: var(--ds-location-active); border-color: var(--ds-location-active); }
+
+/* Campos nativos: conservar tipo, bindings, tamaños y validaciones del dueño. */
+.ds-field { color: var(--ds-text); background-color: var(--ds-surface); border-color: var(--ds-border); }
+.ds-field::placeholder { color: var(--ds-text-muted); opacity: 1; }
+.ds-field[readonly] { color: var(--ds-text-muted); background-color: var(--ds-background); }
+.ds-choice { accent-color: var(--ds-primary); }
+.ds-button:disabled, .ds-field:disabled, .ds-choice:disabled {
+	color: var(--ds-on-disabled);
+	background-color: var(--ds-disabled);
+	border-color: var(--ds-border);
+	opacity: 1;
+}
+
+/* Anillo opaco fuera de la caja: no modifica medidas ni captura teclado. */
+.ds-button:focus, .ds-field:focus, .ds-choice:focus, .ds-focus:focus {
+	outline: 3px solid var(--ds-focus);
+	outline-offset: 2px;
+	border-color: var(--ds-focus);
+	box-shadow: none;
+}
