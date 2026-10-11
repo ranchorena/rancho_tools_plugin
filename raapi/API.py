@@ -6,7 +6,7 @@ from decimal import Decimal
 import datetime
 import json
 import re
-from tables import Cliente, Tramo
+from tables import Cliente, Pedido, Precio, Tramo
 
 class API: # Clase contenedora renombrada a API
     @staticmethod
@@ -180,15 +180,77 @@ class API: # Clase contenedora renombrada a API
             else:
                 valores_actualizacion[db_column_name] = value_dto
 
+        registra_pedido = valores_actualizacion.get("tiene_pedido") == 1
+        datos_pedido = None
+        if registra_pedido:
+            fecha_pedido = API._fecha_pedido(datos_actualizados)
+            if fecha_pedido is None:
+                return "error", "La fecha del pedido no es válida."
+
+            precio_unitario = API._precio_unitario_vigente(session)
+            if precio_unitario is None:
+                return "error", "No hay un precio vigente para registrar el pedido."
+
+            cliente = session.query(Cliente).filter(Cliente.id == cliente_id).one()
+            datos_pedido = {
+                "fecha": datetime.datetime.combine(fecha_pedido, datetime.time.min),
+                "id_cliente": cliente_id,
+                "nombre": cliente.nombre,
+                "turno": 1,
+                "cantidad": valores_actualizacion.get("cantidad", cliente.cantidad),
+                "direccion": cliente.direccion,
+                "calle": cliente.calle,
+                "altura": cliente.altura,
+                "geometry": cliente.geometria,
+                "observaciones": valores_actualizacion.get("observacion", cliente.observacion),
+                "precio_unitario": precio_unitario,
+                "nro_pao": valores_actualizacion.get("nro_pao", cliente.nro_pao),
+            }
+
         # Ejecutar la actualización usando ORM
         try:
             result = session.query(Cliente).filter(Cliente.id == cliente_id).update(valores_actualizacion)
             if result > 0:
+                if datos_pedido is not None:
+                    session.add(Pedido(**datos_pedido))
                 return "success", "Cliente actualizado correctamente."
             else:
                 return "error", "No se pudo actualizar el cliente."
         except Exception as e:
             raise e  # Dejar que el contexto superior maneje la excepción
+
+    @staticmethod
+    def _fecha_pedido(datos_actualizados):
+        """Usa la fecha recibida. Si no viene, el pedido queda para mañana."""
+        if "fecha" not in datos_actualizados or datos_actualizados.get("fecha") in (None, ""):
+            return datetime.date.today() + datetime.timedelta(days=1)
+
+        value = datos_actualizados.get("fecha")
+        if isinstance(value, datetime.datetime):
+            return value.date()
+        if isinstance(value, datetime.date):
+            return value
+        if isinstance(value, str):
+            texto = value.strip()
+            if not texto:
+                return datetime.date.today() + datetime.timedelta(days=1)
+            try:
+                return datetime.date.fromisoformat(texto[:10])
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
+    def _precio_unitario_vigente(session):
+        """Precio del registro con la fecha más reciente."""
+        fila = (
+            session.query(Precio.precio)
+            .order_by(Precio.fecha.desc(), Precio.id_precio.desc())
+            .first()
+        )
+        if fila is None or fila[0] is None:
+            return None
+        return float(fila[0])
 
     @staticmethod
     def getClienteById(session, id_cliente):

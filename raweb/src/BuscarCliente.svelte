@@ -4,6 +4,7 @@
   import DialogHeader from './design-system/DialogHeader.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
   import { shouldActivateRow } from './design-system/keyboard.mjs';
+  import { resolveClientSearch } from './client-search.mjs';
   const dispatch = createEventDispatcher(); // Inicializar dispatcher
 
   // Variables de estado para los campos de búsqueda
@@ -52,80 +53,47 @@
     }
   }
 
-  async function searchByName() {
-    if (!searchTermCliente.trim()) {
-      errorMessage = "Por favor, ingrese un nombre de cliente.";
-      return;
-    }
-    const payload = {
-      criterio: "nombre",
-      nombre_cliente: searchTermCliente
-    };
-    const results = await fetchData(`${API_BASE_URL}/api/clientes/buscar`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (results) {
-      searchResults = results;
-      if (results.length === 0) {
-        errorMessage = "No se encontraron clientes con ese nombre.";
-      } else {
-        // Scroll hacia la grilla de resultados
-        await scrollToResults();
-      }
-    }
-  }
-
-  async function searchByAddress() {
-    if (!searchTermDireccion.trim()) {
-      errorMessage = "Por favor, ingrese una dirección.";
-      return;
-    }
-    const payload = {
-      criterio: "direccion",
-      direccion: searchTermDireccion
-    };
-    const results = await fetchData(`${API_BASE_URL}/api/clientes/buscar`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (results) {
-      searchResults = results;
-      if (results.length === 0) {
-        errorMessage = "No se encontraron clientes con esa dirección.";
-      } else {
-        // Scroll hacia la grilla de resultados
-        await scrollToResults();
-      }
-    }
-  }
-
-  async function searchByStreetHeight() {
-    if (!searchTermCalle.trim()) {
-      errorMessage = "Por favor, ingrese una calle.";
-      return;
-    }
-    const payload = {
-      criterio: "calle_altura",
+  async function search() {
+    const decision = resolveClientSearch({
+      nombre: searchTermCliente,
+      direccion: searchTermDireccion,
       calle: searchTermCalle,
-      altura: searchTermAltura.trim() || null // Enviar null si la altura está vacía
-    };
+      altura: searchTermAltura
+    });
+    if (!decision.ok) {
+      errorMessage = decision.message;
+      return;
+    }
+
     const results = await fetchData(`${API_BASE_URL}/api/clientes/buscar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(decision.payload)
     });
     if (results) {
       searchResults = results;
+      selectedClient = null;
       if (results.length === 0) {
-        errorMessage = "No se encontraron clientes con esa calle/altura.";
+        errorMessage = decision.emptyMessage;
       } else {
-        // Scroll hacia la grilla de resultados
         await scrollToResults();
       }
     }
+  }
+
+  function handleSearchKeydown(event) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    search();
+  }
+
+  function openAgregarCliente() {
+    dispatch("agregarCliente", {
+      nombre: searchTermCliente.trim(),
+      direccion: searchTermDireccion.trim(),
+      calle: searchTermCalle.trim(),
+      altura: searchTermAltura.trim()
+    });
   }
 
   async function selectClient(client) {
@@ -402,12 +370,6 @@
     flex: 0 0 100px;
   }
 
-  .input-group button {
-    white-space: nowrap;
-    flex-shrink: 0;
-    margin: 0;
-  }
-
   button {
     padding: 0.75rem 1.25rem;
     cursor: pointer;
@@ -437,15 +399,8 @@
     box-shadow: none;
   }
 
-  .input-group button.ds-button:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
-    border-color: var(--ds-focus);
-    box-shadow: none;
-  }
-
   button.primary,
-  .input-group button.ds-button--primary,
+  .search-actions button.ds-button--primary,
   .selected-client-section button {
     background-color: var(--ds-primary);
     color: var(--ds-on-primary);
@@ -453,14 +408,15 @@
   }
 
   button.primary:hover,
-  .input-group button.ds-button--primary:hover,
+  .search-actions button.ds-button--primary:hover,
   .selected-client-section button:hover {
     background-color: var(--ds-primary-hover);
     border-color: var(--ds-primary-hover);
     transform: translateY(-1px);
   }
 
-  .form-actions {
+  .form-actions,
+  .search-actions {
     display: flex;
     justify-content: flex-end;
     margin-top: 1.5rem;
@@ -650,22 +606,19 @@
       flex: 1;
     }
 
-    .input-group button {
-      width: 100%;
-      margin-top: 0.5rem;
-    }
-
     .form-row {
       grid-template-columns: 1fr;
       gap: 1rem;
     }
 
-    .form-actions {
+    .form-actions,
+    .search-actions {
       flex-direction: column-reverse;
       gap: 0.5rem;
     }
 
-    .form-actions button {
+    .form-actions button,
+    .search-actions button {
       width: 100%;
     }
 
@@ -766,12 +719,14 @@
       grid-template-columns: 1fr 1fr;
     }
 
-    .form-actions {
+    .form-actions,
+    .search-actions {
       flex-direction: row;
       justify-content: flex-end;
     }
 
-    .form-actions button {
+    .form-actions button,
+    .search-actions button {
       width: auto;
       min-width: 120px;
     }
@@ -841,26 +796,28 @@
         <div class="form-group centered-search">
           <label for="search-cliente">Buscar por nombre:</label>
           <div class="input-group">
-            <input type="text" class="ds-field" id="search-cliente" data-dialog-initial-focus bind:value={searchTermCliente} placeholder="Nombre del cliente">
-            <button type="button" class="ds-button ds-button--primary" on:click={searchByName}>Buscar</button>
+            <input type="text" class="ds-field" id="search-cliente" data-dialog-initial-focus bind:value={searchTermCliente} placeholder="Nombre del cliente" on:keydown={handleSearchKeydown}>
           </div>
         </div>
 
         <div class="form-group centered-search">
           <label for="search-direccion">Buscar por dirección:</label>
           <div class="input-group">
-            <input type="text" class="ds-field" id="search-direccion" bind:value={searchTermDireccion} placeholder="Parte de la dirección">
-            <button type="button" class="ds-button ds-button--primary" on:click={searchByAddress}>Buscar</button>
+            <input type="text" class="ds-field" id="search-direccion" bind:value={searchTermDireccion} placeholder="Parte de la dirección" on:keydown={handleSearchKeydown}>
           </div>
         </div>
 
         <div class="form-group centered-search">
           <label for="searchTermCalle">Buscar por calle y altura:</label>
           <div class="input-group">
-            <input id="searchTermCalle" type="text" class="ds-field" bind:value={searchTermCalle} placeholder="Nombre de la calle" aria-label="Nombre de la calle">
-            <input type="text" class="ds-field" bind:value={searchTermAltura} placeholder="Altura" aria-label="Altura de la calle">
-            <button type="button" class="ds-button ds-button--primary" on:click={searchByStreetHeight}>Buscar</button>
+            <input id="searchTermCalle" type="text" class="ds-field" bind:value={searchTermCalle} placeholder="Nombre de la calle" aria-label="Nombre de la calle" on:keydown={handleSearchKeydown}>
+            <input type="text" class="ds-field" bind:value={searchTermAltura} placeholder="Altura" aria-label="Altura de la calle" on:keydown={handleSearchKeydown}>
           </div>
+        </div>
+
+        <div class="search-actions">
+          <button type="button" class="ds-button" on:click={openAgregarCliente}>Agregar cliente</button>
+          <button type="button" class="ds-button ds-button--primary primary" on:click={search}>Buscar</button>
         </div>
       </div>
 

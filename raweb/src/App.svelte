@@ -12,7 +12,7 @@
   import VectorSource from 'ol/source/Vector.js';
   import {bbox as bboxStrategy} from 'ol/loadingstrategy.js'; // Estrategia BBOX para WFS
   import GeoJSON from 'ol/format/GeoJSON.js'; // Formato WFS
-  import {Style, Circle, Fill, Stroke} from 'ol/style.js'; // Estilos para WFS y marcadores
+  import {Style, Circle, Fill, Stroke, Text} from 'ol/style.js'; // Estilos para WFS y marcadores
   import Icon from 'ol/style/Icon.js'; // Para el markerLayer
   import {defaults as defaultControls} from 'ol/control.js'; // Para controles personalizados
 
@@ -58,6 +58,7 @@
   let showBuscarClienteDialog = false;
   let showPedidosDialog = false;
   let showAgregarClienteDialog = false;
+  let agregarClienteInicial = null;
 
   // Variables para agregar cliente
   let modoSeleccionPunto = false;
@@ -70,11 +71,13 @@
   // Variables para las capas
   let pedidosLayer; // VectorLayer con WFS
   let clientesLayer; // VectorLayer con WFS
+  let barriosLayer; // VectorLayer con WFS
 
   // Estado para los checkboxes del Layer Switcher
   let baseLayerType = 'osm'; // 'osm' o 'satellite'
   let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
   let showClientesLayer = false;  // Por defecto: Clientes APAGADA
+  let showBarriosLayer = false; // Por defecto: Barrios APAGADA
 
   // Variables computadas para las capas base
   $: showOSMLayer = baseLayerType === 'osm';
@@ -107,6 +110,7 @@
   $: if (satelliteLayer) satelliteLayer.setVisible(showSatelliteLayer);
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
   $: if (clientesLayer) clientesLayer.setVisible(showClientesLayer);
+  $: if (barriosLayer) barriosLayer.setVisible(showBarriosLayer);
 
   // Estado para la notificación global
   let globalNotificationMessage = "";
@@ -237,6 +241,42 @@
       visible: showPedidosLayer
     });
 
+    // Definición de la capa de Barrios (WFS). En el mapa queda debajo de Clientes.
+    barriosLayer = new VectorLayer({
+      source: new VectorSource({
+        url: function(extent) {
+          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Barrios&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
+        },
+        format: new GeoJSON(),
+        strategy: bboxStrategy
+      }),
+      declutter: true,
+      style: function(feature) {
+        return new Style({
+          fill: new Fill({
+            color: 'rgba(19, 139, 129, 0.35)'
+          }),
+          stroke: new Stroke({
+            color: '#000000',
+            width: 1
+          }),
+          text: new Text({
+            text: feature.get('nombre') || '',
+            font: '600 13px sans-serif',
+            fill: new Fill({
+              color: '#1a1a1a'
+            }),
+            stroke: new Stroke({
+              color: '#ffffff',
+              width: 3
+            }),
+            overflow: true
+          })
+        });
+      },
+      visible: showBarriosLayer
+    });
+
     // Definición de la capa de Clientes (WFS)
     clientesLayer = new VectorLayer({
       source: new VectorSource({
@@ -271,6 +311,7 @@
       layers: [
         osmLayer, // Capa base OSM
         satelliteLayer, // Capa base Satelital
+        barriosLayer, // Debajo de clientes
         clientesLayer,
         pedidosLayer, // Los pedidos ahora van encima de los clientes
         markerLayer // Capa para los marcadores (debe estar encima de las WMS)
@@ -436,11 +477,20 @@
 
   function openAgregarCliente(event) {
     captureDialogTrigger(event);
+    agregarClienteInicial = null;
     showAgregarClienteDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
+  }
+
+  function openAgregarClienteFromSearch(event) {
+    agregarClienteInicial = event.detail;
+    showAgregarClienteDialog = true;
+    showBuscarClienteDialog = false;
+    showBuscarDireccionDialog = false;
+    showPedidosDialog = false;
   }
 
   async function closeDialogs() {
@@ -744,6 +794,10 @@
               <input class="ds-choice" type="checkbox" bind:checked={showPedidosLayer} />
               <span class="layer-name">▪ Pedidos</span>
             </label>
+            <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showBarriosLayer} />
+              <span class="layer-name">▢ Barrios</span>
+            </label>
           </div>
           
           <div class="layer-group">
@@ -784,6 +838,7 @@
       on:showGlobalNotification={handleShowGlobalNotification}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
       on:buscarDireccionCliente={handleBuscarDireccionCliente}
+      on:agregarCliente={openAgregarClienteFromSearch}
     />
   {/if}
 
@@ -798,6 +853,7 @@
     <AgregarCliente
       coordenadas={coordenadasSeleccionadas}
       seleccionandoUbicacion={modoSeleccionPunto}
+      valoresIniciales={agregarClienteInicial}
       on:close={closeDialogs}
       on:seleccionarUbicacion={handleSeleccionarUbicacion}
       on:clienteAgregado={handleClienteAgregado}
@@ -826,7 +882,7 @@
         {/if}
         {#if tooltipType === 'pedido'}
           {#if selectedFeatureData.cantidad !== 'N/A'}
-            <div class="feature-tooltip-data">{selectedFeatureData.cantidad}</div>
+            <div class="feature-tooltip-data">{selectedFeatureData.cantidad} {Number(selectedFeatureData.cantidad) === 1 ? 'docena' : 'docenas'}</div>
           {/if}
           {#if selectedFeatureData.fecha !== 'N/A'}
             <div class="feature-tooltip-data">{selectedFeatureData.fecha}</div>

@@ -39,6 +39,10 @@ class Fraccion(Base):
 class Pedido(Base):
     __table__ = Table('pedido', Base.metadata, autoload_with=engine, schema=schema)
 
+# Tabla Precio
+class Precio(Base):
+    __table__ = Table('precio', Base.metadata, autoload_with=engine, schema=schema)
+
 # Tabla Plazas
 class Plaza(Base):
     __table__ = Table('plazas', Base.metadata, autoload_with=engine, schema=schema)

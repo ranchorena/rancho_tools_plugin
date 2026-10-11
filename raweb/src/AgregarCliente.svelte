@@ -9,13 +9,14 @@
   // Props
   export let coordenadas = null; // { lat, lon } - coordenadas seleccionadas en el mapa
   export let seleccionandoUbicacion = false;
+  export let valoresIniciales = null;
 
   // Estado del formulario
   let formData = {
-    nombre: '',
-    direccion: '',
-    calle: '',
-    altura: '',
+    nombre: valoresIniciales?.nombre || '',
+    direccion: valoresIniciales?.direccion || '',
+    calle: valoresIniciales?.calle || '',
+    altura: valoresIniciales?.altura || '',
     telefono: '',
     tiene_pedido: false,
     cantidad: '',

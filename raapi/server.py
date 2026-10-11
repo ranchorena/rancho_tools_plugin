@@ -331,6 +331,10 @@ def actualizar_cliente_api(cliente_id):
               type: string
             horario:
               type: string
+            fecha:
+              type: string
+              format: date
+              description: Fecha del pedido. Si tiene_pedido es verdadero y no se envía, se usa el día siguiente.
     responses:
       200:
         description: Cliente actualizado con éxito
