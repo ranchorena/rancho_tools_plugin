@@ -97,6 +97,7 @@
 
   // Estado para el toolbar de capas
   let showLayerToolbar = false;
+  let tramosGroupOpen = false;
 
   // El retorno de foco móvil sigue pudiendo usar el botón de menú si existiera.
   let menuButton;
@@ -1056,18 +1057,35 @@
               <input class="ds-choice" type="checkbox" bind:checked={showPedidosNombre} disabled={!showPedidosLayer} />
               <span class="layer-name">Nombre</span>
             </label>
-            <label class="layer-item">
-              <input class="ds-choice" type="checkbox" bind:checked={showTramosLayer} />
-              <span class="layer-name">━ Tramos</span>
-            </label>
-            <label class="layer-item">
-              <input class="ds-choice" type="checkbox" bind:checked={showTramosSentidoLayer} />
-              <span class="layer-name">➤ Tramos sentido</span>
-            </label>
-            <label class="layer-item">
-              <input class="ds-choice" type="checkbox" bind:checked={showTramosNombreLayer} />
-              <span class="layer-name">A Tramos nombre</span>
-            </label>
+            <div class="layer-subgroup" role="group" aria-labelledby="layer-group-tramos">
+              <button
+                type="button"
+                class="layer-subgroup-toggle"
+                id="layer-group-tramos"
+                aria-expanded={tramosGroupOpen}
+                aria-controls="layer-group-tramos-items"
+                on:click={() => tramosGroupOpen = !tramosGroupOpen}
+              >
+                <span class="layer-subgroup-chevron" class:is-open={tramosGroupOpen} aria-hidden="true"></span>
+                Tramos
+              </button>
+              {#if tramosGroupOpen}
+                <div id="layer-group-tramos-items">
+                  <label class="layer-item">
+                    <input class="ds-choice" type="checkbox" bind:checked={showTramosLayer} />
+                    <span class="layer-name">━ Tramos</span>
+                  </label>
+                  <label class="layer-item">
+                    <input class="ds-choice" type="checkbox" bind:checked={showTramosSentidoLayer} />
+                    <span class="layer-name">➤ Tramos sentido</span>
+                  </label>
+                  <label class="layer-item">
+                    <input class="ds-choice" type="checkbox" bind:checked={showTramosNombreLayer} />
+                    <span class="layer-name">A Tramos nombre</span>
+                  </label>
+                </div>
+              {/if}
+            </div>
             <label class="layer-item">
               <input class="ds-choice" type="checkbox" bind:checked={showPlazasLayer} />
               <span class="layer-name">▣ Plazas</span>
@@ -1401,6 +1419,65 @@
     font-size: 0.8rem;
     text-transform: none;
     letter-spacing: 0;
+  }
+
+  .layer-subgroup {
+    margin: 0 0 0.5rem 0.35rem;
+    padding: 0.15rem 0 0.15rem 0.65rem;
+    border-left: 2px solid var(--ds-divider);
+  }
+
+  .layer-subgroup-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    margin: 0 0 0.25rem;
+    padding: 0.15rem 0.15rem;
+    border: none;
+    background: transparent;
+    color: var(--ds-text-muted);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+
+  .layer-subgroup-toggle:hover {
+    color: var(--ds-text);
+  }
+
+  .layer-subgroup-toggle:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
+  }
+
+  .layer-subgroup-chevron {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform var(--ds-motion) ease;
+    flex-shrink: 0;
+  }
+
+  .layer-subgroup-chevron.is-open {
+    transform: rotate(45deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .layer-subgroup-chevron {
+      transition: none;
+    }
+  }
+
+  .layer-subgroup .layer-item {
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
   }
 
   .layer-item {
