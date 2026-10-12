@@ -407,6 +407,7 @@ class API: # Clase contenedora renombrada a API
         result = (
             session.query(
                 Pedido.id_pedido.label("id"),
+                Pedido.fecha,
                 Pedido.id_cliente,
                 Pedido.nombre,
                 Pedido.direccion,

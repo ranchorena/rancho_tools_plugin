@@ -29,7 +29,7 @@ Base de datos
 
 `ra-mcp` no abre la base, no importa Flask y no replica el SQL de `raapi`.
 
-La búsqueda reutiliza `POST /api/clientes/buscar`. El pedido reutiliza `PUT /api/clientes/actualizar/<id>`. No se agregó un endpoint nuevo: ese `PUT` ya acepta un cuerpo parcial y `actualizarCliente` solo escribe los campos presentes. El MCP envía únicamente:
+La búsqueda reutiliza `POST /api/clientes/buscar`. El pedido reutiliza `PUT /api/clientes/actualizar/<id>`. No se agregó un endpoint nuevo para registrar: ese `PUT` ya acepta un cuerpo parcial y `actualizarCliente` solo escribe los campos presentes. El MCP envía únicamente:
 
 ```json
 {
@@ -40,6 +40,8 @@ La búsqueda reutiliza `POST /api/clientes/buscar`. El pedido reutiliza `PUT /ap
 ```
 
 `raapi` traduce `docenas` a la columna `cantidad`, convierte `tiene_pedido: true` en `1` y guarda `nro_pao` como entero. La transacción es la de `Session.begin()`: un solo `UPDATE` y commit al salir sin error. No se reenvían horario, observaciones ni `es_regalo`, porque la búsqueda no los devuelve y volver a mandarlos en blanco los pisaría.
+
+El historial reutiliza `GET /api/pedidos/historico`. Sin fechas, `raapi` devuelve el día del pedido más reciente. Con `desde` y `hasta`, el rango incluye ambos días. Las estadísticas las calcula el tool con la misma regla del formulario: la cantidad total suma todos los pedidos, y la cantidad vendida y el valor total excluyen los regalos. El valor de cada pedido es su cantidad por el precio unitario.
 
 Tampoco hay un tool `listar_clientes`. `POST /api/clientes/buscar` ya devuelve todas las coincidencias del nombre.
 
@@ -189,6 +191,38 @@ Error:
 Otros códigos: `INVALID_ID_CLIENTE`, `INVALID_CANTIDAD`, `INVALID_NRO_PAO`, `RAAPI_REJECTED`, `RAAPI_ERROR`, `RAAPI_UNAVAILABLE`, `RAAPI_NOT_CONFIGURED`.
 
 Si la validación local falla, no hay llamada HTTP. Si `raapi` responde 4xx o 5xx, `success` es `false`.
+
+### pedidos_historico
+
+Devuelve los pedidos históricos de un período y las estadísticas totales. Si no se envían fechas, trae los pedidos del día del pedido más reciente, igual que el formulario Pedidos histórico.
+
+| Parámetro | Tipo | Descripción |
+| --- | --- | --- |
+| `desde` | `YYYY-MM-DD`, opcional | Fecha inicial inclusive. Hay que enviarla junto con `hasta`. |
+| `hasta` | `YYYY-MM-DD`, opcional | Fecha final inclusive. Hay que enviarla junto con `desde`. |
+
+Sin `desde` ni `hasta`, el tool llama a `GET /api/pedidos/historico` sin consulta. `raapi` usa el día de la fecha máxima de la tabla `pedido`.
+
+`cantidad_total` suma la cantidad de todos los pedidos. `cantidad_vendida` y `valor_total` dejan afuera los que tienen `es_regalo` en 1. El valor de cada pedido vendido es `cantidad * precio_unitario`.
+
+```json
+{
+  "success": true,
+  "fecha_desde": "2026-10-11",
+  "fecha_hasta": "2026-10-11",
+  "pedidos": [],
+  "estadisticas": {
+    "cantidad_total": 3.5,
+    "cantidad_vendida": 2.5,
+    "valor_total": 12500.0
+  },
+  "message": "Pedidos históricos del período indicado."
+}
+```
+
+Si no hay ningún pedido cargado, `fecha_desde` y `fecha_hasta` vienen vacías y el mensaje es `No hay pedidos registrados.` Si el período no tiene filas, el mensaje es `No se encontraron pedidos para las fechas indicadas.`
+
+Una sola fecha, un formato distinto de `YYYY-MM-DD` o un desde posterior al hasta responden `INVALID_FECHA` y no llaman a `raapi`.
 
 ## Manejo de múltiples clientes
 

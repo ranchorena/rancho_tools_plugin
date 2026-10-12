@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Callable
 
@@ -148,7 +149,40 @@ class RaApiClient:
             )
         return body
 
-    def _request(self, method: str, path: str, body: dict) -> Any:
+    def pedidos_historico(self, desde: str | None = None, hasta: str | None = None) -> dict:
+        """GET /api/pedidos/historico.
+
+        Sin fechas, raapi usa el día del pedido más reciente. Con fechas, el
+        rango incluye ambos días.
+        """
+        consulta: dict[str, str] = {}
+        if desde is not None:
+            consulta["desde"] = desde
+        if hasta is not None:
+            consulta["hasta"] = hasta
+        path = "/api/pedidos/historico"
+        if consulta:
+            path = f"{path}?{urllib.parse.urlencode(consulta)}"
+        body = self._request("GET", path, None)
+        if not isinstance(body, dict):
+            raise RaApiResponseError(
+                "raapi no devolvió el historial de pedidos esperado.",
+                body,
+            )
+        pedidos = body.get("pedidos")
+        if not isinstance(pedidos, list) or not all(isinstance(item, dict) for item in pedidos):
+            raise RaApiResponseError(
+                "raapi devolvió pedidos con un formato inesperado.",
+                body,
+            )
+        if "fecha_desde" not in body or "fecha_hasta" not in body:
+            raise RaApiResponseError(
+                "raapi no informó las fechas del historial.",
+                body,
+            )
+        return body
+
+    def _request(self, method: str, path: str, body: dict | None) -> Any:
         status, payload = self._transport(method, f"{self.base_url}{path}", body, self.timeout)
         if status >= 400:
             raise RaApiHttpError(status, payload)

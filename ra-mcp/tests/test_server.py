@@ -5,9 +5,11 @@ import pytest
 from ra_mcp.server import (
     AGREGAR_PEDIDO_DESCRIPTION,
     BUSCAR_CLIENTE_DESCRIPTION,
+    PEDIDOS_HISTORICO_DESCRIPTION,
     agregar_pedido,
     buscar_cliente,
     mcp,
+    pedidos_historico,
 )
 
 
@@ -16,9 +18,11 @@ def test_descripciones_obligatorias():
     assert "el agente debe pedir al usuario que seleccione el cliente correcto antes de efectuar cambios" in BUSCAR_CLIENTE_DESCRIPTION
     assert "Registra un pedido para un cliente previamente identificado mediante su id_cliente." in AGREGAR_PEDIDO_DESCRIPTION
     assert "No debe utilizarse si la búsqueda previa devolvió múltiples clientes y el usuario todavía no seleccionó uno." in AGREGAR_PEDIDO_DESCRIPTION
+    assert "Si no se envían fechas, trae los pedidos del día del pedido más reciente" in PEDIDOS_HISTORICO_DESCRIPTION
+    assert "cantidad_total, cantidad_vendida y valor_total" in PEDIDOS_HISTORICO_DESCRIPTION
 
 
-def test_el_servidor_expone_solo_los_dos_tools():
+def test_el_servidor_expone_los_tools():
     tools = mcp.list_tools()
     if hasattr(tools, "__await__"):
         import asyncio
@@ -26,10 +30,11 @@ def test_el_servidor_expone_solo_los_dos_tools():
         tools = asyncio.run(tools)
     registrados = list(_iterable(tools))
     nombres = sorted(_nombre(tool) for tool in registrados)
-    assert nombres == ["agregar_pedido", "buscar_cliente"]
+    assert nombres == ["agregar_pedido", "buscar_cliente", "pedidos_historico"]
     descripciones = {_nombre(tool): getattr(tool, "description", "") for tool in registrados}
     assert "el agente debe pedir al usuario que seleccione el cliente correcto antes de efectuar cambios" in descripciones["buscar_cliente"]
     assert "el usuario todavía no seleccionó uno" in descripciones["agregar_pedido"]
+    assert "día del pedido más reciente" in descripciones["pedidos_historico"]
 
 
 def test_sin_url_no_hay_direccion_de_desarrollo_implicita(monkeypatch):
@@ -37,13 +42,23 @@ def test_sin_url_no_hay_direccion_de_desarrollo_implicita(monkeypatch):
 
     busqueda = buscar_cliente("Silvia")
     pedido = agregar_pedido(145, 2, 3)
+    historico = pedidos_historico()
 
     assert busqueda["success"] is False
     assert busqueda["error_code"] == "RAAPI_NOT_CONFIGURED"
     assert busqueda["status"] == "ERROR"
     assert pedido["success"] is False
     assert pedido["error_code"] == "RAAPI_NOT_CONFIGURED"
+    assert historico["success"] is False
+    assert historico["error_code"] == "RAAPI_NOT_CONFIGURED"
+    assert historico["pedidos"] == []
+    assert historico["estadisticas"] == {
+        "cantidad_total": 0,
+        "cantidad_vendida": 0,
+        "valor_total": 0,
+    }
     assert "localhost" not in busqueda["message"]
+    assert "localhost" not in historico["message"]
     assert os.environ.get("RA_API_BASE_URL", "") == ""
 
 

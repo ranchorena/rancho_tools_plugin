@@ -22,6 +22,17 @@ class _ApiSimulada(BaseHTTPRequestHandler):
         assert body == {"docenas": 1, "nro_pao": 5, "tiene_pedido": True}
         self._json(200, {"mensaje": "Cliente actualizado correctamente."})
 
+    def do_GET(self):  # noqa: N802
+        assert self.path == "/api/pedidos/historico"
+        self._json(
+            200,
+            {
+                "fecha_desde": "2026-10-11",
+                "fecha_hasta": "2026-10-11",
+                "pedidos": [],
+            },
+        )
+
     def _leer(self):
         length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(length) if length else b""
@@ -59,6 +70,7 @@ def test_cliente_http_busca_y_registra(api_simulada):
 
     assert encontrados[0]["id"] == 220
     assert confirmacion["mensaje"] == "Cliente actualizado correctamente."
+    assert client.pedidos_historico()["fecha_desde"] == "2026-10-11"
 
 
 def test_puerto_cerrado_es_error_de_comunicacion():

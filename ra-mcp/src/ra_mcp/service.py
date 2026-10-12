@@ -7,6 +7,8 @@ se interpreta el contrato HTTP y se arma una respuesta estructurada.
 from __future__ import annotations
 
 import math
+import re
+from datetime import date
 from typing import Any
 
 from ra_mcp.client import (
@@ -26,6 +28,7 @@ INVALID_NOMBRE = "INVALID_NOMBRE"
 INVALID_ID_CLIENTE = "INVALID_ID_CLIENTE"
 INVALID_CANTIDAD = "INVALID_CANTIDAD"
 INVALID_NRO_PAO = "INVALID_NRO_PAO"
+INVALID_FECHA = "INVALID_FECHA"
 CLIENT_NOT_FOUND = "CLIENT_NOT_FOUND"
 RAAPI_UNAVAILABLE = "RAAPI_UNAVAILABLE"
 RAAPI_NOT_CONFIGURED = "RAAPI_NOT_CONFIGURED"
@@ -33,6 +36,12 @@ RAAPI_ERROR = "RAAPI_ERROR"
 RAAPI_REJECTED = "RAAPI_REJECTED"
 
 _CAMPOS_BUSQUEDA = ("nombre", "direccion", "calle", "altura", "longitud", "latitud")
+_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+ESTADISTICAS_VACIAS = {
+    "cantidad_total": 0,
+    "cantidad_vendida": 0,
+    "valor_total": 0,
+}
 
 
 def buscar_cliente(nombre: str, client: RaApiClient) -> dict:
@@ -142,6 +151,109 @@ def agregar_pedido(
     }
 
 
+def pedidos_historico(
+    desde: str | None,
+    hasta: str | None,
+    client: RaApiClient,
+) -> dict:
+    """Lista los pedidos del período y calcula las mismas estadísticas del formulario.
+
+    Sin fechas, no arma consulta: raapi responde el día del pedido más reciente.
+    Los regalos entran en la cantidad total y quedan fuera de la cantidad vendida
+    y del valor.
+    """
+    try:
+        fecha_desde, fecha_hasta = _rango_fechas(desde, hasta)
+    except ValueError as error:
+        return _error_historico(INVALID_FECHA, str(error))
+
+    try:
+        body = client.pedidos_historico(fecha_desde, fecha_hasta)
+    except RaApiConnectionError as error:
+        return _error_historico(RAAPI_UNAVAILABLE, error.message)
+    except RaApiHttpError as error:
+        codigo = RAAPI_REJECTED if error.status_code == 400 else RAAPI_ERROR
+        return _error_historico(codigo, _mensaje_http(error))
+    except RaApiResponseError as error:
+        return _error_historico(RAAPI_ERROR, error.message)
+
+    pedidos = body["pedidos"]
+    fecha_respuesta_desde = body.get("fecha_desde")
+    fecha_respuesta_hasta = body.get("fecha_hasta")
+    if not pedidos and fecha_respuesta_desde is None and fecha_respuesta_hasta is None:
+        mensaje = "No hay pedidos registrados."
+    elif not pedidos:
+        mensaje = "No se encontraron pedidos para las fechas indicadas."
+    else:
+        mensaje = "Pedidos históricos del período indicado."
+
+    return {
+        "success": True,
+        "fecha_desde": fecha_respuesta_desde,
+        "fecha_hasta": fecha_respuesta_hasta,
+        "pedidos": pedidos,
+        "estadisticas": _estadisticas(pedidos),
+        "message": mensaje,
+    }
+
+
+def _rango_fechas(desde: str | None, hasta: str | None) -> tuple[str | None, str | None]:
+    fecha_desde = _fecha_o_vacia(desde, "desde")
+    fecha_hasta = _fecha_o_vacia(hasta, "hasta")
+    if (fecha_desde is None) != (fecha_hasta is None):
+        raise ValueError("Indicá la fecha desde y la fecha hasta.")
+    if fecha_desde is not None and fecha_hasta is not None and fecha_desde > fecha_hasta:
+        raise ValueError("La fecha desde no puede ser posterior a la fecha hasta.")
+    return fecha_desde, fecha_hasta
+
+
+def _fecha_o_vacia(value: str | None, nombre: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"La fecha {nombre} no es válida. Usá YYYY-MM-DD.")
+    texto = value.strip()
+    if not texto:
+        return None
+    if _FECHA.fullmatch(texto) is None:
+        raise ValueError(f"La fecha {nombre} no es válida. Usá YYYY-MM-DD.")
+    try:
+        date.fromisoformat(texto)
+    except ValueError as error:
+        raise ValueError(f"La fecha {nombre} no es válida. Usá YYYY-MM-DD.") from error
+    return texto
+
+
+def _estadisticas(pedidos: list[dict]) -> dict:
+    cantidad_total = 0.0
+    cantidad_vendida = 0.0
+    valor_total = 0.0
+    for pedido in pedidos:
+        cantidad = _numero(pedido.get("cantidad"))
+        precio = _numero(pedido.get("precio_unitario"))
+        cantidad_total += cantidad
+        if not _es_regalo(pedido.get("es_regalo")):
+            cantidad_vendida += cantidad
+            valor_total += cantidad * precio
+    return {
+        "cantidad_total": round(cantidad_total, 1),
+        "cantidad_vendida": round(cantidad_vendida, 1),
+        "valor_total": round(valor_total, 2),
+    }
+
+
+def _numero(value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0.0
+    if not math.isfinite(value):
+        return 0.0
+    return float(value)
+
+
+def _es_regalo(value: Any) -> bool:
+    return not isinstance(value, bool) and value == 1
+
+
 def _cliente_busqueda(fila: dict) -> dict:
     if "id" not in fila:
         raise ValueError("raapi devolvió un cliente sin id.")
@@ -206,3 +318,15 @@ def _error_pedido(
     if detalle and detalle != message:
         payload["detalle"] = detalle
     return payload
+
+
+def _error_historico(error_code: str, message: str) -> dict:
+    return {
+        "success": False,
+        "error_code": error_code,
+        "message": message,
+        "fecha_desde": None,
+        "fecha_hasta": None,
+        "pedidos": [],
+        "estadisticas": dict(ESTADISTICAS_VACIAS),
+    }

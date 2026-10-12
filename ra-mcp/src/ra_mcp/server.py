@@ -9,9 +9,11 @@ from fastmcp import FastMCP
 from ra_mcp.client import RaApiClient
 from ra_mcp.service import (
     ERROR,
+    ESTADISTICAS_VACIAS,
     RAAPI_NOT_CONFIGURED,
     agregar_pedido as agregar_pedido_service,
     buscar_cliente as buscar_cliente_service,
+    pedidos_historico as pedidos_historico_service,
 )
 
 BUSCAR_CLIENTE_DESCRIPTION = (
@@ -40,7 +42,10 @@ INSTRUCCIONES = (
     "Con ONE_MATCH, usá el id_cliente devuelto. "
     "Con MULTIPLE_MATCHES, mostrá todos los candidatos y esperá a que la persona elija uno; "
     "no registres el pedido todavía. "
-    "Después llamá a agregar_pedido solo con el id_cliente elegido, la cantidad de docenas y nro_pao."
+    "Después llamá a agregar_pedido solo con el id_cliente elegido, la cantidad de docenas y nro_pao. "
+    "Para consultar pedidos ya registrados, llamá a pedidos_historico. "
+    "Si no te indican fechas, no envíes desde ni hasta: devuelve los pedidos del día más reciente. "
+    "Si te indican un período, enviá desde y hasta juntas, en formato YYYY-MM-DD."
 )
 
 mcp = FastMCP(name="ra-mcp", instructions=INSTRUCCIONES)
@@ -113,6 +118,44 @@ def agregar_pedido(id_cliente: int, cantidad_docenas: float, nro_pao: int) -> di
     if isinstance(client, dict):
         return client
     return agregar_pedido_service(id_cliente, cantidad_docenas, nro_pao, client)
+
+
+PEDIDOS_HISTORICO_DESCRIPTION = (
+    "Devuelve los pedidos históricos de un período y las estadísticas totales. "
+    "Si no se envían fechas, trae los pedidos del día del pedido más reciente, igual que el formulario Pedidos histórico. "
+    "Para un período, desde y hasta van juntas en formato YYYY-MM-DD e incluyen ambos días. "
+    "Las estadísticas son cantidad_total, cantidad_vendida y valor_total. "
+    "Los regalos suman solo en cantidad_total. "
+    "El valor total suma, en cada pedido que no es regalo, la cantidad por su precio unitario."
+)
+
+
+@mcp.tool(
+    description=PEDIDOS_HISTORICO_DESCRIPTION,
+    annotations={
+        "title": "Pedidos histórico",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+def pedidos_historico(desde: str | None = None, hasta: str | None = None) -> dict:
+    """
+    Args:
+        desde: Fecha inicial inclusive, YYYY-MM-DD. Omitila junto con hasta para usar el día del último pedido.
+        hasta: Fecha final inclusive, YYYY-MM-DD. Omitila junto con desde para usar el día del último pedido.
+    """
+    client = _client_desde_entorno()
+    if isinstance(client, dict):
+        return {
+            **client,
+            "fecha_desde": None,
+            "fecha_hasta": None,
+            "pedidos": [],
+            "estadisticas": dict(ESTADISTICAS_VACIAS),
+        }
+    return pedidos_historico_service(desde, hasta, client)
 
 
 def main() -> None:
