@@ -384,6 +384,54 @@ class API: # Clase contenedora renombrada a API
         return clientes
 
     @staticmethod
+    def getPedidosHistorico(session, desde=None, hasta=None):
+        """
+        Lista pedidos de la tabla pedido entre dos fechas, inclusive.
+        Si no llegan fechas, usa el día del pedido más reciente.
+        """
+        ultima = session.query(func.max(Pedido.fecha)).scalar()
+        if ultima is None:
+            return {"fecha_desde": None, "fecha_hasta": None, "pedidos": []}
+
+        dia_ultimo = ultima.date() if isinstance(ultima, datetime.datetime) else ultima
+        if desde is None and hasta is None:
+            desde = dia_ultimo
+            hasta = dia_ultimo
+        elif desde is None or hasta is None:
+            raise ValueError("Indicá la fecha desde y la fecha hasta.")
+        if desde > hasta:
+            raise ValueError("La fecha desde no puede ser posterior a la fecha hasta.")
+
+        inicio = datetime.datetime.combine(desde, datetime.time.min)
+        fin = datetime.datetime.combine(hasta + datetime.timedelta(days=1), datetime.time.min)
+        result = (
+            session.query(
+                Pedido.id_pedido.label("id"),
+                Pedido.id_cliente,
+                Pedido.nombre,
+                Pedido.direccion,
+                Pedido.cantidad,
+                Cliente.telefono,
+                Cliente.horario,
+                Pedido.nro_pao,
+                Cliente.es_regalo,
+                Pedido.precio_unitario,
+                Pedido.observaciones.label("observacion"),
+                func.ST_X(func.ST_Transform(Pedido.geometry, 4326)).label("longitud"),
+                func.ST_Y(func.ST_Transform(Pedido.geometry, 4326)).label("latitud")
+            )
+            .outerjoin(Cliente, Cliente.id == Pedido.id_cliente)
+            .filter(Pedido.fecha >= inicio, Pedido.fecha < fin)
+            .order_by(Pedido.id_pedido)
+            .all()
+        )
+        return {
+            "fecha_desde": desde.isoformat(),
+            "fecha_hasta": hasta.isoformat(),
+            "pedidos": [API.to_dict(row) for row in result]
+        }
+
+    @staticmethod
     def parse_direccion(direccion_str):
         """
         Parsea una dirección completa en calle y altura.

@@ -23,6 +23,7 @@
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
   import Pedidos from './Pedidos.svelte'; // Importar el componente Pedidos
+  import PedidosHistorico from './PedidosHistorico.svelte';
   import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
   import ThemeSelector from './design-system/ThemeSelector.svelte';
@@ -53,10 +54,12 @@
   let mapElement;
   let map;
   let markerSource;
+  let temporaryLayers = [];
 
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
   let showPedidosDialog = false;
+  let showPedidosHistoricoDialog = false;
   let showAgregarClienteDialog = false;
   let agregarClienteInicial = null;
 
@@ -72,16 +75,24 @@
   let pedidosLayer; // VectorLayer con WFS
   let clientesLayer; // VectorLayer con WFS
   let barriosLayer; // VectorLayer con WFS
+  let subbarriosLayer; // VectorLayer con WFS
+  let plazasLayer; // VectorLayer con WFS
+  let tramosLayer; // VectorLayer con WFS, solo la línea
+  let tramosSentidoLayer; // VectorLayer con WFS, solo la flecha
+  let tramosNombreLayer; // VectorLayer con WFS, solo el nombre
 
   // Estado para los checkboxes del Layer Switcher
-  let baseLayerType = 'osm'; // 'osm' o 'satellite'
+  let showOSMLayer = true; // Por defecto: OpenStreetMap ENCENDIDA
+  let showSatelliteLayer = false; // Por defecto: Satelital APAGADA
   let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
+  let showPedidosNombre = false; // Por defecto: nombre de pedidos APAGADO
   let showClientesLayer = false;  // Por defecto: Clientes APAGADA
+  let showTramosLayer = false; // Por defecto: Tramos APAGADA
+  let showTramosSentidoLayer = false; // Por defecto: Tramos sentido APAGADA
+  let showTramosNombreLayer = false; // Por defecto: Tramos nombre APAGADA
   let showBarriosLayer = false; // Por defecto: Barrios APAGADA
-
-  // Variables computadas para las capas base
-  $: showOSMLayer = baseLayerType === 'osm';
-  $: showSatelliteLayer = baseLayerType === 'satellite';
+  let showSubbarriosLayer = false; // Por defecto: Subbarrios APAGADA
+  let showPlazasLayer = false; // Por defecto: Plazas APAGADA
 
   // Estado para el toolbar de capas
   let showLayerToolbar = false;
@@ -109,8 +120,17 @@
   $: if (osmLayer) osmLayer.setVisible(showOSMLayer);
   $: if (satelliteLayer) satelliteLayer.setVisible(showSatelliteLayer);
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
+  $: if (pedidosLayer) {
+    showPedidosNombre;
+    pedidosLayer.setStyle(pedidoStyle);
+  }
   $: if (clientesLayer) clientesLayer.setVisible(showClientesLayer);
   $: if (barriosLayer) barriosLayer.setVisible(showBarriosLayer);
+  $: if (subbarriosLayer) subbarriosLayer.setVisible(showSubbarriosLayer);
+  $: if (plazasLayer) plazasLayer.setVisible(showPlazasLayer);
+  $: if (tramosLayer) tramosLayer.setVisible(showTramosLayer);
+  $: if (tramosSentidoLayer) tramosSentidoLayer.setVisible(showTramosSentidoLayer);
+  $: if (tramosNombreLayer) tramosNombreLayer.setVisible(showTramosNombreLayer);
 
   // Estado para la notificación global
   let globalNotificationMessage = "";
@@ -164,6 +184,137 @@
 
   function closeMobileMenu() {
     mobileMenuOpen = false;
+  }
+
+  const TRAMO_LABEL_MAX_SCALE = 10000;
+  const TRAMO_ARROW_MAX_SCALE = 25000;
+  const MAP_RESOLUTION_TO_SCALE = 1000 / 0.28;
+
+  function tramoStroke(tipoCalle, suelo) {
+    const tipo = Number(tipoCalle);
+    const sueloN = Number(suelo);
+    if (tipo === 1 && sueloN === 1) return { color: '#e29f47', width: 1.5 };
+    if (tipo === 1 && sueloN === 2) return { color: '#f0c47f', width: 1.5 };
+    if (tipo === 2 && sueloN === 1) return { color: '#3d31a5', width: 2 };
+    if (tipo === 2 && sueloN === 2) return { color: '#5c53c4', width: 2 };
+    if (tipo === 3 && sueloN === 1) return { color: '#b53c1b', width: 2 };
+    return { color: '#b3b3b3', width: 1 };
+  }
+
+  function tramoArrowStyles(feature) {
+    const sentido = feature.get('sentido');
+    if (sentido === null || sentido === undefined) return [];
+    const sentidoN = Number(sentido);
+    if (sentidoN !== 0 && sentidoN !== 1 && sentidoN !== 2) return [];
+
+    const desde = feature.get('desde');
+    if (desde === null || desde === undefined || Number(desde) % 300 !== 0) return [];
+
+    const geometry = feature.getGeometry();
+    if (!geometry) return [];
+    const parts = geometry.getType() === 'MultiLineString'
+      ? geometry.getLineStrings()
+      : geometry.getType() === 'LineString'
+        ? [geometry]
+        : [];
+
+    return parts.flatMap((line) => {
+      if (line.getCoordinates().length < 2) return [];
+      const mid = line.getCoordinateAt(0.5);
+      const start = line.getCoordinateAt(0.4);
+      const end = line.getCoordinateAt(0.6);
+      const angle = Math.atan2(end[1] - start[1], end[0] - start[0]);
+
+      const flecha = sentidoN === 2 ? '↔' : '→';
+      const giro = sentidoN === 1 ? Math.PI : 0;
+      return [new Style({
+        geometry: new Point(mid),
+        text: new Text({
+          text: flecha,
+          font: '16px sans-serif',
+          fill: new Fill({ color: '#555555' }),
+          stroke: new Stroke({ color: '#ffffff', width: 2 }),
+          rotation: -angle + giro,
+          rotateWithView: true
+        })
+      })];
+    });
+  }
+
+  function tramoStyle(feature) {
+    const stroke = tramoStroke(feature.get('tipo_calle'), feature.get('suelo'));
+    return new Style({
+      stroke: new Stroke({
+        color: stroke.color,
+        width: stroke.width,
+        lineJoin: 'bevel',
+        lineCap: 'square'
+      })
+    });
+  }
+
+  function tramoSentidoStyle(feature, resolution) {
+    if (resolution * MAP_RESOLUTION_TO_SCALE > TRAMO_ARROW_MAX_SCALE) return null;
+    const arrows = tramoArrowStyles(feature);
+    return arrows.length ? arrows : null;
+  }
+
+  function tramoNombreStyle(feature, resolution) {
+    if (resolution * MAP_RESOLUTION_TO_SCALE > TRAMO_LABEL_MAX_SCALE) return null;
+    const name = feature.get('name');
+    if (!name) return null;
+    return new Style({
+      text: new Text({
+        text: String(name),
+        font: '8px Arial',
+        fill: new Fill({ color: '#000000' }),
+        placement: 'line',
+        overflow: false,
+        maxAngle: Math.PI / 2,
+        offsetY: -6
+      })
+    });
+  }
+
+  function pedidoStyle(feature) {
+    return new Style({
+      image: new Circle({
+        radius: 6,
+        fill: new Fill({
+          color: '#ff6b6b'
+        }),
+        stroke: new Stroke({
+          color: '#ffffff',
+          width: 2
+        })
+      }),
+      text: showPedidosNombre && feature.get('nombre')
+        ? new Text({
+            text: String(feature.get('nombre')),
+            font: '13px sans-serif',
+            fill: new Fill({ color: '#111111' }),
+            offsetY: -4,
+            textAlign: 'center',
+            textBaseline: 'bottom'
+          })
+        : undefined
+    });
+  }
+
+  function areaNombreStyle(fillColor, strokeColor) {
+    return function(feature) {
+      return new Style({
+        fill: new Fill({ color: fillColor }),
+        stroke: new Stroke({ color: strokeColor, width: 1 }),
+        text: new Text({
+          text: feature.get('nombre') || '',
+          font: '600 13px sans-serif',
+          fill: new Fill({ color: '#1a1a1a' }),
+          stroke: new Stroke({ color: '#ffffff', width: 3 }),
+          overflow: true
+        })
+      });
+    };
   }
 
   async function toggleLayerToolbar() {
@@ -226,18 +377,7 @@
         format: new GeoJSON(),
         strategy: bboxStrategy
       }),
-      style: new Style({
-        image: new Circle({
-          radius: 6,
-          fill: new Fill({
-            color: '#ff6b6b'
-          }),
-          stroke: new Stroke({
-            color: '#ffffff',
-            width: 2
-          })
-        })
-      }),
+      style: pedidoStyle,
       visible: showPedidosLayer
     });
 
@@ -277,6 +417,58 @@
       visible: showBarriosLayer
     });
 
+    subbarriosLayer = new VectorLayer({
+      source: new VectorSource({
+        url: function(extent) {
+          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:subbarrios&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
+        },
+        format: new GeoJSON(),
+        strategy: bboxStrategy
+      }),
+      declutter: true,
+      style: areaNombreStyle('rgba(92, 107, 192, 0.28)', '#3949ab'),
+      visible: showSubbarriosLayer
+    });
+
+    plazasLayer = new VectorLayer({
+      source: new VectorSource({
+        url: function(extent) {
+          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:plazas&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
+        },
+        format: new GeoJSON(),
+        strategy: bboxStrategy
+      }),
+      declutter: true,
+      style: areaNombreStyle('rgba(46, 125, 50, 0.4)', '#1b5e20'),
+      visible: showPlazasLayer
+    });
+
+    // Una sola lectura WFS para las tres capas de tramos.
+    const tramosSource = new VectorSource({
+      url: function(extent) {
+        return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:tramos&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
+      },
+      format: new GeoJSON(),
+      strategy: bboxStrategy
+    });
+
+    // En el mapa quedan encima de Barrios y debajo de Clientes y Pedidos.
+    tramosLayer = new VectorLayer({
+      source: tramosSource,
+      style: tramoStyle,
+      visible: showTramosLayer
+    });
+    tramosSentidoLayer = new VectorLayer({
+      source: tramosSource,
+      style: tramoSentidoStyle,
+      visible: showTramosSentidoLayer
+    });
+    tramosNombreLayer = new VectorLayer({
+      source: tramosSource,
+      style: tramoNombreStyle,
+      visible: showTramosNombreLayer
+    });
+
     // Definición de la capa de Clientes (WFS)
     clientesLayer = new VectorLayer({
       source: new VectorSource({
@@ -311,7 +503,12 @@
       layers: [
         osmLayer, // Capa base OSM
         satelliteLayer, // Capa base Satelital
-        barriosLayer, // Debajo de clientes
+        barriosLayer,
+        subbarriosLayer,
+        plazasLayer,
+        tramosLayer,
+        tramosSentidoLayer,
+        tramosNombreLayer,
         clientesLayer,
         pedidosLayer, // Los pedidos ahora van encima de los clientes
         markerLayer // Capa para los marcadores (debe estar encima de las WMS)
@@ -349,9 +546,10 @@
       let foundFeature = null;
       let foundLayer = null;
       
-      // Buscar features de pedidos o clientes en el pixel clickeado
+      // Buscar features de pedidos, la capa temporal o clientes en el pixel clickeado
       map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
-        if (layer === pedidosLayer || layer === clientesLayer) {
+        const esCapaTemporal = temporaryLayers.includes(layer);
+        if (esCapaTemporal || layer === pedidosLayer || layer === clientesLayer) {
           foundFeature = feature;
           foundLayer = layer;
           return true; // Parar la búsqueda al encontrar la primera feature
@@ -362,7 +560,7 @@
         const properties = foundFeature.getProperties();
         
         // Determinar el tipo de feature
-        const isPedido = foundLayer === pedidosLayer;
+        const isPedido = foundLayer === pedidosLayer || temporaryLayers.includes(foundLayer);
         
         selectedFeatureData = {
           id: properties.id_pedido || properties.id || 'N/A',
@@ -453,6 +651,7 @@
     showBuscarDireccionDialog = true;
     showBuscarClienteDialog = false; // Asegurar que los otros diálogos estén cerrados
     showPedidosDialog = false;
+    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
@@ -462,6 +661,7 @@
     showBuscarClienteDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showPedidosDialog = false;
+    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
@@ -471,8 +671,19 @@
     showPedidosDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
+    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
+  }
+
+  function openPedidosHistorico(event) {
+    captureDialogTrigger(event);
+    showPedidosHistoricoDialog = true;
+    showPedidosDialog = false;
+    showBuscarDireccionDialog = false;
+    showBuscarClienteDialog = false;
+    showAgregarClienteDialog = false;
+    closeMobileMenu();
   }
 
   function openAgregarCliente(event) {
@@ -482,6 +693,7 @@
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
+    showPedidosHistoricoDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
@@ -491,6 +703,7 @@
     showBuscarClienteDialog = false;
     showBuscarDireccionDialog = false;
     showPedidosDialog = false;
+    showPedidosHistoricoDialog = false;
   }
 
   async function closeDialogs() {
@@ -499,6 +712,7 @@
     showBuscarDireccionDialog = false;
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
+    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     modoSeleccionPunto = false;
     coordenadasSeleccionadas = null;
@@ -511,7 +725,7 @@
     // Solo el cierre final devuelve foco; los cambios internos y el mapa no pasan aquí.
     await tick();
     if (!origin || dialogOrigin || showBuscarDireccionDialog || showBuscarClienteDialog ||
-        showPedidosDialog || showAgregarClienteDialog) return;
+        showPedidosDialog || showPedidosHistoricoDialog || showAgregarClienteDialog) return;
     const destination = chooseFocusReturn({
       triggerPresent: origin.trigger.isConnected,
       triggerVisible: isFocusTargetVisible(origin.trigger),
@@ -641,6 +855,53 @@
     }
   }
 
+  function limpiarMapa() {
+    if (markerSource) markerSource.clear();
+    temporaryLayers.forEach((layer) => {
+      if (map) map.removeLayer(layer);
+    });
+    temporaryLayers = [];
+    closeFeatureTooltip();
+  }
+
+  function handleVerHistoricoEnMapa(event) {
+    if (!map) return;
+    limpiarMapa();
+    const ids = [...new Set(
+      (event.detail.pedidos || [])
+        .map((pedido) => Number(pedido.id_cliente))
+        .filter((id) => Number.isInteger(id) && id > 0)
+    )];
+    if (!ids.length) return;
+
+    const cql = `id IN (${ids.join(',')})`;
+    const source = new VectorSource({
+      format: new GeoJSON(),
+      url: GEOSERVER_BASE_URL
+        + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&CQL_FILTER='
+        + encodeURIComponent(cql)
+    });
+    const layer = new VectorLayer({
+      source,
+      style: new Style({
+        image: new Icon({
+          src: '/imagenes/medialuna.svg?v=2',
+          width: 16,
+          height: 16,
+          anchor: [0.5, 0.5]
+        })
+      })
+    });
+    map.addLayer(layer);
+    temporaryLayers = [layer];
+    source.once('featuresloadend', () => {
+      const extent = source.getExtent();
+      if (extent && extent.every((value) => Number.isFinite(value))) {
+        map.getView().fit(extent, { padding: [48, 48, 48, 48], maxZoom: 17, duration: 600 });
+      }
+    });
+  }
+
   async function handleBuscarDireccionCliente(event) {
     const direccion = event.detail.direccion;
     console.log("Buscando dirección del cliente:", direccion);
@@ -723,6 +984,9 @@
       <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
         📦 Pedidos
       </button>
+      <button on:click={openPedidosHistorico} class:active={showPedidosHistoricoDialog}>
+        📜 Pedidos Histórico
+      </button>
       <ThemeSelector id="theme-desktop" value={themePreference} on:change={handleThemeChange} />
     </div>
 
@@ -752,6 +1016,9 @@
           </button>
           <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
             📦 Pedidos
+          </button>
+          <button on:click={openPedidosHistorico} class:active={showPedidosHistoricoDialog}>
+            📜 Pedidos Histórico
           </button>
         </div>
         <ThemeSelector id="theme-mobile" value={themePreference} on:change={handleThemeChange} />
@@ -794,6 +1061,30 @@
               <input class="ds-choice" type="checkbox" bind:checked={showPedidosLayer} />
               <span class="layer-name">▪ Pedidos</span>
             </label>
+            <label class="layer-item layer-subitem">
+              <input class="ds-choice" type="checkbox" bind:checked={showPedidosNombre} disabled={!showPedidosLayer} />
+              <span class="layer-name">Nombre</span>
+            </label>
+            <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showTramosLayer} />
+              <span class="layer-name">━ Tramos</span>
+            </label>
+            <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showTramosSentidoLayer} />
+              <span class="layer-name">➤ Tramos sentido</span>
+            </label>
+            <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showTramosNombreLayer} />
+              <span class="layer-name">A Tramos nombre</span>
+            </label>
+            <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showPlazasLayer} />
+              <span class="layer-name">▣ Plazas</span>
+            </label>
+            <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showSubbarriosLayer} />
+              <span class="layer-name">▢ Subbarrios</span>
+            </label>
             <label class="layer-item">
               <input class="ds-choice" type="checkbox" bind:checked={showBarriosLayer} />
               <span class="layer-name">▢ Barrios</span>
@@ -803,11 +1094,11 @@
           <div class="layer-group">
             <div class="layer-group-title">Capas Base</div>
             <label class="layer-item">
-              <input class="ds-choice" type="radio" bind:group={baseLayerType} value="osm" />
+              <input class="ds-choice" type="checkbox" bind:checked={showOSMLayer} />
               <span class="layer-name">○ OpenStreetMap</span>
             </label>
             <label class="layer-item">
-              <input class="ds-choice" type="radio" bind:group={baseLayerType} value="satellite" />
+              <input class="ds-choice" type="checkbox" bind:checked={showSatelliteLayer} />
               <span class="layer-name">◉ Satelital</span>
             </label>
           </div>
@@ -823,6 +1114,7 @@
     <button type="button" class="add-client-floating-btn" on:click={openAgregarCliente} title="Agregar nuevo cliente" aria-label="Agregar nuevo cliente">
       ➕
     </button>
+    <button type="button" class="map-clear-btn" on:click={limpiarMapa}>Limpiar</button>
   </div>
 
   {#if showBuscarDireccionDialog}
@@ -846,6 +1138,14 @@
     <Pedidos
       on:close={closeDialogs}
       on:zoomToLocation={handleZoomToLocation}
+    />
+  {/if}
+
+  {#if showPedidosHistoricoDialog}
+    <PedidosHistorico
+      on:close={closeDialogs}
+      on:zoomToLocation={handleZoomToLocation}
+      on:verEnMapa={handleVerHistoricoEnMapa}
     />
   {/if}
 
@@ -1094,8 +1394,14 @@
     margin-bottom: 0;
   }
 
-  .layer-item input[type="checkbox"],
-  .layer-item input[type="radio"] {
+  .layer-subitem {
+    margin-top: -0.25rem;
+    margin-left: 1.5rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .layer-item input[type="checkbox"] {
     margin-right: 0.75rem;
     margin-bottom: 0;
     width: auto;
@@ -1178,6 +1484,32 @@
 
   .add-client-floating-btn:active {
     transform: translateY(-1px) scale(1.02);
+  }
+
+  .map-clear-btn {
+    position: absolute;
+    left: 0.5rem;
+    bottom: 2rem;
+    z-index: 1000;
+    width: max-content;
+    padding: 0.45rem 0.8rem;
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    border: 1px solid var(--ds-border);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+  }
+
+  .map-clear-btn:hover {
+    background: var(--ds-secondary-hover);
+  }
+
+  .map-clear-btn:focus-visible {
+    outline: 3px solid var(--ds-focus);
+    outline-offset: 2px;
   }
 
   /* Botón hamburguesa móvil */
@@ -1295,6 +1627,7 @@
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
     overflow: hidden;
+    background: #f3f3f3;
   }
 
   /* Estilos para OpenLayers */

@@ -647,6 +647,58 @@ def get_clientes_con_pedidos():
       # finally:
       #     session.close()
 
+@app.route("/api/pedidos/historico", methods=["GET"])
+def get_pedidos_historico():
+    """
+    Obtiene pedidos de la tabla pedido entre fecha desde y fecha hasta.
+    Sin fechas, usa el día del último pedido.
+    ---
+    tags:
+      - Pedidos
+    parameters:
+      - name: desde
+        in: query
+        type: string
+        format: date
+        required: false
+      - name: hasta
+        in: query
+        type: string
+        format: date
+        required: false
+    responses:
+      200:
+        description: Pedidos del rango y las fechas aplicadas
+      400:
+        description: Fechas inválidas
+      500:
+        description: Error interno del servidor
+    """
+    def parse_fecha(nombre):
+        valor = request.args.get(nombre)
+        if valor is None or valor.strip() == "":
+            return None
+        try:
+            return datetime.strptime(valor.strip()[:10], "%Y-%m-%d").date()
+        except ValueError:
+            raise ValueError(f"La fecha {nombre} no es válida.")
+
+    try:
+        desde = parse_fecha("desde")
+        hasta = parse_fecha("hasta")
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+
+    with Session.begin() as session:
+        try:
+            datos = API.getPedidosHistorico(session, desde, hasta)
+            return jsonify(datos), 200
+        except ValueError as error:
+            return jsonify({"error": str(error)}), 400
+        except Exception as e:
+            app.logger.error(f"Error en /api/pedidos/historico: {e}")
+            return jsonify({"error": "Error interno del servidor al obtener el historial de pedidos."}), 500
+
 if __name__ == '__main__':
     # Habilitar logging para ver errores de Flask y SQLAlchemy
     import logging
