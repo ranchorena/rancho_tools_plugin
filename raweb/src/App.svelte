@@ -27,6 +27,7 @@
   import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
   import ThemeSelector from './design-system/ThemeSelector.svelte';
+  import UiIcon from './design-system/Icon.svelte';
   import { createThemeController } from './design-system/theme-controller.mjs';
   import { chooseFocusReturn } from './design-system/focus-policy.mjs';
 
@@ -97,8 +98,7 @@
   // Estado para el toolbar de capas
   let showLayerToolbar = false;
 
-  // Estado para el menú móvil
-  let mobileMenuOpen = false;
+  // El retorno de foco móvil sigue pudiendo usar el botón de menú si existiera.
   let menuButton;
   let dialogOrigin = null;
 
@@ -106,7 +106,7 @@
     const trigger = event.currentTarget;
     dialogOrigin = {
       trigger,
-      openedFromMobileMenu: Boolean(trigger.closest('.mobile-nav-buttons'))
+      openedFromMobileMenu: Boolean(trigger.closest('.bottom-nav'))
     };
   }
 
@@ -178,12 +178,8 @@
     }
   }
 
-  function toggleMobileMenu() {
-    mobileMenuOpen = !mobileMenuOpen;
-  }
-
   function closeMobileMenu() {
-    mobileMenuOpen = false;
+    // La barra inferior permanece visible; no hay un panel móvil que cerrar.
   }
 
   const TRAMO_LABEL_MAX_SCALE = 10000;
@@ -619,8 +615,14 @@
       }
     });
 
+    const handleResize = () => {
+      map?.updateSize();
+    };
+    window.addEventListener('resize', handleResize);
+
     // Limpiar el mapa al desmontar el componente
     return () => {
+      window.removeEventListener('resize', handleResize);
       if (map) {
         map.setTarget(undefined);
         map = undefined;
@@ -965,77 +967,66 @@
 </script>
 
 <main>
-  <nav class="navbar">
+  <nav class="navbar" aria-label="Principal">
     <div class="navbar-brand">
       <h1>RAWEB</h1>
     </div>
 
-    <!-- Menú desktop -->
     <div class="nav-buttons d-mobile-none">
       <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>
-        📍 Buscar Dirección
+        <UiIcon name="pin" size={16} />
+        <span>Buscar dirección</span>
       </button>
       <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
-        👤 Buscar Cliente
+        <UiIcon name="user" size={16} />
+        <span>Buscar cliente</span>
       </button>
       <button on:click={openAgregarCliente} class:active={showAgregarClienteDialog}>
-        ➕ Agregar Cliente
+        <UiIcon name="plus" size={16} />
+        <span>Agregar cliente</span>
       </button>
       <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
-        📦 Pedidos
+        <UiIcon name="box" size={16} />
+        <span>Pedidos</span>
       </button>
       <button on:click={openPedidosHistorico} class:active={showPedidosHistoricoDialog}>
-        📜 Pedidos Histórico
+        <UiIcon name="history" size={16} />
+        <span>Pedidos histórico</span>
       </button>
-      <ThemeSelector id="theme-desktop" value={themePreference} on:change={handleThemeChange} />
     </div>
 
-
-
-    <!-- Botón hamburguesa para móviles -->
-    <button bind:this={menuButton} class="mobile-menu-toggle d-mobile-block" on:click={toggleMobileMenu} aria-label="Menú">
-      <span class="hamburger-line" class:active={mobileMenuOpen}></span>
-      <span class="hamburger-line" class:active={mobileMenuOpen}></span>
-      <span class="hamburger-line" class:active={mobileMenuOpen}></span>
-    </button>
-  </nav>
-
-  <!-- Menú móvil desplegable -->
-  {#if mobileMenuOpen}
-    <div class="mobile-menu d-mobile-block" class:open={mobileMenuOpen}>
-      <div class="mobile-menu-content">
-        <div class="mobile-nav-buttons">
-          <button on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>
-            📍 Buscar Dirección
-          </button>
-          <button on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
-            👤 Buscar Cliente
-          </button>
-          <button on:click={openAgregarCliente} class:active={showAgregarClienteDialog}>
-            ➕ Agregar Cliente
-          </button>
-          <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
-            📦 Pedidos
-          </button>
-          <button on:click={openPedidosHistorico} class:active={showPedidosHistoricoDialog}>
-            📜 Pedidos Histórico
-          </button>
-        </div>
+    <div class="navbar-tools">
+      <div class="d-mobile-none">
+        <ThemeSelector id="theme-desktop" value={themePreference} on:change={handleThemeChange} />
+      </div>
+      <div class="theme-mobile d-mobile-block">
         <ThemeSelector id="theme-mobile" value={themePreference} on:change={handleThemeChange} />
-
       </div>
     </div>
-  {/if}
+  </nav>
 
-  <!-- Overlay para cerrar menú móvil -->
-  {#if mobileMenuOpen}
-    <div class="mobile-menu-overlay" 
-         on:click={closeMobileMenu}
-         on:keydown={(e) => e.key === 'Escape' && closeMobileMenu()}
-         role="button"
-         tabindex="0"
-         aria-label="Cerrar menú móvil"></div>
-  {/if}
+  <nav class="bottom-nav" aria-label="Acciones">
+    <button type="button" on:click={openBuscarDireccion} class:active={showBuscarDireccionDialog}>
+      <span class="bottom-nav-mark"><UiIcon name="pin" size={18} /></span>
+      <span>Dirección</span>
+    </button>
+    <button type="button" on:click={openBuscarCliente} class:active={showBuscarClienteDialog}>
+      <span class="bottom-nav-mark"><UiIcon name="user" size={18} /></span>
+      <span>Clientes</span>
+    </button>
+    <button type="button" class="bottom-nav-add" on:click={openAgregarCliente} class:active={showAgregarClienteDialog}>
+      <span class="bottom-nav-mark"><UiIcon name="plus" size={18} /></span>
+      <span>Agregar</span>
+    </button>
+    <button type="button" on:click={handlePedidosAction} class:active={showPedidosDialog}>
+      <span class="bottom-nav-mark"><UiIcon name="box" size={18} /></span>
+      <span>Pedidos</span>
+    </button>
+    <button type="button" on:click={openPedidosHistorico} class:active={showPedidosHistoricoDialog}>
+      <span class="bottom-nav-mark"><UiIcon name="history" size={18} /></span>
+      <span>Historial</span>
+    </button>
+  </nav>
 
   <div class="map-container" bind:this={mapElement}>
     <!-- El mapa siempre está presente en el DOM -->
@@ -1044,9 +1035,9 @@
     {#if showLayerToolbar}
       <div class="layer-toolbar">
                  <div class="layer-toolbar-header">
-           <span class="layer-toolbar-title">▣ Capas</span>
+           <span class="layer-toolbar-title"><UiIcon name="layers" size={16} /> Capas</span>
             <button type="button" class="layer-toolbar-toggle" on:click={toggleLayerToolbar} title="Cerrar panel de capas" aria-label="Cerrar panel de capas">
-             ✕
+             <UiIcon name="close" size={16} />
            </button>
          </div>
         
@@ -1106,13 +1097,13 @@
       </div>
     {:else}
              <button type="button" class="layer-toolbar-show-btn" on:click={toggleLayerToolbar} title="Mostrar panel de capas" aria-label="Mostrar panel de capas">
-         ▣
+         <UiIcon name="layers" size={18} />
        </button>
     {/if}
 
     <!-- Botón flotante para agregar cliente -->
     <button type="button" class="add-client-floating-btn" on:click={openAgregarCliente} title="Agregar nuevo cliente" aria-label="Agregar nuevo cliente">
-      ➕
+      <UiIcon name="plus" size={20} />
     </button>
     <button type="button" class="map-clear-btn" on:click={limpiarMapa}>Limpiar</button>
   </div>
@@ -1146,6 +1137,8 @@
       on:close={closeDialogs}
       on:zoomToLocation={handleZoomToLocation}
       on:verEnMapa={handleVerHistoricoEnMapa}
+      on:refreshPedidosLayer={refreshPedidosLayerMap}
+      on:showGlobalNotification={handleShowGlobalNotification}
     />
   {/if}
 
@@ -1209,45 +1202,73 @@
   main {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    height: auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-    /* Mejoras para móvil */
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: pan-x pan-y;
   }
 
-  /* Navbar responsive */
   .navbar {
     background-color: var(--ds-background);
     color: var(--ds-text);
-    padding: 0.75rem 1rem;
+    padding: 0.3rem 1rem;
+    padding-top: calc(0.3rem + env(safe-area-inset-top));
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
     align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    gap: 1.25rem;
+    border-bottom: 1px solid var(--ds-divider);
     z-index: 1000;
     position: relative;
-    min-height: 60px;
+    min-height: var(--ds-header-height);
+  }
+
+  .navbar-brand {
+    flex: 0 0 auto;
   }
 
   .navbar-brand h1 {
     margin: 0;
-    font-size: 1.5rem;
-    color: var(--ds-primary);
-    font-weight: 600;
+    font-size: var(--ds-type-brand);
+    color: var(--ds-text);
+    font-weight: 700;
+    line-height: 1.2;
   }
 
-  /* Botones de navegación desktop */
   .nav-buttons {
     display: flex;
+    flex: 0 1 auto;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.2rem;
     align-items: center;
+    min-width: 0;
+  }
+
+  .navbar-tools {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .navbar-tools :global(.theme-selector label) {
+    margin: 0;
+    color: var(--ds-text-muted);
+    font-size: var(--ds-type-muted);
+    font-weight: 500;
+  }
+
+  .navbar-tools :global(.theme-selector select) {
+    width: auto;
+    min-height: 2rem;
+    margin: 0;
+    padding: 0.15rem 0.4rem;
+    font-size: var(--ds-type-label);
+    font-weight: 500;
+    background: var(--ds-surface);
+    border-color: var(--ds-divider);
   }
 
   @media (min-width: 769px) {
@@ -1258,54 +1279,59 @@
   }
 
   .nav-buttons button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     margin: 0;
-    padding: 0.5rem 1rem;
+    padding: 0.35rem 0.7rem;
+    min-height: 2.125rem;
     cursor: pointer;
-    border: 1px solid var(--ds-border);
-    border-radius: 6px;
-    background-color: var(--ds-surface);
+    border: 1px solid transparent;
+    border-radius: var(--ds-radius-small);
+    background-color: transparent;
     color: var(--ds-text);
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    font-size: var(--ds-type-nav);
+    font-weight: 600;
+    transition: background-color var(--ds-motion) ease, color var(--ds-motion) ease;
     white-space: nowrap;
   }
 
   .nav-buttons button:hover {
     background-color: var(--ds-secondary-hover);
-    border-color: var(--ds-border);
-    transform: translateY(-1px);
+    border-color: transparent;
   }
 
   .nav-buttons button.active {
-    background-color: var(--ds-primary);
-    border-color: var(--ds-primary);
-    color: var(--ds-on-primary);
+    background-color: var(--ds-selected);
+    border-color: transparent;
+    color: var(--ds-primary);
   }
 
-  .nav-buttons button:focus,
-  .mobile-nav-buttons button:focus,
-  .mobile-menu-toggle:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+  .nav-buttons button:focus-visible,
+  .bottom-nav button:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
     box-shadow: none;
+  }
+
+  .bottom-nav {
+    display: none;
   }
 
   /* Toolbar de capas flotante */
   .layer-toolbar {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 0.75rem;
+    right: 0.75rem;
     width: 250px;
     background: var(--ds-surface);
     color: var(--ds-text);
-    backdrop-filter: blur(10px);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: var(--ds-radius-medium);
+    box-shadow: var(--ds-shadow-panel);
     border: 1px solid var(--ds-border);
     z-index: 1000;
     font-size: 0.875rem;
-    max-height: calc(100vh - 200px);
+    max-height: calc(100dvh - var(--ds-header-height) - 2rem);
     overflow-y: auto;
   }
 
@@ -1314,16 +1340,19 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.3rem 1rem;
-    border-bottom: 1px solid var(--ds-border);
+    border-bottom: 1px solid var(--ds-divider);
     background: var(--ds-background);
     border-radius: 8px 8px 0 0;
     min-height: 32px;
   }
 
   .layer-toolbar-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     font-weight: 600;
     color: var(--ds-text);
-    font-size: 0.85rem;
+    font-size: var(--ds-type-label);
     line-height: 1.2;
   }
 
@@ -1349,8 +1378,8 @@
   }
 
   .layer-toolbar-toggle:focus-visible {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   .layer-toolbar-content {
@@ -1370,8 +1399,8 @@
     color: var(--ds-text-muted);
     margin-bottom: 0.5rem;
     font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   .layer-item {
@@ -1415,19 +1444,19 @@
 
   .layer-toolbar-show-btn {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 0.75rem;
+    right: 0.75rem;
     width: 44px;
     height: 44px;
+    margin: 0;
     background: var(--ds-surface);
     color: var(--ds-text);
-    backdrop-filter: blur(10px);
     border: 1px solid var(--ds-border);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: var(--ds-radius-medium);
+    box-shadow: var(--ds-shadow-sm);
     cursor: pointer;
-    font-size: 1.2rem;
-    transition: all 0.2s ease;
+    font-size: 1.05rem;
+    transition: background-color var(--ds-motion) ease;
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -1436,70 +1465,69 @@
 
   .layer-toolbar-show-btn:hover {
     background: var(--ds-secondary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   .layer-toolbar-show-btn:focus-visible,
   .add-client-floating-btn:focus-visible {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   :global(:root[data-theme="dark"]) .layer-toolbar-show-btn:focus-visible,
   :global(:root[data-theme="dark"]) .add-client-floating-btn:focus-visible {
-    outline: 3px solid #ffffff;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 5px #111827;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   /* Botón flotante para agregar cliente */
   .add-client-floating-btn {
     position: absolute;
-    top: 5rem; /* Debajo del botón de capas */
-    right: 1rem;
+    top: 4.35rem;
+    right: 0.75rem;
     width: 44px;
     height: 44px;
+    margin: 0;
     background: var(--ds-location);
     border: 1px solid var(--ds-location);
-    border-radius: 50%;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    border-radius: var(--ds-radius-round);
+    box-shadow: var(--ds-shadow-sm);
     cursor: pointer;
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     color: var(--ds-on-location);
-    transition: all 0.2s ease;
+    transition: background-color var(--ds-motion) ease;
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    font-weight: 600;
   }
 
   .add-client-floating-btn:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
     background: var(--ds-location-hover);
     border-color: var(--ds-location-hover);
   }
 
   .add-client-floating-btn:active {
-    transform: translateY(-1px) scale(1.02);
+    background: var(--ds-location-active);
   }
 
   .map-clear-btn {
     position: absolute;
-    left: 0.5rem;
-    bottom: 2rem;
+    left: 0.75rem;
+    bottom: 2.25rem;
     z-index: 1000;
     width: max-content;
-    padding: 0.45rem 0.8rem;
+    min-height: 36px;
+    margin: 0;
+    padding: 0.35rem 0.7rem;
     background: var(--ds-surface);
     color: var(--ds-text);
     border: 1px solid var(--ds-border);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: var(--ds-radius-medium);
+    box-shadow: var(--ds-shadow-sm);
     cursor: pointer;
     font: inherit;
+    font-size: 0.8125rem;
     font-weight: 600;
   }
 
@@ -1508,126 +1536,62 @@
   }
 
   .map-clear-btn:focus-visible {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
-  /* Botón hamburguesa móvil */
-  .mobile-menu-toggle {
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 44px;
-    height: 44px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 8px;
-  }
-
-  .hamburger-line {
-    width: 24px;
-    height: 3px;
-    background-color: var(--ds-text);
-    margin: 2px 0;
-    transition: all 0.3s ease;
-    border-radius: 1.5px;
-  }
-
-  .hamburger-line.active:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
-  }
-
-  .hamburger-line.active:nth-child(2) {
-    opacity: 0;
-  }
-
-  .hamburger-line.active:nth-child(3) {
-    transform: rotate(-45deg) translate(7px, -6px);
-  }
-
-  /* Menú móvil */
-  .mobile-menu {
-    position: fixed;
-    top: 60px;
-    left: 0;
-    right: 0;
-    background-color: var(--ds-surface);
-    color: var(--ds-text);
-    border-bottom: 1px solid var(--ds-border);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    z-index: 999;
-    transform: translateY(-100%);
-    transition: transform 0.3s ease;
-    display: none; /* Oculto por defecto */
-  }
-
-  .mobile-menu.open {
-    transform: translateY(0);
-    display: block;
-  }
-
-  .mobile-menu-content {
-    padding: 1rem;
-  }
-
-  .mobile-menu-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 998;
-  }
-
-  /* Botones navegación móvil */
-  .mobile-nav-buttons {
+  .bottom-nav button {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .mobile-nav-buttons button {
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
     width: 100%;
-    padding: 1rem;
-    font-size: 1rem;
-    border: 1px solid var(--ds-border);
-    border-radius: 8px;
-    background-color: var(--ds-surface);
-    color: var(--ds-text);
+    min-height: 44px;
+    margin: 0;
+    padding: 0.3rem 0.15rem;
+    border: none;
+    border-radius: var(--ds-radius-small);
+    background: transparent;
+    color: var(--ds-text-muted);
+    font-size: 0.68rem;
     font-weight: 500;
-    transition: all 0.2s ease;
-    text-align: left;
+    line-height: 1.15;
   }
 
-  .mobile-nav-buttons button:hover,
-  .mobile-nav-buttons button:focus {
-    background-color: var(--ds-secondary-hover);
-    border-color: var(--ds-focus);
+  .bottom-nav button.active {
+    color: var(--ds-on-selected);
+    background: var(--ds-selected);
   }
 
-  .mobile-nav-buttons button.active {
-    background-color: var(--ds-primary);
-    border-color: var(--ds-primary);
-    color: var(--ds-on-primary);
+  .bottom-nav-mark {
+    display: flex;
+    line-height: 1;
+  }
+
+  .bottom-nav-add {
+    color: var(--ds-on-location);
+    background: var(--ds-location);
+    border-radius: var(--ds-radius-medium);
+  }
+
+  .bottom-nav-add.active {
+    background: var(--ds-location-active);
+    color: var(--ds-on-location);
   }
 
 
 
   /* Contenedor del mapa */
   .map-container {
-    flex: 1 0 60vh;
+    flex: 1 1 auto;
     width: 100%;
     position: relative;
-    min-height: 0; /* Importante para flex */
-    /* Optimizaciones para móvil */
+    min-height: 0;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
     overflow: hidden;
-    background: #f3f3f3;
+    background: var(--ds-background);
   }
 
   /* Estilos para OpenLayers */
@@ -1643,13 +1607,14 @@
   }
 
   :global(.ol-zoom) {
-    top: 0.5rem;
-    left: 0.5rem;
+    top: 0.75rem;
+    left: 0.75rem;
     display: flex;
     flex-direction: column;
     background: var(--ds-surface);
     border: 1px solid var(--ds-border);
-    border-radius: 4px;
+    border-radius: var(--ds-radius-medium);
+    box-shadow: var(--ds-shadow-sm);
     overflow: hidden;
   }
 
@@ -1678,20 +1643,21 @@
   }
 
   :global(.ol-zoom button:focus-visible) {
-    outline: 3px solid var(--ds-focus) !important;
-    outline-offset: -3px !important;
+    outline: 2px solid var(--ds-focus) !important;
+    outline-offset: -2px !important;
     box-shadow: none !important;
   }
 
   :global(.ol-attribution) {
-    bottom: 0.25rem;
-    right: 0.25rem;
+    bottom: 0.35rem;
+    right: 0.35rem;
     font-size: 0.75rem;
     background: var(--ds-surface);
     color: var(--ds-text);
     border: 1px solid var(--ds-border);
     padding: 2px 4px;
-    border-radius: 3px;
+    border-radius: var(--ds-radius-small);
+    box-shadow: var(--ds-shadow-sm);
   }
 
   :global(.ol-attribution ul) {
@@ -1722,8 +1688,8 @@
   }
 
   :global(.ol-attribution button:focus-visible) {
-    outline: 3px solid var(--ds-focus) !important;
-    outline-offset: -3px !important;
+    outline: 2px solid var(--ds-focus) !important;
+    outline-offset: -2px !important;
   }
 
 
@@ -1768,74 +1734,70 @@
       display: flex;
     }
 
-    .navbar {
-      padding: 0.5rem 1rem;
-      min-height: 56px;
+    main {
+      padding-bottom: calc(var(--ds-bottom-nav-height) + env(safe-area-inset-bottom));
     }
 
     .navbar-brand h1 {
-      font-size: 1.25rem;
+      font-size: 1rem;
     }
 
-    .mobile-menu-toggle {
-      display: flex;
+    .theme-mobile :global(.theme-selector label) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
-    .mobile-menu {
-      top: 56px;
-      display: none; /* Asegurar que esté oculto por defecto en móvil */
+    .bottom-nav {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      align-items: center;
+      gap: 0.15rem;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      min-height: var(--ds-bottom-nav-height);
+      padding: 0.25rem 0.35rem calc(0.25rem + env(safe-area-inset-bottom));
+      background: var(--ds-surface);
+      color: var(--ds-text);
+      border-top: 1px solid var(--ds-border);
     }
 
-    .mobile-menu.open {
-      display: block; /* Mostrar cuando esté abierto */
-    }
-
-    /* Toolbar responsivo en móviles */
     .layer-toolbar {
-      width: 280px;
-      max-width: calc(100vw - 4rem);
+      width: min(280px, calc(100vw - 5.5rem));
+      max-height: calc(100dvh - var(--ds-header-height) - var(--ds-bottom-nav-height) - 1.5rem);
       top: 0.5rem;
       right: 0.5rem;
-      left: auto; /* Eliminar left para que solo use right */
+    }
+
+    .layer-toolbar-show-btn,
+    .add-client-floating-btn {
+      right: 0.5rem;
     }
 
     .layer-toolbar-show-btn {
       top: 0.5rem;
-      right: 0.5rem;
-      width: 40px;
-      height: 40px;
     }
 
     .add-client-floating-btn {
-      top: 4rem; /* Ajustar posición en móviles */
-      right: 0.5rem;
-      width: 40px;
-      height: 40px;
-      font-size: 1.3rem;
+      top: 4rem;
     }
 
-    /* Ajustes para pantallas muy pequeñas */
+    .map-clear-btn {
+      bottom: 0.75rem;
+    }
+
     @media (max-width: 480px) {
       .navbar {
-        padding: 0.5rem;
-      }
-
-      .navbar-brand h1 {
-        font-size: 1.1rem;
-      }
-
-      .mobile-menu-content {
-        padding: 0.75rem;
-      }
-
-      .mobile-nav-buttons button {
-        padding: 0.875rem;
-      }
-
-      /* Toolbar aún más compacto en pantallas muy pequeñas */
-      .layer-toolbar {
-        width: 260px;
-        max-width: calc(100vw - 6rem);
+        padding-inline: 0.5rem;
       }
 
       .layer-toolbar-content {
@@ -1846,22 +1808,33 @@
         padding: 0.375rem;
         margin-bottom: 0.375rem;
       }
+
+      .bottom-nav button {
+        font-size: 0.62rem;
+      }
     }
   }
 
-  /* Landscape móvil */
   @media (max-width: 768px) and (orientation: landscape) {
-    .mobile-menu {
-      max-height: calc(100vh - 56px);
-      overflow-y: auto;
+    .bottom-nav {
+      min-height: 3.25rem;
+    }
+
+    .layer-toolbar {
+      max-height: calc(100dvh - var(--ds-header-height) - 4.5rem);
     }
   }
 
   /* Tablet */
-  @media (min-width: 769px) and (max-width: 1024px) {
+  @media (min-width: 769px) and (max-width: 1100px) {
+    .nav-buttons {
+      flex-wrap: nowrap;
+    }
+
     .nav-buttons button {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.8rem;
+      padding: 0.3rem 0.45rem;
+      font-size: 0.8125rem;
+      gap: 0.3rem;
     }
 
     .layer-toolbar {
@@ -1882,7 +1855,7 @@
     font-size: 0.85em;
     pointer-events: auto; /* Permitir que el tooltip pueda ser clickeado */
     display: block; /* Mostrar siempre */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: var(--ds-shadow-panel);
     min-width: 180px;
     max-width: 250px;
     max-height: calc(100vh - 20px);

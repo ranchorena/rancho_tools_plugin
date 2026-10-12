@@ -2,6 +2,7 @@
   import { API_BASE_URL } from './config.js';
   import { createEventDispatcher, tick } from 'svelte'; // Importar dispatcher y tick
   import DialogHeader from './design-system/DialogHeader.svelte';
+  import Icon from './design-system/Icon.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
   import { shouldActivateRow } from './design-system/keyboard.mjs';
   import { resolveClientSearch } from './client-search.mjs';
@@ -203,15 +204,15 @@
     background-color: var(--ds-surface);
     color: var(--ds-text);
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    width: 100%;
-    max-width: 800px;
-    max-height: 95vh;
+    box-shadow: var(--ds-shadow-dialog);
+    width: min(720px, calc(100vw - 2rem));
+    max-width: 720px;
+    max-height: min(85dvh, 95vh);
     display: flex;
     flex-direction: column;
     position: relative;
     overflow: hidden;
-    animation: modalSlideIn 0.3s ease-out;
+    animation: modalSlideIn var(--ds-motion) ease-out;
   }
 
   @keyframes modalSlideIn {
@@ -226,7 +227,7 @@
   }
 
   .modal-header {
-    box-shadow: inset 0 -1px var(--ds-border);
+    box-shadow: inset 0 -1px var(--ds-divider);
     flex-shrink: 0;
     background-color: var(--ds-surface);
     color: var(--ds-text);
@@ -243,7 +244,7 @@
   .modal-body {
     overflow-y: auto;
     flex-grow: 1;
-    padding: 1rem 1.5rem 1.5rem 1.5rem;
+    padding: 0.75rem 1.25rem 1.25rem;
   }
 
   .close-button {
@@ -278,20 +279,31 @@
   }
 
   h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     color: var(--ds-text);
-    margin: 0 0 1rem 0;
-    font-size: 1.1rem;
+    margin: 0 0 0.85rem 0;
+    font-size: var(--ds-type-section);
     font-weight: 600;
-    border-bottom: 2px solid var(--ds-border);
-    padding-bottom: 0.5rem;
+    padding-bottom: 0;
   }
 
-  .search-section, .selected-client-section {
-    margin-bottom: 2rem;
-    background-color: var(--ds-surface);
+  .search-section {
+    margin-bottom: 1.25rem;
+    background-color: transparent;
     color: var(--ds-text);
-    padding: 1.5rem;
-    border-radius: 8px;
+    padding: 0;
+    border: none;
+  }
+
+  .selected-client-section,
+  .results-grid.search-section {
+    margin-bottom: 1.25rem;
+    background-color: var(--ds-background);
+    color: var(--ds-text);
+    padding: 0.9rem;
+    border-radius: var(--ds-radius-medium);
     border: 1px solid var(--ds-border);
   }
 
@@ -304,27 +316,28 @@
   }
 
   .form-group.centered-search {
-    max-width: 100%;
-    margin: 0 auto 1.5rem auto;
+    max-width: none;
+    margin: 0 0 0.85rem 0;
   }
 
   label {
     display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
     color: var(--ds-text);
-    font-size: 0.9rem;
+    font-size: var(--ds-type-label);
   }
 
   input[type="text"], input[type="number"], textarea {
     width: 100%;
-    padding: 0.75rem;
-    border: 2px solid var(--ds-border);
-    border-radius: 6px;
-    font-size: 1rem;
+    min-height: 2.625rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-small);
+    background-color: var(--ds-background);
+    font-size: var(--ds-type-body);
     box-sizing: border-box;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    background-color: var(--ds-surface);
+    transition: border-color var(--ds-motion) ease;
     color: var(--ds-text);
     margin-bottom: 0;
   }
@@ -333,9 +346,13 @@
     max-width: 120px;
   }
 
-  input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+  input[type="text"]:hover, input[type="number"]:hover, textarea:hover {
+    border-color: var(--ds-text-muted);
+  }
+
+  input[type="text"]:focus-visible, input[type="number"]:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
     border-color: var(--ds-focus);
     box-shadow: none;
   }
@@ -366,8 +383,8 @@
   }
 
   .input-group input[type="text"][placeholder="Altura"] {
-    max-width: 100px;
-    flex: 0 0 100px;
+    max-width: 7rem;
+    flex: 0 0 7rem;
   }
 
   button {
@@ -392,11 +409,31 @@
     transform: translateY(-1px);
   }
 
-  button:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+  button:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
     border-color: var(--ds-focus);
     box-shadow: none;
+  }
+
+  .search-actions .ds-button--ghost {
+    background: transparent;
+    border-color: var(--ds-divider);
+    color: var(--ds-text);
+  }
+
+  .search-actions .ds-button--ghost:hover {
+    background: var(--ds-secondary-hover);
+    border-color: var(--ds-divider);
+    transform: none;
+  }
+
+  .search-actions .ds-button--primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-width: 8rem;
   }
 
   button.primary,
@@ -419,8 +456,15 @@
   .search-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 1.5rem;
-    gap: 0.75rem;
+    align-items: center;
+    margin-top: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .search-actions button,
+  .form-actions button {
+    width: auto;
+    margin-bottom: 0;
   }
 
   .results-grid {
@@ -482,8 +526,8 @@
   }
 
   tbody tr:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: -3px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: -2px;
   }
 
   .checkbox-group {
@@ -568,9 +612,15 @@
       padding: 0.75rem 1rem 1rem 1rem;
     }
 
-    .search-section, .selected-client-section {
-      padding: 1rem;
-      margin-bottom: 1.5rem;
+    .search-section {
+      padding: 0;
+      margin-bottom: 1rem;
+    }
+
+    .selected-client-section,
+    .results-grid.search-section {
+      padding: 0.75rem;
+      margin-bottom: 1rem;
     }
 
     .modal-header :global(h2) {
@@ -666,9 +716,13 @@
       padding: 0.625rem 0.875rem 0.875rem 0.875rem;
     }
 
-    .search-section, .selected-client-section {
-      padding: 0.75rem;
-      margin-bottom: 1rem;
+    .search-section {
+      padding: 0;
+    }
+
+    .selected-client-section,
+    .results-grid.search-section {
+      padding: 0.65rem;
     }
 
     .modal-header :global(h2) {
@@ -777,8 +831,9 @@
        aria-labelledby="modal-title">
     <div class="modal-header">
       <DialogHeader titleId="modal-title">
-        👤 Buscar Cliente
-        <button slot="close" type="button" class="close-button ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar">&times;</button>
+        <Icon name="user" size={18} />
+        Buscar cliente
+        <button slot="close" type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar"><Icon name="close" size={16} /></button>
       </DialogHeader>
     </div>
 
@@ -787,11 +842,11 @@
       <div class="message error-message">{errorMessage}</div>
       {/if}
       {#if isLoading}
-        <div class="loading-indicator">🔄 Cargando...</div>
+        <div class="loading-indicator">Cargando...</div>
       {/if}
 
       <div class="search-section">
-        <h3>🔍 Criterios de Búsqueda</h3>
+        <h3><Icon name="search" size={16} /> Criterios de búsqueda</h3>
         
         <div class="form-group centered-search">
           <label for="search-cliente">Buscar por nombre:</label>
@@ -816,14 +871,14 @@
         </div>
 
         <div class="search-actions">
-          <button type="button" class="ds-button" on:click={openAgregarCliente}>Agregar cliente</button>
-          <button type="button" class="ds-button ds-button--primary primary" on:click={search}>Buscar</button>
+          <button type="button" class="ds-button ds-button--ghost" on:click={openAgregarCliente}>Agregar cliente</button>
+          <button type="button" class="ds-button ds-button--primary primary" on:click={search}><Icon name="search" size={16} /> Buscar</button>
         </div>
       </div>
 
       {#if searchResults.length > 0}
         <div class="results-grid search-section" id="search-results-section">
-          <h3>📋 Resultados de Búsqueda</h3>
+          <h3>Resultados de búsqueda</h3>
           <div class="table-container">
             <table>
               <thead>
@@ -913,7 +968,7 @@
           </div>
 
           <div class="form-actions">
-            <button type="button" class="ds-button ds-button--primary primary" on:click={saveChanges}>💾 Guardar Cambios</button>
+            <button type="button" class="ds-button ds-button--primary primary" on:click={saveChanges}>Guardar cambios</button>
           </div>
         </div>
       {/if}

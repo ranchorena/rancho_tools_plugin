@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import DialogHeader from './design-system/DialogHeader.svelte';
+  import Icon from './design-system/Icon.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
 
   const dispatch = createEventDispatcher();
@@ -44,9 +45,10 @@
        aria-labelledby="direccion-title">
     <div class="modal-header">
       <DialogHeader titleId="direccion-title">
-        📍 Buscar Dirección
-      <button slot="close" type="button" class="close-button ds-focus" on:click={handleCancelar} aria-label="Cerrar">
-        &times;
+        <Icon name="pin" size={18} />
+        Buscar dirección
+      <button slot="close" type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={handleCancelar} aria-label="Cerrar">
+        <Icon name="close" size={16} />
       </button>
       </DialogHeader>
     </div>
@@ -68,7 +70,8 @@
 
     <div class="modal-footer">
       <button type="button" class="btn-primary ds-button ds-button--primary" on:click={handleBuscar}>
-        🔍 Buscar
+        <Icon name="search" size={16} />
+        Buscar
       </button>
     </div>
   </div>
@@ -95,7 +98,7 @@
     background-color: var(--ds-surface);
     color: var(--ds-text);
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    box-shadow: var(--ds-shadow-dialog);
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
@@ -118,7 +121,7 @@
   }
 
   .modal-header {
-    border-bottom: 1px solid var(--ds-border);
+    box-shadow: inset 0 -1px var(--ds-divider);
     flex-shrink: 0;
     color: var(--ds-text);
   }
@@ -162,49 +165,62 @@
   }
 
   label {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--ds-text);
-    font-size: 0.9rem;
+    font-size: var(--ds-type-label);
   }
 
   input[type="text"] {
     width: 100%;
-    padding: 0.875rem 1rem;
-    border: 2px solid var(--ds-border);
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    min-height: 2.625rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-small);
+    font-size: var(--ds-type-body);
+    background: var(--ds-background);
+    color: var(--ds-text);
+    transition: border-color var(--ds-motion) ease;
     box-sizing: border-box;
     margin: 0;
   }
 
-  input[type="text"]:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+  input[type="text"]::placeholder {
+    color: var(--ds-text-muted);
+    font-weight: 400;
+  }
+
+  input[type="text"]:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
     border-color: var(--ds-focus);
     box-shadow: none;
   }
 
   .modal-footer {
     display: flex;
-    justify-content: center;
+    justify-content: stretch;
     gap: 0.75rem;
-    padding: 1rem 1.5rem 1.5rem 1.5rem;
-    border-top: 1px solid var(--ds-border);
+    padding: 0.85rem 1.25rem 1.1rem;
+    background: var(--ds-background);
+    box-shadow: inset 0 1px var(--ds-divider);
     flex-shrink: 0;
   }
 
   .btn-primary {
-    padding: 0.625rem 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.55rem 1rem;
     border: 1px solid var(--ds-primary);
-    border-radius: 6px;
+    border-radius: var(--ds-radius-small);
     background-color: var(--ds-primary);
     color: var(--ds-on-primary);
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-    min-height: 44px;
+    font-size: var(--ds-type-nav);
+    min-height: 2.625rem;
   }
 
   .btn-primary:hover {
@@ -212,9 +228,9 @@
     border-color: var(--ds-primary-hover);
   }
 
-  .btn-primary:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+  .btn-primary:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
     border-color: var(--ds-focus);
     box-shadow: none;
   }

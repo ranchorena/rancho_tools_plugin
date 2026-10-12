@@ -2,6 +2,7 @@
   import { API_BASE_URL } from './config.js';
   import { createEventDispatcher } from 'svelte';
   import DialogHeader from './design-system/DialogHeader.svelte';
+  import Icon from './design-system/Icon.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
   import { shouldActivateRow } from './design-system/keyboard.mjs';
   const dispatch = createEventDispatcher();
@@ -105,6 +106,54 @@
     dispatch('close');
   }
 
+  let eliminandoId = null;
+  let pedidoAEliminar = null;
+
+  function pedirEliminar(pedido) {
+    if (eliminandoId !== null) return;
+    pedidoAEliminar = pedido;
+  }
+
+  function cancelarEliminar() {
+    if (eliminandoId !== null) return;
+    pedidoAEliminar = null;
+  }
+
+  async function eliminar_pedido() {
+    const pedido = pedidoAEliminar;
+    if (!pedido || eliminandoId !== null) return;
+
+    eliminandoId = pedido.id;
+    errorMessage = "";
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/pedidos/eliminar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_pedido: pedido.id })
+      });
+      const body = await response.json().catch(() => ({ error: "Error desconocido" }));
+      if (!response.ok) {
+        throw new Error(body.error || `Error ${response.status}: ${response.statusText}`);
+      }
+      pedidos = pedidos.filter((item) => item.id !== pedido.id);
+      calcularEstadisticas();
+      if (pedidos.length === 0) {
+        errorMessage = "No se encontraron pedidos para las fechas indicadas.";
+      }
+      dispatch('refreshPedidosLayer');
+      dispatch('showGlobalNotification', {
+        message: body.mensaje || 'Pedido eliminado correctamente.',
+        type: 'success'
+      });
+      pedidoAEliminar = null;
+    } catch (err) {
+      errorMessage = err.message;
+      console.error("Error al eliminar pedido:", err);
+    } finally {
+      eliminandoId = null;
+    }
+  }
+
   function handlePedidoRowKeydown(event, pedido) {
     if (!shouldActivateRow(event.key, event.repeat, event.target === event.currentTarget)) return;
     event.preventDefault();
@@ -135,7 +184,7 @@
     background-color: var(--ds-surface);
     color: var(--ds-text);
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    box-shadow: var(--ds-shadow-dialog);
     width: 100%;
     max-width: 1100px;
     max-height: 95vh;
@@ -146,7 +195,7 @@
   }
 
   .modal-header {
-    border-bottom: 1px solid var(--ds-border);
+    box-shadow: inset 0 -1px var(--ds-divider);
     flex-shrink: 0;
     background-color: var(--ds-surface);
     min-height: 40px;
@@ -184,8 +233,8 @@
   }
 
   .close-button:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   .modal-header :global(h2) {
@@ -198,11 +247,9 @@
 
   h3 {
     color: var(--ds-text);
-    margin: 0 0 1rem 0;
-    font-size: 1.1rem;
+    margin: 0 0 0.85rem 0;
+    font-size: var(--ds-type-section);
     font-weight: 600;
-    border-bottom: 2px solid var(--ds-border);
-    padding-bottom: 0.5rem;
   }
 
   .filtros-fecha {
@@ -246,8 +293,8 @@
 
   .filtros-fecha button:focus,
   .filtros-fecha input:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   .pedidos-section,
@@ -295,7 +342,7 @@
   }
 
   tbody tr:focus-visible {
-    outline: 3px solid var(--ds-focus);
+    outline: 2px solid var(--ds-focus);
     outline-offset: -3px;
   }
 
@@ -368,8 +415,8 @@
   }
 
   .ver-mapa-btn:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   .pedido-regalo {
@@ -384,11 +431,83 @@
   .pedido-normal:hover {
     background-color: var(--ds-selected) !important;
   }
+
+  .eliminar-btn {
+    color: var(--ds-text-muted);
+  }
+
+  .eliminar-btn:hover:not(:disabled) {
+    color: var(--ds-error);
+  }
+
+  .confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1102;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.45);
+  }
+
+  .confirm-dialog {
+    width: 100%;
+    max-width: 26rem;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
+    border-radius: 12px;
+    box-shadow: var(--ds-shadow-dialog);
+    overflow: hidden;
+  }
+
+  .confirm-body {
+    padding: 1rem 1.25rem 1.25rem;
+  }
+
+  .confirm-body p {
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+
+  .confirm-actions button {
+    font: inherit;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 0.45rem 0.9rem;
+    cursor: pointer;
+    width: auto;
+  }
+
+  .confirm-cancelar {
+    color: var(--ds-text);
+    background: transparent;
+    border: 1px solid var(--ds-divider);
+  }
+
+  .confirm-eliminar {
+    color: var(--ds-error);
+    background: var(--ds-error-surface);
+    border: 1px solid var(--ds-error);
+  }
+
+  .confirm-actions button:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
 </style>
 
 <div class="modal-backdrop"
-     on:click={() => dispatch('close')}
-     on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
+     on:click={() => !pedidoAEliminar && dispatch('close')}
+     on:keydown={(e) => e.key === 'Escape' && !pedidoAEliminar && dispatch('close')}
      role="button"
      tabindex="0"
      aria-label="Cerrar modal">
@@ -400,9 +519,10 @@
        aria-labelledby="pedidos-historico-title">
     <div class="modal-header">
       <DialogHeader titleId="pedidos-historico-title">
-        Pedidos Histórico
+        <Icon name="history" size={18} />
+        Pedidos histórico
         <svelte:fragment slot="close">
-          <button type="button" class="close-button ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar">&times;</button>
+          <button type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar"><Icon name="close" size={16} /></button>
         </svelte:fragment>
       </DialogHeader>
     </div>
@@ -446,6 +566,7 @@
                   <th>Regalo</th>
                   <th>Precio unitario</th>
                   <th>Observaciones</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -467,6 +588,17 @@
                     <td>{pedido.es_regalo === 1 ? 'Sí' : 'No'}</td>
                     <td>{formatearPrecio(pedido.precio_unitario)}</td>
                     <td>{pedido.observacion || 'N/A'}</td>
+                    <td>
+                      <button
+                        type="button"
+                        class="eliminar-btn ds-button ds-button--icon ds-focus"
+                        aria-label="Eliminar pedido"
+                        disabled={eliminandoId === pedido.id}
+                        on:click|stopPropagation={() => pedirEliminar(pedido)}
+                      >
+                        <Icon name="trash" size={16} />
+                      </button>
+                    </td>
                   </tr>
                 {/each}
               </tbody>
@@ -503,3 +635,35 @@
     </div>
   </div>
 </div>
+
+{#if pedidoAEliminar}
+  <div class="confirm-backdrop"
+       on:click={cancelarEliminar}
+       on:keydown={(e) => e.key === 'Escape' && cancelarEliminar()}
+       role="presentation">
+    <div class="confirm-dialog"
+         on:click|stopPropagation
+         on:keydown|stopPropagation={(e) => e.key === 'Escape' && cancelarEliminar()}
+         use:dialogFocus
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="eliminar-pedido-title">
+      <div class="modal-header">
+        <DialogHeader titleId="eliminar-pedido-title">
+          <Icon name="trash" size={18} />
+          Eliminar pedido
+          <svelte:fragment slot="close">
+            <button type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={cancelarEliminar} aria-label="Cerrar" disabled={eliminandoId !== null}><Icon name="close" size={16} /></button>
+          </svelte:fragment>
+        </DialogHeader>
+      </div>
+      <div class="confirm-body">
+        <p>¿Eliminar el pedido de {pedidoAEliminar.nombre || `pedido ${pedidoAEliminar.id}`}? El cliente quedará sin pedido activo.</p>
+        <div class="confirm-actions">
+          <button type="button" class="confirm-cancelar ds-focus" data-dialog-initial-focus on:click={cancelarEliminar} disabled={eliminandoId !== null}>Cancelar</button>
+          <button type="button" class="confirm-eliminar ds-focus" on:click={eliminar_pedido} disabled={eliminandoId !== null}>Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}

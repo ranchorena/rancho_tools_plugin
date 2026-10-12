@@ -12,16 +12,19 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.25rem 0.75rem;
+		padding: 0.55rem 0.9rem;
 		flex-shrink: 0;
 	}
 
 	h2 {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
 		flex: 1;
 		min-width: 0;
 		margin: 0;
 		font-family: inherit;
-		font-size: 1rem;
+		font-size: var(--ds-type-title);
 		font-weight: 600;
 		line-height: 1.25;
 		overflow-wrap: anywhere;
@@ -41,5 +44,12 @@
 		font-family: inherit;
 		font-size: 1rem;
 		line-height: 1.25;
+	}
+
+	@media (max-width: 768px) {
+		.ds-dialog-header__close :global(button) {
+			min-width: 44px;
+			min-height: 44px;
+		}
 	}
 </style>

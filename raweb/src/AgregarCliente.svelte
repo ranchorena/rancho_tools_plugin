@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { API_BASE_URL } from './config.js';
   import DialogHeader from './design-system/DialogHeader.svelte';
+  import Icon from './design-system/Icon.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
 
   const dispatch = createEventDispatcher();
@@ -138,7 +139,7 @@
     background: var(--ds-surface);
     color: var(--ds-text);
     border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: var(--ds-shadow-dialog);
     width: 90%;
     max-width: 600px;
     max-height: 90vh;
@@ -150,7 +151,7 @@
   .modal-header {
     background: var(--ds-surface);
     color: var(--ds-text);
-    box-shadow: inset 0 -1px var(--ds-border);
+    box-shadow: inset 0 -1px var(--ds-divider);
     padding: 0;
   }
 
@@ -197,22 +198,21 @@
   }
 
   .modal-body {
-    padding: 2rem;
+    padding: 1.15rem 1.35rem 1.25rem;
     overflow-y: auto;
     flex: 1;
   }
 
   .form-section {
-    margin-bottom: 2rem;
+    margin-bottom: 1.35rem;
   }
 
   .section-title {
-    font-size: 1.1rem;
+    font-size: var(--ds-type-section);
     font-weight: 600;
     color: var(--ds-text);
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--ds-border);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0;
   }
 
   .form-row {
@@ -256,16 +256,16 @@
   /* Mantener el anillo compartido en controles y observación. */
   .form-group input:focus,
   .form-group textarea:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
     border-color: var(--ds-focus);
     box-shadow: none;
   }
 
   .form-group input.ds-field:focus,
   .form-group textarea.ds-field:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
     border-color: var(--ds-focus);
     box-shadow: none;
   }
@@ -305,14 +305,16 @@
   }
 
   .btn-seleccionar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     background: var(--ds-location);
     color: var(--ds-on-location);
     border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 500;
+    padding: 0.55rem 0.9rem;
+    border-radius: var(--ds-radius-small);
+    font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
   }
 
   .btn-seleccionar:hover {
@@ -328,8 +330,8 @@
   .btn-seleccionar:focus,
   .close-button:focus,
   .checkbox-group input[type="checkbox"]:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   .alert {
@@ -340,6 +342,9 @@
   }
 
   .alert-error {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     background-color: var(--ds-error-surface);
     color: var(--ds-error);
     border: 1px solid var(--ds-error);
@@ -352,12 +357,12 @@
   }
 
   .modal-footer {
-    padding: 1.5rem 2rem;
-    background: var(--ds-surface);
+    padding: 0.9rem 1.25rem;
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    border-top: 1px solid var(--ds-border);
+    gap: 0.6rem;
+    background: var(--ds-background);
+    box-shadow: inset 0 1px var(--ds-divider);
   }
 
   .btn {
@@ -417,8 +422,8 @@
 
   .btn-primary.ds-button--primary:focus,
   .btn-secondary.ds-button:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   /* Al seleccionar un punto, retirar temporalmente el diálogo del hit-testing
@@ -495,9 +500,10 @@
        aria-labelledby="agregar-cliente-title">
     <div class="modal-header">
       <DialogHeader titleId="agregar-cliente-title">
-        ➕ Agregar Nuevo Cliente
-        <button slot="close" type="button" class="close-button ds-focus" on:click={handleCancel} aria-label="Cerrar">
-          &times;
+        <Icon name="plus" size={18} />
+        Agregar nuevo cliente
+        <button slot="close" type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={handleCancel} aria-label="Cerrar">
+          <Icon name="close" size={16} />
         </button>
       </DialogHeader>
     </div>
@@ -505,7 +511,7 @@
     <div class="modal-body">
       {#if errorMessage}
         <div class="alert alert-error">
-          ⚠️ {errorMessage}
+          <Icon name="alert" size={16} /> {errorMessage}
         </div>
       {/if}
 
@@ -518,7 +524,7 @@
       <form on:submit|preventDefault={handleSubmit}>
         <!-- Información Básica -->
         <div class="form-section">
-          <div class="section-title">📋 Información Básica</div>
+          <div class="section-title">Información básica</div>
           
           <div class="form-row">
             <div class="form-group">
@@ -589,7 +595,7 @@
 
         <!-- Ubicación -->
         <div class="form-section">
-          <div class="section-title">📍 Ubicación</div>
+          <div class="section-title">Ubicación</div>
           <div class="coordenadas-section">
             <div class="coordenadas-info">
               {coordenadasTexto}
@@ -599,14 +605,14 @@
                class="btn-seleccionar ds-button ds-button--location"
               on:click={handleSeleccionarUbicacion}
             >
-              📍 Seleccionar en Mapa
+              <Icon name="pin" size={16} /> Seleccionar en mapa
             </button>
           </div>
         </div>
 
         <!-- Información del Pedido -->
         <div class="form-section">
-          <div class="section-title">📦 Información del Pedido</div>
+          <div class="section-title">Información del pedido</div>
           
           <div class="form-row">
             <div class="form-group">

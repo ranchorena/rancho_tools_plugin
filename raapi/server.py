@@ -699,6 +699,51 @@ def get_pedidos_historico():
             app.logger.error(f"Error en /api/pedidos/historico: {e}")
             return jsonify({"error": "Error interno del servidor al obtener el historial de pedidos."}), 500
 
+@app.route("/api/pedidos/eliminar", methods=["POST"])
+def eliminar_pedido_api():
+    """
+    Elimina un pedido y deja al cliente sin pedido activo.
+    ---
+    tags:
+      - Pedidos
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - id_pedido
+          properties:
+            id_pedido:
+              type: integer
+    responses:
+      200:
+        description: Pedido eliminado
+      400:
+        description: Datos inválidos
+      404:
+        description: Pedido no encontrado
+      500:
+        description: Error interno del servidor
+    """
+    datos = request.get_json(silent=True) or {}
+    id_pedido = datos.get("id_pedido")
+    if not isinstance(id_pedido, int) or isinstance(id_pedido, bool) or id_pedido <= 0:
+        return jsonify({"error": "Indicá el id_pedido a eliminar."}), 400
+
+    with Session.begin() as session:
+        try:
+            resultado, mensaje = API.eliminarPedido(session, id_pedido)
+            if resultado == "success":
+                return jsonify({"mensaje": mensaje}), 200
+            if resultado == "not_found":
+                return jsonify({"error": mensaje}), 404
+            return jsonify({"error": mensaje}), 400
+        except Exception as e:
+            app.logger.error(f"Error en /api/pedidos/eliminar: {e}")
+            return jsonify({"error": "Error interno del servidor al eliminar el pedido."}), 500
+
 if __name__ == '__main__':
     # Habilitar logging para ver errores de Flask y SQLAlchemy
     import logging

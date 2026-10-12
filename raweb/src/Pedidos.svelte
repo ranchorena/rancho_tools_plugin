@@ -2,6 +2,7 @@
   import { API_BASE_URL } from './config.js';
   import { createEventDispatcher } from 'svelte';
   import DialogHeader from './design-system/DialogHeader.svelte';
+  import Icon from './design-system/Icon.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
   import { shouldActivateRow } from './design-system/keyboard.mjs';
   const dispatch = createEventDispatcher();
@@ -111,7 +112,7 @@
     background-color: var(--ds-surface);
     color: var(--ds-text);
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    box-shadow: var(--ds-shadow-dialog);
     width: 100%;
     max-width: 1000px;
     max-height: 95vh;
@@ -134,7 +135,7 @@
   }
 
   .modal-header {
-    border-bottom: 1px solid var(--ds-border);
+    box-shadow: inset 0 -1px var(--ds-divider);
     flex-shrink: 0;
     background-color: var(--ds-surface);
     min-height: 40px;
@@ -178,8 +179,8 @@
   }
 
   .close-button:focus {
-    outline: 3px solid var(--ds-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
     border-color: var(--ds-focus);
     box-shadow: none;
   }
@@ -194,11 +195,9 @@
 
   h3 {
     color: var(--ds-text);
-    margin: 0 0 1rem 0;
-    font-size: 1.1rem;
+    margin: 0 0 0.85rem 0;
+    font-size: var(--ds-type-section);
     font-weight: 600;
-    border-bottom: 2px solid var(--ds-border);
-    padding-bottom: 0.5rem;
   }
 
   .pedidos-section {
@@ -255,7 +254,7 @@
   }
 
   tbody tr:focus-visible {
-    outline: 3px solid var(--ds-focus);
+    outline: 2px solid var(--ds-focus);
     outline-offset: -3px;
   }
 
@@ -451,9 +450,10 @@
        aria-labelledby="pedidos-title">
     <div class="modal-header">
       <DialogHeader titleId="pedidos-title">
-        📦 Pedidos
+        <Icon name="box" size={18} />
+        Pedidos
         <svelte:fragment slot="close">
-          <button type="button" class="close-button ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar">&times;</button>
+          <button type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar"><Icon name="close" size={16} /></button>
         </svelte:fragment>
       </DialogHeader>
     </div>
@@ -464,11 +464,11 @@
       {/if}
       
       {#if isLoading}
-        <div class="loading-indicator">🔄 Cargando pedidos...</div>
+        <div class="loading-indicator">Cargando pedidos...</div>
       {/if}
 
       <div class="pedidos-section">
-        <h3>📋 Todos los Pedidos</h3>
+        <h3>Todos los pedidos</h3>
         
         {#if pedidos.length > 0}
           <div class="table-container">

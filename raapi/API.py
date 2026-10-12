@@ -432,6 +432,31 @@ class API: # Clase contenedora renombrada a API
         }
 
     @staticmethod
+    def eliminarPedido(session, id_pedido):
+        """
+        Elimina el pedido y deja al cliente sin pedido activo.
+        """
+        pedido = session.query(Pedido).filter(Pedido.id_pedido == id_pedido).one_or_none()
+        if pedido is None:
+            return "not_found", "Pedido no encontrado."
+
+        id_cliente = pedido.id_cliente
+        session.delete(pedido)
+        if id_cliente is not None:
+            session.query(Cliente).filter(Cliente.id == id_cliente).update(
+                {
+                    "tiene_pedido": 0,
+                    "cantidad": 1,
+                    "horario": None,
+                    "nro_pao": None,
+                    "es_regalo": 0,
+                },
+                synchronize_session=False,
+            )
+        session.flush()
+        return "success", "Pedido eliminado correctamente."
+
+    @staticmethod
     def parse_direccion(direccion_str):
         """
         Parsea una dirección completa en calle y altura.
@@ -472,28 +497,25 @@ class API: # Clase contenedora renombrada a API
             }
 
         try:
-            # Usar SQLAlchemy ORM para buscar el tramo
-            # Usamos ST_Centroid para obtener el punto medio y ST_Transform para convertir a EPSG:4326 (lat/lon)
-            # La función ST_AsGeoJSON se usa para extraer las coordenadas del punto.
-            # El SRID original es 5347 según el DDL.
-            # La búsqueda de calle es case-insensitive usando func.upper() en ambos lados.
-            result = (
-                session.query(
-                    Tramo.id,
-                    Tramo.calle,
-                    Tramo.desde,
-                    Tramo.hasta,
-                    func.ST_AsGeoJSON(func.ST_Transform(func.ST_Centroid(Tramo.geometry), 4326)).label("centroide_geojson")
-                )
-                .filter(
-                    and_(
-                        func.upper(Tramo.calle) == func.upper(nombre_calle),
-                        Tramo.desde <= altura,
-                        altura <= Tramo.hasta
-                    )
-                )
-                .first()
-            )
+            # El callejero guarda "Av Italia"; quien busca suele escribir "Italia 50".
+            # Primero el nombre exacto. Si no hay tramo, el nombre al final del de la calle.
+            nombre = func.upper(nombre_calle)
+            calle = func.upper(Tramo.calle)
+            misma_vereda = func.mod(Tramo.desde, 2) == (altura % 2)
+            consulta = session.query(
+                Tramo.id,
+                Tramo.calle,
+                Tramo.desde,
+                Tramo.hasta,
+                func.ST_AsGeoJSON(func.ST_Transform(func.ST_Centroid(Tramo.geometry), 4326)).label("centroide_geojson")
+            ).filter(
+                Tramo.desde <= altura,
+                altura <= Tramo.hasta
+            ).order_by(misma_vereda.desc(), func.length(Tramo.calle))
+
+            result = consulta.filter(calle == nombre).first()
+            if result is None:
+                result = consulta.filter(calle.like("% " + nombre_calle)).first()
 
             if result:
                 tramo_id, tramo_calle, tramo_desde, tramo_hasta, centroide_geojson_str = result

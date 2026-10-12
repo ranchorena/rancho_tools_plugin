@@ -31,11 +31,21 @@
 
 	label {
 		margin: 0;
+		color: var(--ds-text-muted);
+		font-size: var(--ds-type-muted);
+		font-weight: 500;
 	}
 
 	select {
 		width: auto;
 		margin: 0;
-		padding: 0.5rem;
+		padding: 0.2rem 0.45rem;
+		font-size: var(--ds-type-label);
+	}
+
+	@media (max-width: 768px) {
+		select {
+			min-height: 44px;
+		}
 	}
 </style>

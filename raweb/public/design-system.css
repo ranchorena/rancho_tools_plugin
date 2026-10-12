@@ -32,6 +32,18 @@
 	--ds-radius-round: 50%;
 	--ds-shadow-panel: 0 4px 12px rgb(0 0 0 / 15%);
 	--ds-shadow-dialog: 0 20px 25px -5px rgb(0 0 0 / 20%);
+	--ds-shadow-sm: 0 1px 2px rgb(0 0 0 / 16%);
+	--ds-header-height: 3.25rem;
+	--ds-bottom-nav-height: 3.75rem;
+	--ds-motion: 180ms;
+	--ds-divider: color-mix(in srgb, var(--ds-border) 42%, transparent);
+	--ds-type-brand: 1rem;
+	--ds-type-title: 1rem;
+	--ds-type-section: 0.9375rem;
+	--ds-type-nav: 0.875rem;
+	--ds-type-label: 0.8125rem;
+	--ds-type-body: 0.875rem;
+	--ds-type-muted: 0.75rem;
 }
 
 /* Claro es el valor de respaldo; el controlador compartido resuelve Sistema. */
@@ -118,6 +130,30 @@
 .ds-button--location { color: var(--ds-on-location); background-color: var(--ds-location); border-color: var(--ds-location); }
 .ds-button--location:hover:not(:disabled) { background-color: var(--ds-location-hover); border-color: var(--ds-location-hover); }
 .ds-button--location:active:not(:disabled) { background-color: var(--ds-location-active); border-color: var(--ds-location-active); }
+.ds-button--ghost {
+	color: var(--ds-text);
+	background-color: transparent;
+	border-color: var(--ds-divider);
+}
+.ds-button--ghost:hover:not(:disabled) {
+	color: var(--ds-text);
+	background-color: var(--ds-secondary-hover);
+	border-color: var(--ds-divider);
+}
+.ds-button--ghost:active:not(:disabled) {
+	background-color: var(--ds-secondary-active);
+	border-color: var(--ds-divider);
+}
+.ds-button--icon {
+	color: var(--ds-text-muted);
+	background-color: transparent;
+	border-color: transparent;
+}
+.ds-button--icon:hover:not(:disabled) {
+	color: var(--ds-text);
+	background-color: var(--ds-secondary-hover);
+	border-color: transparent;
+}
 
 /* Campos nativos: conservar tipo, bindings, tamaños y validaciones del dueño. */
 .ds-field { color: var(--ds-text); background-color: var(--ds-surface); border-color: var(--ds-border); }
@@ -131,10 +167,54 @@
 	opacity: 1;
 }
 
-/* Anillo opaco fuera de la caja: no modifica medidas ni captura teclado. */
-.ds-button:focus, .ds-field:focus, .ds-choice:focus, .ds-focus:focus {
-	outline: 3px solid var(--ds-focus);
-	outline-offset: 2px;
+/* Anillo fino y opaco: el mouse no lo dispara; el teclado sí. */
+.ds-button:focus-visible, .ds-field:focus-visible, .ds-choice:focus-visible, .ds-focus:focus-visible {
+	outline: 2px solid var(--ds-focus);
+	outline-offset: 1px;
 	border-color: var(--ds-focus);
 	box-shadow: none;
+}
+
+.ds-field:hover:not(:disabled) {
+	border-color: var(--ds-text-muted);
+}
+
+/* Hoja inferior en pantallas chicas. Los diálogos conservan su markup y su foco. */
+@keyframes ds-sheet-in {
+	from { opacity: 0; transform: translateY(0.75rem); }
+	to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 768px) {
+	.modal-backdrop {
+		align-items: flex-end !important;
+		justify-content: center !important;
+		padding: 0 !important;
+	}
+
+	.modal-content {
+		width: 100% !important;
+		max-width: none !important;
+		max-height: min(88dvh, calc(100dvh - var(--ds-header-height) - env(safe-area-inset-top))) !important;
+		margin: 0 !important;
+		border-radius: var(--ds-radius-large) var(--ds-radius-large) 0 0 !important;
+		animation: ds-sheet-in var(--ds-motion) ease-out !important;
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+
+	.modal-header::before {
+		content: "";
+		display: block;
+		width: 2.25rem;
+		height: 0.2rem;
+		margin: 0.45rem auto 0.1rem;
+		border-radius: 999px;
+		background: var(--ds-border);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.modal-content {
+		animation: none !important;
+	}
 }
