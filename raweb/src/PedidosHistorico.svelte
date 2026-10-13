@@ -56,6 +56,10 @@
     if (results) aplicarResultado(results);
   }
 
+  function alCambiarDesde(event) {
+    fechaHasta = event.currentTarget.value;
+  }
+
   async function buscar() {
     if (!fechaDesde || !fechaHasta) {
       errorMessage = "Indicá la fecha desde y la fecha hasta.";
@@ -531,7 +535,7 @@
       <form class="filtros-fecha" on:submit|preventDefault={buscar}>
         <label>
           Desde
-          <input type="date" bind:value={fechaDesde} />
+          <input type="date" bind:value={fechaDesde} on:change={alCambiarDesde} />
         </label>
         <label>
           Hasta

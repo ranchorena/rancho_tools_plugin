@@ -458,6 +458,31 @@ class API: # Clase contenedora renombrada a API
         return "success", "Pedido eliminado correctamente."
 
     @staticmethod
+    def iniciarPedidos(session):
+        """
+        Deja sin pedido activo a los clientes que tienen uno.
+        No borra filas de la tabla pedido.
+        """
+        actualizados = (
+            session.query(Cliente)
+            .filter(Cliente.tiene_pedido == 1)
+            .update(
+                {
+                    "tiene_pedido": 0,
+                    "cantidad": 1,
+                    "horario": None,
+                    "nro_pao": None,
+                    "es_regalo": 0,
+                },
+                synchronize_session=False,
+            )
+        )
+        session.flush()
+        if actualizados:
+            return "success", f"Se iniciaron los pedidos. {actualizados} clientes quedaron sin pedido activo."
+        return "success", "No había clientes con pedido activo."
+
+    @staticmethod
     def parse_direccion(direccion_str):
         """
         Parsea una dirección completa en calle y altura.

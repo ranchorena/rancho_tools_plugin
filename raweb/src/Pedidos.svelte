@@ -44,9 +44,9 @@
     });
     
     if (results) {
-      pedidos = results;
+      pedidos = Array.isArray(results) ? results : [];
       calcularEstadisticas();
-      if (results.length === 0) {
+      if (pedidos.length === 0) {
         errorMessage = "No se encontraron clientes con pedidos.";
       }
     }
@@ -85,6 +85,43 @@
     if (!shouldActivateRow(event.key, event.repeat, event.target === event.currentTarget)) return;
     event.preventDefault();
     onPedidoClick(pedido);
+  }
+
+  let confirmarInicio = false;
+  let iniciando = false;
+
+  function cancelarInicio() {
+    if (iniciando) return;
+    confirmarInicio = false;
+  }
+
+  async function iniciar_pedidos() {
+    if (iniciando) return;
+    iniciando = true;
+    errorMessage = "";
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/pedidos/iniciar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const body = await response.json().catch(() => ({ error: "Error desconocido" }));
+      if (!response.ok) {
+        throw new Error(body.error || `Error ${response.status}: ${response.statusText}`);
+      }
+      confirmarInicio = false;
+      dispatch('refreshPedidosLayer');
+      dispatch('showGlobalNotification', {
+        message: body.mensaje || 'Pedidos iniciados.',
+        type: 'success'
+      });
+      await loadPedidos();
+    } catch (err) {
+      errorMessage = err.message;
+      console.error("Error al iniciar pedidos:", err);
+      confirmarInicio = false;
+    } finally {
+      iniciando = false;
+    }
   }
 
   // Cargar pedidos al montar el componente
@@ -434,11 +471,109 @@
   .pedido-normal:hover {
     background-color: var(--ds-selected) !important;
   }
+
+  .pedidos-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .pedidos-section-header h3 {
+    margin: 0;
+  }
+
+  .iniciar-pedidos-btn {
+    width: auto;
+    min-height: 32px;
+    margin: 0;
+    padding: 0.35rem 0.75rem;
+    border: none;
+    border-radius: 6px;
+    background: var(--ds-primary);
+    color: var(--ds-on-primary);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .iniciar-pedidos-btn:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .confirm-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1102;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.45);
+  }
+
+  .confirm-dialog {
+    width: 100%;
+    max-width: 26rem;
+    background-color: var(--ds-surface);
+    color: var(--ds-text);
+    border-radius: 12px;
+    box-shadow: var(--ds-shadow-dialog);
+    overflow: hidden;
+  }
+
+  .confirm-body {
+    padding: 1rem 1.25rem 1.25rem;
+  }
+
+  .confirm-body p {
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+
+  .confirm-actions button {
+    font: inherit;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 0.45rem 0.9rem;
+    cursor: pointer;
+    width: auto;
+  }
+
+  .confirm-cancelar {
+    color: var(--ds-text);
+    background: transparent;
+    border: 1px solid var(--ds-divider);
+  }
+
+  .confirm-iniciar {
+    color: var(--ds-on-primary);
+    background: var(--ds-primary);
+    border: none;
+  }
+
+  .confirm-actions button:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
 </style>
 
 <div class="modal-backdrop" 
-     on:click={() => dispatch('close')}
-     on:keydown={(e) => e.key === 'Escape' && dispatch('close')}
+     on:click={() => !confirmarInicio && dispatch('close')}
+     on:keydown={(e) => e.key === 'Escape' && !confirmarInicio && dispatch('close')}
      role="button"
      tabindex="0"
      aria-label="Cerrar modal">
@@ -453,7 +588,7 @@
         <Icon name="box" size={18} />
         Pedidos
         <svelte:fragment slot="close">
-          <button type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar"><Icon name="close" size={16} /></button>
+          <button type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar" data-dialog-initial-focus><Icon name="close" size={16} /></button>
         </svelte:fragment>
       </DialogHeader>
     </div>
@@ -468,7 +603,10 @@
       {/if}
 
       <div class="pedidos-section">
-        <h3>Todos los pedidos</h3>
+        <div class="pedidos-section-header">
+          <h3>Todos los pedidos</h3>
+          <button type="button" class="iniciar-pedidos-btn ds-focus" on:click={() => confirmarInicio = true} disabled={iniciando}>Iniciar Pedidos</button>
+        </div>
         
         {#if pedidos.length > 0}
           <div class="table-container">
@@ -537,3 +675,34 @@
     </div>
   </div>
 </div>
+
+{#if confirmarInicio}
+  <div class="confirm-backdrop"
+       on:click={cancelarInicio}
+       on:keydown={(e) => e.key === 'Escape' && cancelarInicio()}
+       role="presentation">
+    <div class="confirm-dialog"
+         on:click|stopPropagation
+         on:keydown|stopPropagation={(e) => e.key === 'Escape' && cancelarInicio()}
+         use:dialogFocus
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="iniciar-pedidos-title">
+      <div class="modal-header">
+        <DialogHeader titleId="iniciar-pedidos-title">
+          Iniciar pedidos
+          <svelte:fragment slot="close">
+            <button type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={cancelarInicio} aria-label="Cerrar" disabled={iniciando}><Icon name="close" size={16} /></button>
+          </svelte:fragment>
+        </DialogHeader>
+      </div>
+      <div class="confirm-body">
+        <p>Los clientes que tienen un pedido activo quedarán sin pedido, con cantidad 1, sin horario, sin número de PaO y sin marca de regalo.</p>
+        <div class="confirm-actions">
+          <button type="button" class="confirm-cancelar ds-focus" data-dialog-initial-focus on:click={cancelarInicio} disabled={iniciando}>Cancelar</button>
+          <button type="button" class="confirm-iniciar ds-focus" on:click={iniciar_pedidos} disabled={iniciando}>Iniciar Pedidos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}

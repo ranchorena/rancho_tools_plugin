@@ -744,6 +744,29 @@ def eliminar_pedido_api():
             app.logger.error(f"Error en /api/pedidos/eliminar: {e}")
             return jsonify({"error": "Error interno del servidor al eliminar el pedido."}), 500
 
+@app.route("/api/pedidos/iniciar", methods=["POST"])
+def iniciar_pedidos_api():
+    """
+    Deja sin pedido activo a los clientes que tienen tiene_pedido=1.
+    ---
+    tags:
+      - Pedidos
+    responses:
+      200:
+        description: Clientes actualizados
+      500:
+        description: Error interno del servidor
+    """
+    with Session.begin() as session:
+        try:
+            resultado, mensaje = API.iniciarPedidos(session)
+            if resultado == "success":
+                return jsonify({"mensaje": mensaje}), 200
+            return jsonify({"error": mensaje}), 400
+        except Exception as e:
+            app.logger.error(f"Error en /api/pedidos/iniciar: {e}")
+            return jsonify({"error": "Error interno del servidor al iniciar los pedidos."}), 500
+
 if __name__ == '__main__':
     # Habilitar logging para ver errores de Flask y SQLAlchemy
     import logging

@@ -477,7 +477,7 @@
       }),
       style: new Style({
         image: new Circle({
-          radius: 8,
+          radius: 6,
           fill: new Fill({
             color: '#4285f4'
           }),
@@ -1147,6 +1147,8 @@
     <Pedidos
       on:close={closeDialogs}
       on:zoomToLocation={handleZoomToLocation}
+      on:refreshPedidosLayer={refreshPedidosLayerMap}
+      on:showGlobalNotification={handleShowGlobalNotification}
     />
   {/if}
 
