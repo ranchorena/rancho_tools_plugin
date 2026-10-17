@@ -30,7 +30,7 @@
   import UiIcon from './design-system/Icon.svelte';
   import { createThemeController } from './design-system/theme-controller.mjs';
   import { chooseFocusReturn } from './design-system/focus-policy.mjs';
-  import { authorizedFetch, initAuth, login, logout } from './auth/session.mjs';
+  import { authorizedFetch, cambiarContrasena, initAuth, login, logout } from './auth/session.mjs';
 
   let authReady = false;
   let authenticated = false;
@@ -670,6 +670,10 @@
     logout();
   }
 
+  function solicitarCambioContrasena() {
+    cambiarContrasena();
+  }
+
   // function openBuscarDireccion() { // Reemplazado por setView
   //   showBuscarDireccionDialog = true;
   // }
@@ -1053,6 +1057,7 @@
         {username}
         {themePreference}
         on:themechange={handleThemeChange}
+        on:changepassword={solicitarCambioContrasena}
         on:logout={cerrarSesion}
       />
     </div>

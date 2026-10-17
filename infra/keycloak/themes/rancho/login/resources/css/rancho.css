@@ -153,7 +153,8 @@ body#keycloak-bg::before {
   padding: 0;
 }
 
-#kc-form-login {
+#kc-form-login,
+#kc-passwd-update-form {
   display: grid;
   gap: 1rem;
 }
@@ -269,6 +270,32 @@ body#keycloak-bg::before {
 #kc-login:active {
   background: var(--ds-primary-active);
   border-color: var(--ds-primary-active);
+}
+
+#kc-passwd-update-form [id^="input-error"] {
+  color: var(--ds-error);
+  font-size: 0.8125rem;
+}
+
+button#kc-password-cancel {
+  width: 100%;
+  min-height: 44px;
+  margin: 0.5rem 0 0;
+  padding: 0 0.75rem;
+  border: 1px solid var(--ds-divider);
+  border-radius: var(--ds-radius);
+  background: transparent;
+  color: var(--ds-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+button#kc-password-cancel:hover {
+  background: var(--ds-secondary);
+  border-color: var(--ds-divider);
+  color: var(--ds-text);
 }
 
 #kc-login:focus-visible,

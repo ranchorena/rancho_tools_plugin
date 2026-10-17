@@ -38,6 +38,11 @@
     dispatch('logout');
   }
 
+  function cambiarContrasena() {
+    menuAbierto = false;
+    dispatch('changepassword');
+  }
+
   function portal(node) {
     document.body.appendChild(node);
     return {
@@ -90,7 +95,7 @@
         <ThemeSelector id="theme-account" value={themePreference} on:change={cambiarTema} />
       </div>
       <hr class="account-separator" />
-      <button type="button" class="account-item" disabled title="Todavía no está disponible">
+      <button type="button" class="account-item" on:click={cambiarContrasena}>
         <UiIcon name="lock" size={16} />
         <span>Cambiar contraseña</span>
       </button>

@@ -6,7 +6,7 @@ services:
       context: ./raweb
       dockerfile: Dockerfile
       args:
-        API_URL: ${API_URL:-http://backend:5000} # Valor por defecto si no está en .env o entorno
+        API_URL: ${API_URL:-http://localhost:5000} # El navegador llama a la API; backend:5000 no resuelve fuera de Docker
         GEOSERVER_URL: ${GEOSERVER_URL:-http://localhost:8087/geoserver} # Asume que GeoServer corre en el host o es accesible
         KEYCLOAK_URL: ${KEYCLOAK_URL:-http://localhost:8081}
     image: raweb:qa
@@ -21,7 +21,7 @@ services:
       # Estas variables también se pasan al entorno de ejecución del contenedor,
       # aunque para Svelte/Rollup, los valores importantes son los usados en tiempo de BUILD (ver build.args).
       # Podrían ser útiles si el entrypoint del contenedor las usara para alguna tarea (no es el caso aquí).
-      - API_URL=${API_URL:-http://backend:5000}
+      - API_URL=${API_URL:-http://localhost:5000}
       - GEOSERVER_URL=${GEOSERVER_URL:-http://localhost:8087/geoserver}
 
   backend:

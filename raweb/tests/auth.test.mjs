@@ -74,10 +74,13 @@ test("cierra sesión si el refresh sigue en 401 y conserva el 403", async () => 
 test("la landing no pide credenciales y ofrece Keycloak", () => {
   const app = readFileSync(new URL("../src/App.svelte", import.meta.url), "utf8");
   const cuenta = readFileSync(new URL("../src/AccountMenu.svelte", import.meta.url), "utf8");
+  const sesion = readFileSync(new URL("../src/auth/session.mjs", import.meta.url), "utf8");
+  const botonClave = cuenta.slice(Math.max(0, cuenta.indexOf("Cambiar contraseña") - 250), cuenta.indexOf("Cambiar contraseña"));
   assert.match(app, /Ingresar con Keycloak/);
   assert.match(cuenta, /Cerrar sesión/);
   assert.match(cuenta, /Cambiar contraseña/);
-  assert.match(cuenta, /disabled/);
+  assert.equal(botonClave.includes("disabled"), false);
+  assert.match(sesion, /action:\s*"UPDATE_PASSWORD"/);
   assert.equal(app.includes('type="password"'), false);
   assert.equal(cuenta.includes('type="password"'), false);
   assert.equal(cuenta.includes("UPDATE_PASSWORD"), false);
