@@ -1,0 +1,352 @@
+/* Colores del tema oscuro de RAWEB (design-system.css). */
+:root {
+  --ds-background: #111827;
+  --ds-surface: #1f2937;
+  --ds-text: #f9fafb;
+  --ds-text-muted: #d1d5db;
+  --ds-border: #9ca3af;
+  --ds-primary: #93c5fd;
+  --ds-primary-hover: #bfdbfe;
+  --ds-primary-active: #60a5fa;
+  --ds-on-primary: #111827;
+  --ds-secondary: #374151;
+  --ds-secondary-hover: #4b5563;
+  --ds-divider: color-mix(in srgb, var(--ds-border) 42%, transparent);
+  --ds-error: #fecaca;
+  --ds-error-surface: #7f1d1d;
+  --ds-focus: #93c5fd;
+  --ds-radius: 8px;
+  --ds-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body#keycloak-bg {
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--ds-background) !important;
+  color: var(--ds-text);
+  font-family: var(--ds-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+body#keycloak-bg::before {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  background:
+    linear-gradient(100deg, var(--ds-background) 0%, var(--ds-background) 34%, rgb(17 24 39 / 88%) 52%, rgb(17 24 39 / 42%) 100%),
+    url("../img/black-background.jpg") right center / cover no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.pf-v5-c-login {
+  position: relative;
+  z-index: 1;
+  display: block;
+  min-height: 100dvh;
+  padding: 0;
+  background: transparent;
+}
+
+.pf-v5-c-login__container {
+  display: grid;
+  grid-template-areas:
+    "header"
+    "main"
+    "footer";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 3.25rem minmax(0, 1fr) 3.25rem;
+  min-height: 100dvh;
+  padding: 0;
+}
+
+#kc-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  height: 3.25rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid var(--ds-divider);
+  background: var(--ds-background);
+}
+
+#kc-header-wrapper {
+  color: var(--ds-text);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.pf-v5-c-login__main {
+  grid-area: main;
+  display: flex;
+  align-self: center;
+  flex-direction: column;
+  justify-self: center;
+  width: min(420px, calc(100% - 2rem));
+  margin-block: 1.5rem;
+  padding: 1.75rem 1.5rem 1.5rem;
+  border: 1px solid var(--ds-divider);
+  border-radius: 12px;
+  background: var(--ds-surface);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+
+.pf-v5-c-login__main-header {
+  display: block;
+  padding: 0;
+}
+
+#kc-page-title {
+  margin: 0;
+  color: var(--ds-text);
+  font-size: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.rancho-login-brand,
+.rancho-login-heading,
+.rancho-login-subtitle {
+  display: block;
+}
+
+.rancho-login-brand {
+  color: var(--ds-text);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.rancho-login-heading {
+  margin-top: 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.rancho-login-subtitle {
+  margin-top: 0.35rem;
+  color: var(--ds-text-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.pf-v5-c-login__main-body {
+  margin-top: 1.5rem;
+  padding: 0;
+}
+
+#kc-form-login {
+  display: grid;
+  gap: 1rem;
+}
+
+.pf-v5-c-form__group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.pf-v5-c-form__label {
+  color: var(--ds-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.pf-v5-c-form-control {
+  width: 100%;
+  height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  outline: none;
+  background: var(--ds-background);
+  color: var(--ds-text);
+  font-size: 1rem;
+  box-shadow: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.pf-v5-c-form-control::placeholder {
+  color: var(--ds-text-muted);
+  opacity: 0.8;
+}
+
+.pf-v5-c-form-control:hover {
+  border-color: var(--ds-primary);
+}
+
+.pf-v5-c-form-control:focus {
+  border-color: var(--ds-focus);
+  background: var(--ds-background);
+  box-shadow: 0 0 0 3px rgb(147 197 253 / 28%);
+}
+
+.pf-v5-c-form-control:-webkit-autofill,
+.pf-v5-c-form-control:-webkit-autofill:hover,
+.pf-v5-c-form-control:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ds-text);
+  caret-color: var(--ds-text);
+  box-shadow: 0 0 0 1000px var(--ds-background) inset;
+  transition: background-color 9999s ease-out;
+}
+
+.pf-v5-c-input-group {
+  position: relative;
+  display: block;
+}
+
+.pf-v5-c-input-group .pf-v5-c-form-control {
+  padding-right: 2.75rem;
+}
+
+.pf-v5-c-button.pf-m-control {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 var(--ds-radius) var(--ds-radius) 0;
+  background: transparent;
+  color: var(--ds-text-muted);
+}
+
+.pf-v5-c-button.pf-m-control:hover,
+.pf-v5-c-button.pf-m-control:focus-visible {
+  color: var(--ds-primary);
+  background: transparent;
+}
+
+#kc-form-options:empty,
+.pf-v5-c-form__group:has(#kc-form-options:empty) {
+  display: none;
+}
+
+#kc-form-buttons {
+  margin-top: 0.25rem;
+}
+
+#kc-login {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--ds-primary);
+  border-radius: var(--ds-radius);
+  background: var(--ds-primary);
+  color: var(--ds-on-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+#kc-login:hover {
+  background: var(--ds-primary-hover);
+  border-color: var(--ds-primary-hover);
+  color: var(--ds-on-primary);
+}
+
+#kc-login:active {
+  background: var(--ds-primary-active);
+  border-color: var(--ds-primary-active);
+}
+
+#kc-login:focus-visible,
+.pf-v5-c-button:focus-visible,
+.pf-v5-c-form-control:focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--ds-primary);
+}
+
+a:hover {
+  color: var(--ds-primary-hover);
+}
+
+.pf-v5-c-alert {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--ds-error);
+  border-radius: var(--ds-radius);
+  background: var(--ds-error-surface);
+  color: var(--ds-error);
+  box-shadow: none;
+}
+
+.pf-v5-c-alert__icon {
+  color: var(--ds-error);
+}
+
+.pf-v5-c-helper-text__item-text.pf-m-error,
+.kc-feedback-text {
+  color: var(--ds-error);
+  font-size: 0.8125rem;
+}
+
+.pf-v5-c-login__main-footer {
+  margin: 0;
+  padding: 0;
+}
+
+.rancho-identity-footer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  height: 3.25rem;
+  margin: 0;
+  border-top: 1px solid var(--ds-divider);
+  background: var(--ds-background);
+  color: var(--ds-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+@media (max-width: 640px) {
+  body#keycloak-bg::before {
+    background:
+      linear-gradient(180deg, var(--ds-background) 0%, rgb(17 24 39 / 82%) 100%),
+      url("../img/black-background.jpg") center / cover no-repeat;
+  }
+
+  .pf-v5-c-login__main {
+    width: min(100% - 1.5rem, 420px);
+    padding: 1.5rem 1.25rem 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -7,8 +7,11 @@
 // URL base para la API del backend
 export const API_BASE_URL = '__API_URL__';
 
-// URL base para el servicio WMS de GeoServer
 export const GEOSERVER_BASE_URL = '__GEOSERVER_URL__';
+
+export const KEYCLOAK_URL = '__KEYCLOAK_URL__';
+export const KEYCLOAK_REALM = 'rancho';
+export const KEYCLOAK_CLIENT_ID = 'raweb';
 
 // Coordenadas iniciales para el mapa
 export const INITIAL_COORDINATES = {

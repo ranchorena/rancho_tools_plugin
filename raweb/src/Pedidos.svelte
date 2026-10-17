@@ -1,5 +1,6 @@
 <script>
   import { API_BASE_URL } from './config.js';
+  import { authorizedFetch } from './auth/session.mjs';
   import { createEventDispatcher } from 'svelte';
   import DialogHeader from './design-system/DialogHeader.svelte';
   import Icon from './design-system/Icon.svelte';
@@ -22,7 +23,7 @@
     isLoading = true;
     errorMessage = "";
     try {
-      const response = await fetch(url, options);
+      const response = await authorizedFetch(url, options);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Error desconocido" }));
         throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
@@ -100,7 +101,7 @@
     iniciando = true;
     errorMessage = "";
     try {
-      const response = await fetch(`${API_BASE_URL}/api/pedidos/iniciar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/api/pedidos/iniciar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });

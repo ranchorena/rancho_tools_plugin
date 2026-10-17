@@ -21,6 +21,7 @@
     "svelte": "^3.59.2"
   },
   "dependencies": {
+    "keycloak-js": "26.2.0",
     "ol": "^10.6.1",
     "sirv-cli": "^2.0.0"
   }

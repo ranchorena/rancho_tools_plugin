@@ -1,5 +1,6 @@
 <script>
   import { API_BASE_URL } from './config.js';
+  import { authorizedFetch } from './auth/session.mjs';
   import { createEventDispatcher } from 'svelte';
   import DialogHeader from './design-system/DialogHeader.svelte';
   import Icon from './design-system/Icon.svelte';
@@ -21,7 +22,7 @@
     isLoading = true;
     errorMessage = "";
     try {
-      const response = await fetch(url, {
+      const response = await authorizedFetch(url, {
         method: "GET",
         headers: { "Content-Type": "application/json" }
       });
@@ -130,7 +131,7 @@
     eliminandoId = pedido.id;
     errorMessage = "";
     try {
-      const response = await fetch(`${API_BASE_URL}/api/pedidos/eliminar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/api/pedidos/eliminar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_pedido: pedido.id })

@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { API_BASE_URL } from './config.js';
+  import { authorizedFetch } from './auth/session.mjs';
   import DialogHeader from './design-system/DialogHeader.svelte';
   import Icon from './design-system/Icon.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
@@ -76,7 +77,7 @@
         longitud: coordenadas.lon
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/clientes/agregar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/api/clientes/agregar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

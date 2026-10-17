@@ -13,8 +13,8 @@ Estas instrucciones complementan `../AGENTS.md` y se aplican a `raweb/`.
 ## Configuración de URLs
 
 - `rollup.config.js` carga `.env` desde el directorio de ejecución y reemplaza `__API_URL__` y `__GEOSERVER_URL__` en `src/config.js` durante la compilación. Configurar `raweb/.env` usando `.env.example`; no publicar sus valores sensibles.
-- Los valores por defecto locales son `http://localhost:5000` y `http://localhost:8086/geoserver`. Cambiar variables del contenedor en ejecución no modifica el bundle: hay que recompilar.
-- Compose usa el `.env` de la raíz y pasa argumentos de build. Su API por defecto (`http://backend:5000`) es un hostname interno de Docker; las dos URLs deben ser resolubles desde el navegador. El puerto GeoServer por defecto de build es 8087 y el de runtime es 8086.
+- Los valores por defecto locales son `http://localhost:5000` y `http://localhost:8087/geoserver`. Cambiar variables del contenedor en ejecución no modifica el bundle: hay que recompilar.
+- Compose usa el `.env` de la raíz y pasa argumentos de build. Su API por defecto (`http://backend:5000`) es un hostname interno de Docker; las dos URLs deben ser resolubles desde el navegador. GeoServer se consume en el puerto 8087.
 
 ## Organización y eventos
 

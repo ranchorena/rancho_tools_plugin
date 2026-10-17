@@ -40,7 +40,7 @@ class RaApiResponseError(Exception):
         self.body = body
 
 
-Transport = Callable[[str, str, dict | None, float], tuple[int, Any]]
+Transport = Callable[..., tuple[int, Any]]
 
 
 def mensaje_de_cuerpo(body: Any) -> str | None:
@@ -54,16 +54,25 @@ def mensaje_de_cuerpo(body: Any) -> str | None:
     return None
 
 
-def urllib_transport(method: str, url: str, body: dict | None, timeout: float) -> tuple[int, Any]:
+def urllib_transport(
+    method: str,
+    url: str,
+    body: dict | None,
+    timeout: float,
+    headers: dict | None = None,
+) -> tuple[int, Any]:
     data = None if body is None else json.dumps(body).encode("utf-8")
+    request_headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    }
+    if headers:
+        request_headers.update(headers)
     request = urllib.request.Request(
         url,
         data=data,
         method=method,
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        },
+        headers=request_headers,
     )
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -96,6 +105,7 @@ class RaApiClient:
         *,
         timeout: float = 30.0,
         transport: Transport | None = None,
+        token_provider: Callable[[], str] | None = None,
     ) -> None:
         normalized = (base_url or "").strip().rstrip("/")
         if not normalized:
@@ -103,6 +113,7 @@ class RaApiClient:
         self.base_url = normalized
         self.timeout = timeout
         self._transport = transport or urllib_transport
+        self._token_provider = token_provider
 
     def buscar_por_nombre(self, nombre: str) -> list[dict]:
         """POST /api/clientes/buscar con criterio nombre.
@@ -183,7 +194,11 @@ class RaApiClient:
         return body
 
     def _request(self, method: str, path: str, body: dict | None) -> Any:
-        status, payload = self._transport(method, f"{self.base_url}{path}", body, self.timeout)
+        if self._token_provider:
+            headers = {"Authorization": f"Bearer {self._token_provider()}"}
+            status, payload = self._transport(method, f"{self.base_url}{path}", body, self.timeout, headers)
+        else:
+            status, payload = self._transport(method, f"{self.base_url}{path}", body, self.timeout)
         if status >= 400:
             raise RaApiHttpError(status, payload)
         return payload

@@ -48,6 +48,13 @@
 		<path d="M9 7V5.2h6V7" />
 		<path d="M7.2 7l.7 12.2h8.2L16.8 7" />
 		<path d="M10 10.5v5.5M14 10.5v5.5" />
+	{:else if name === 'lock'}
+		<path d="M8 11V8.2a4 4 0 0 1 8 0V11" />
+		<rect x="6.2" y="11" width="11.6" height="8.5" rx="1.6" />
+	{:else if name === 'logout'}
+		<path d="M10 5.5H6.8a1.3 1.3 0 0 0-1.3 1.3v10.4a1.3 1.3 0 0 0 1.3 1.3H10" />
+		<path d="M13.2 12H20" />
+		<path d="M16.8 8.8 20 12l-3.2 3.2" />
 	{/if}
 </svg>
 

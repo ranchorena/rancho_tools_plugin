@@ -1,5 +1,5 @@
 # Usar una imagen base de Node.js
-FROM node:18-alpine as builder
+FROM node:18-alpine AS builder
 
 # Establecer el directorio de trabajo
 WORKDIR /app
@@ -7,10 +7,12 @@ WORKDIR /app
 # Argumentos de build que pueden ser pasados desde docker-compose
 ARG API_URL
 ARG GEOSERVER_URL
+ARG KEYCLOAK_URL
 
 # Establecer las variables de entorno para que estén disponibles durante el build
 ENV API_URL=${API_URL}
 ENV GEOSERVER_URL=${GEOSERVER_URL}
+ENV KEYCLOAK_URL=${KEYCLOAK_URL}
 
 # Copiar los archivos de la aplicación Raweb
 COPY package*.json ./

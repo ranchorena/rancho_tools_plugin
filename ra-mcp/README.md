@@ -73,43 +73,51 @@ $env:RA_API_BASE_URL = "http://localhost:5000"
 
 Opcional: `RA_API_TIMEOUT` en segundos. Si no está, el tiempo de espera es 30.
 
-Ejemplo para Cursor:
+Ejemplo para Cursor. El uso normal es HTTP y OAuth; no hace falta usuario ni contraseña en este archivo:
 
 ```json
 {
   "mcpServers": {
     "ra-mcp": {
-      "command": "C:\\GIT\\github\\rancho_tools_plugin\\ra-mcp\\.venv\\Scripts\\python.exe",
-      "args": ["-m", "ra_mcp.server"],
-      "env": {
-        "RA_API_BASE_URL": "http://localhost:5000"
-      }
+      "url": "http://localhost:8000/mcp"
     }
   }
 }
 ```
 
-El `cwd` del cliente MCP tiene que poder importar el paquete. Con la instalación editable, alcanza con usar el Python del entorno virtual.
+El servidor tiene que estar levantado con `RA_MCP_TRANSPORT=http` antes de conectar Cursor. La primera vez el cliente abre el navegador contra el realm `rancho`.
 
-## Ejecución del servidor FastMCP
+## Modo no autenticado
 
-Con el entorno activado y `RA_API_BASE_URL` definida:
+STDIO no exige OAuth. Sirve para la suite de tests y para desarrollo interno del proceso. No es la configuración de Cursor:
 
 ```powershell
+$env:RA_MCP_TRANSPORT = "stdio"
+$env:RA_API_BASE_URL = "http://localhost:5000"
 python -m ra_mcp.server
 ```
 
-Eso abre el transporte stdio, que es el que usan los clientes MCP locales. También puede usarse la CLI de FastMCP:
+## Ejecución
+
+El uso normal es Streamable HTTP con OAuth:
 
 ```powershell
-fastmcp run src/ra_mcp/server.py:mcp
+$env:RA_MCP_TRANSPORT = "http"
+$env:RA_API_BASE_URL = "http://localhost:5000"
+$env:RA_MCP_PUBLIC_URL = "http://localhost:8000"
+$env:KEYCLOAK_ISSUER = "http://localhost:8081/realms/rancho"
+$env:KEYCLOAK_JWKS_URL = "http://127.0.0.1:8081/realms/rancho/protocol/openid-connect/certs"
+$env:KEYCLOAK_CLIENT_ID = "ra-mcp"
+$env:KEYCLOAK_CLIENT_SECRET = "<secreto local>"
+$env:RA_API_AUDIENCE = "raapi"
+$env:RA_MCP_JWT_SIGNING_KEY = "<secreto local>"
+$env:RA_MCP_OAUTH_STORAGE_KEY = "<secreto local>"
+python -m ra_mcp.server
 ```
 
-Para exponerlo por HTTP:
+El endpoint autenticado es `http://localhost:8000/mcp`. Los tokens upstream quedan cifrados en `%USERPROFILE%\.ra-mcp\oauth`.
 
-```powershell
-fastmcp run src/ra_mcp/server.py:mcp --transport http --port 8000
-```
+`ra-mcp` no manda a `raapi` el JWT interno de FastMCP. Con el access token de Keycloak del usuario hace Standard Token Exchange V2 (`audience=raapi`) y usa solo ese resultado.
 
 ## Tools disponibles
 

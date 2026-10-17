@@ -5,8 +5,11 @@ from __future__ import annotations
 import os
 
 from fastmcp import FastMCP
+from fastmcp.exceptions import AuthorizationError
+from fastmcp.server.dependencies import get_access_token
 
 from ra_mcp.client import RaApiClient
+from ra_mcp.http_auth import construir_proxy, token_para_raapi, transporte_http
 from ra_mcp.service import (
     ERROR,
     ESTADISTICAS_VACIAS,
@@ -48,7 +51,24 @@ INSTRUCCIONES = (
     "Si te indican un período, enviá desde y hasta juntas, en formato YYYY-MM-DD."
 )
 
-mcp = FastMCP(name="ra-mcp", instructions=INSTRUCCIONES)
+_auth = construir_proxy() if transporte_http() else None
+mcp = FastMCP(name="ra-mcp", instructions=INSTRUCCIONES, **({"auth": _auth} if _auth else {}))
+
+
+def _exigir_rol(rol: str) -> None:
+    if not transporte_http():
+        return
+    token = get_access_token()
+    roles = (((token.claims if token else {}) or {}).get("resource_access") or {}).get("raapi", {}).get("roles") or []
+    if token is None or rol not in roles:
+        raise AuthorizationError(f"Falta el permiso {rol}.")
+
+
+def _proveedor_token_raapi() -> str:
+    token = get_access_token()
+    if token is None or not token.token:
+        raise AuthorizationError("No hay un access token de Keycloak para intercambiar.")
+    return token_para_raapi(token.token)
 
 
 def _client_desde_entorno() -> RaApiClient | dict:
@@ -60,7 +80,8 @@ def _client_desde_entorno() -> RaApiClient | dict:
             "message": "Falta la variable de entorno RA_API_BASE_URL.",
         }
     timeout = _timeout_desde_entorno()
-    return RaApiClient(base_url, timeout=timeout)
+    proveedor = _proveedor_token_raapi if transporte_http() else None
+    return RaApiClient(base_url, timeout=timeout, token_provider=proveedor)
 
 
 def _timeout_desde_entorno() -> float:
@@ -91,6 +112,7 @@ def buscar_cliente(nombre: str) -> dict:
     Args:
         nombre: Nombre o fragmento del nombre del cliente. raapi compara en forma parcial y sin distinguir mayúsculas.
     """
+    _exigir_rol("clientes:read")
     client = _client_desde_entorno()
     if isinstance(client, dict):
         return {**client, "status": ERROR, "clientes": []}
@@ -114,6 +136,7 @@ def agregar_pedido(id_cliente: int, cantidad_docenas: float, nro_pao: int) -> di
         cantidad_docenas: Docenas pedidas. Se persiste en la columna cantidad y debe ser mayor que cero.
         nro_pao: Número de PaO del pedido. Debe ser un entero positivo.
     """
+    _exigir_rol("pedidos:write")
     client = _client_desde_entorno()
     if isinstance(client, dict):
         return client
@@ -146,6 +169,7 @@ def pedidos_historico(desde: str | None = None, hasta: str | None = None) -> dic
         desde: Fecha inicial inclusive, YYYY-MM-DD. Omitila junto con hasta para usar el día del último pedido.
         hasta: Fecha final inclusive, YYYY-MM-DD. Omitila junto con desde para usar el día del último pedido.
     """
+    _exigir_rol("clientes:read")
     client = _client_desde_entorno()
     if isinstance(client, dict):
         return {
@@ -159,7 +183,15 @@ def pedidos_historico(desde: str | None = None, hasta: str | None = None) -> dic
 
 
 def main() -> None:
-    mcp.run()
+    transporte = os.environ.get("RA_MCP_TRANSPORT", "stdio").strip().lower() or "stdio"
+    if transporte == "http":
+        puerto = int(os.environ.get("RA_MCP_PORT", "8000"))
+        mcp.run(transport="http", host="0.0.0.0", port=puerto, path="/mcp")
+        return
+    if transporte == "stdio":
+        mcp.run(transport="stdio")
+        return
+    raise SystemExit(f"RA_MCP_TRANSPORT no reconocido: {transporte}")
 
 
 if __name__ == "__main__":

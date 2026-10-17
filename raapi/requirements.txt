@@ -1,8 +1,9 @@
 Flask
 SQLAlchemy
-Flask-JWT-Extended
 Flask-CORS
 Flasgger
 psycopg2-binary
 requests
 MarkupSafe
+PyJWT[crypto]==2.10.1
+cryptography==42.0.8

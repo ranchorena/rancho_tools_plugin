@@ -3,22 +3,26 @@
 
 from flask import Flask, request, jsonify
 from markupsafe import escape
-import json, requests
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+import json, os, requests
 
-from config import Session, jwt_key as app_jwt_key # Renombrado para evitar conflicto de nombres
+from config import Session
 from datetime import datetime
 from flask_cors import CORS
 from flasgger import Swagger
 from sqlalchemy import text # Para ejecutar SQL directamente si es necesario
 # --- Nuevos Endpoints para Clientes ---
 from API import API # Importar la clase/módulo con la lógica de BD
+from auth import identidad_actual, instalar_autenticacion
 
 app = Flask(__name__)
-app.config["JWT_SECRET_KEY"] = app_jwt_key # Usar la clave importada
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 60 * 60 * 6 # 6 horas
-jwt = JWTManager(app)
-CORS(app)
+_origenes = [origen.strip() for origen in os.environ.get("CORS_ORIGINS", "http://localhost:8080").split(",") if origen.strip()]
+CORS(
+    app,
+    origins=_origenes,
+    allow_headers=["Authorization", "Content-Type", "Accept"],
+    methods=["GET", "POST", "PUT", "OPTIONS"],
+)
+instalar_autenticacion(app)
 
 # Configuración simple de Swagger
 swagger_config = {
@@ -44,6 +48,10 @@ Swagger(app, config=swagger_config)
 @app.route("/")
 def root():
     return "<h1>Server is running</h1>"
+
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
 
 @app.route("/buscar_direccion", methods=["POST"])
 def buscar_direccion():
@@ -109,7 +117,6 @@ def buscar_direccion():
 
 
 @app.route("/api/clientes/buscar", methods=["POST"])
-# @jwt_required() # Descomentar si se necesita protección JWT
 def buscar_clientes_api():
     """
     Busca clientes por nombre, dirección, o calle/altura.
@@ -300,7 +307,6 @@ def buscar_clientes_api():
       #     session.close()
 
 @app.route("/api/clientes/actualizar/<int:cliente_id>", methods=["PUT"])
-# @jwt_required() # Descomentar si se necesita protección JWT
 def actualizar_cliente_api(cliente_id):
     """
     Actualiza los datos de un cliente existente.
@@ -357,8 +363,17 @@ def actualizar_cliente_api(cliente_id):
     with Session.begin() as session:
         try:
             resultado, mensaje = API.actualizarCliente(session, cliente_id, datos_actualizados)
-            
+
             if resultado == "success":
+                identidad = identidad_actual() or {}
+                if datos_actualizados.get("tiene_pedido"):
+                    app.logger.info(
+                        "pedido registrado cliente_id=%s sub=%s preferred_username=%s email=%s",
+                        cliente_id,
+                        identidad.get("sub"),
+                        identidad.get("preferred_username"),
+                        identidad.get("email"),
+                    )
                 return jsonify({"mensaje": mensaje}), 200
             elif resultado == "not_found":
                 return jsonify({"error": mensaje}), 404
@@ -372,7 +387,6 @@ def actualizar_cliente_api(cliente_id):
             return jsonify({"error": "Error interno del servidor al actualizar el cliente."}), 500
 
 @app.route("/api/clientes/agregar", methods=["POST"])
-# @jwt_required() # Descomentar si se necesita protección JWT
 def agregar_cliente_api():
     """
     Agrega un nuevo cliente a la base de datos.

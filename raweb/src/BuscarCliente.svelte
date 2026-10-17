@@ -1,5 +1,6 @@
 <script>
   import { API_BASE_URL } from './config.js';
+  import { authorizedFetch } from './auth/session.mjs';
   import { createEventDispatcher, tick } from 'svelte'; // Importar dispatcher y tick
   import DialogHeader from './design-system/DialogHeader.svelte';
   import Icon from './design-system/Icon.svelte';
@@ -39,7 +40,7 @@
     errorMessage = "";
     // successMessage = ""; // Eliminada
     try {
-      const response = await fetch(url, options);
+      const response = await authorizedFetch(url, options);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Error desconocido" }));
         throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);

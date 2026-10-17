@@ -26,10 +26,16 @@
   import PedidosHistorico from './PedidosHistorico.svelte';
   import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
-  import ThemeSelector from './design-system/ThemeSelector.svelte';
+  import AccountMenu from './AccountMenu.svelte';
   import UiIcon from './design-system/Icon.svelte';
   import { createThemeController } from './design-system/theme-controller.mjs';
   import { chooseFocusReturn } from './design-system/focus-policy.mjs';
+  import { authorizedFetch, initAuth, login, logout } from './auth/session.mjs';
+
+  let authReady = false;
+  let authenticated = false;
+  let username = '';
+  let authMessage = '';
 
   let themePreference = 'system';
   let themeController;
@@ -322,7 +328,7 @@
     nextControl?.focus();
   }
 
-  onMount(() => {
+  function iniciarMapa() {
     // Event listener global para cerrar tooltip al hacer click fuera
     function handleGlobalClick(event) {
       if (showFeatureTooltip) {
@@ -628,10 +634,41 @@
         map.setTarget(undefined);
         map = undefined;
       }
-      // Limpiar event listener global
       document.removeEventListener('click', handleGlobalClick);
     };
+  }
+
+  onMount(() => {
+    let limpiarMapa = () => {};
+    let cancelado = false;
+    initAuth()
+      .then(async (sesion) => {
+        if (cancelado) return;
+        authenticated = sesion.authenticated;
+        username = sesion.username;
+        authReady = true;
+        if (!authenticated) return;
+        await tick();
+        limpiarMapa = iniciarMapa() || (() => {});
+      })
+      .catch((error) => {
+        console.error(error);
+        authMessage = 'No se pudo iniciar la sesión con Keycloak.';
+        authReady = true;
+      });
+    return () => {
+      cancelado = true;
+      limpiarMapa();
+    };
   });
+
+  function ingresarConKeycloak() {
+    login();
+  }
+
+  function cerrarSesion() {
+    logout();
+  }
 
   // function openBuscarDireccion() { // Reemplazado por setView
   //   showBuscarDireccionDialog = true;
@@ -797,7 +834,7 @@
     console.log("Buscando dirección:", direccion);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/buscar_direccion`, { // Endpoint sin /api al inicio
+      const response = await authorizedFetch(`${API_BASE_URL}/buscar_direccion`, { // Endpoint sin /api al inicio
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -910,7 +947,7 @@
     console.log("Buscando dirección del cliente:", direccion);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/buscar_direccion`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/buscar_direccion`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -967,6 +1004,21 @@
 
 </script>
 
+{#if !authReady}
+<main class="auth-gate auth-gate-pending" aria-busy="true">
+  <p class="auth-pending">Comprobando sesión…</p>
+</main>
+{:else if !authenticated}
+<main class="auth-gate">
+  <header class="auth-bar"><span>RAWEB</span></header>
+  <section class="auth-card">
+    <h1>RAWEB</h1>
+    <p class="auth-subtitle">Ingresá con tu cuenta de Rancho.</p>
+    {#if authMessage}<p class="auth-message">{authMessage}</p>{/if}
+    <button type="button" class="auth-login" on:click={ingresarConKeycloak}>Ingresar con Keycloak</button>
+  </section>
+</main>
+{:else}
 <main>
   <nav class="navbar" aria-label="Principal">
     <div class="navbar-brand">
@@ -997,12 +1049,12 @@
     </div>
 
     <div class="navbar-tools">
-      <div class="d-mobile-none">
-        <ThemeSelector id="theme-desktop" value={themePreference} on:change={handleThemeChange} />
-      </div>
-      <div class="theme-mobile d-mobile-block">
-        <ThemeSelector id="theme-mobile" value={themePreference} on:change={handleThemeChange} />
-      </div>
+      <AccountMenu
+        {username}
+        {themePreference}
+        on:themechange={handleThemeChange}
+        on:logout={cerrarSesion}
+      />
     </div>
   </nav>
 
@@ -1216,6 +1268,7 @@
 
   <GlobalNotification message={globalNotificationMessage} type={globalNotificationType} />
 </main>
+{/if}
 
 <style>
   /* Estilos responsive base */
@@ -1271,24 +1324,8 @@
   .navbar-tools {
     flex: 0 0 auto;
     margin-left: auto;
-  }
-
-  .navbar-tools :global(.theme-selector label) {
-    margin: 0;
-    color: var(--ds-text-muted);
-    font-size: var(--ds-type-muted);
-    font-weight: 500;
-  }
-
-  .navbar-tools :global(.theme-selector select) {
-    width: auto;
-    min-height: 2rem;
-    margin: 0;
-    padding: 0.15rem 0.4rem;
-    font-size: var(--ds-type-label);
-    font-weight: 500;
-    background: var(--ds-surface);
-    border-color: var(--ds-divider);
+    display: flex;
+    align-items: center;
   }
 
   @media (min-width: 769px) {
@@ -1794,23 +1831,14 @@
     }
   }
 
-  /* Clases de utilidad responsivas */
+  /* La barra de acciones de escritorio usa flex; en móvil la reemplaza la barra inferior. */
   .d-mobile-none {
     display: flex;
   }
 
-  .d-mobile-block {
-    display: none;
-  }
-
-  /* Media queries responsivas */
   @media (max-width: 768px) {
     .d-mobile-none {
       display: none;
-    }
-
-    .d-mobile-block {
-      display: flex;
     }
 
     main {
@@ -1819,18 +1847,6 @@
 
     .navbar-brand h1 {
       font-size: 1rem;
-    }
-
-    .theme-mobile :global(.theme-selector label) {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
     }
 
     .bottom-nav {
@@ -2002,6 +2018,125 @@
   @media (max-width: 768px) and (orientation: landscape) {
     .feature-tooltip {
       max-height: calc(100vh - 20px);
+    }
+  }
+
+  main.auth-gate {
+    display: grid;
+    grid-template-rows: 3.25rem minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 0;
+    overflow: hidden;
+    background: #111827;
+    color: #f9fafb;
+  }
+
+  main.auth-gate-pending {
+    grid-template-rows: 1fr;
+  }
+
+  .auth-pending {
+    margin: 0;
+    color: #d1d5db;
+    font-size: 0.875rem;
+  }
+
+  .auth-bar {
+    justify-self: stretch;
+    align-self: start;
+    display: flex;
+    align-items: center;
+    height: 3.25rem;
+    padding: 0 1rem;
+    border-bottom: 1px solid color-mix(in srgb, #9ca3af 42%, transparent);
+    background: #111827;
+    color: #f9fafb;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .auth-card {
+    width: min(420px, calc(100% - 2rem));
+    margin-block: 1.5rem;
+    padding: 1.75rem 1.5rem 1.5rem;
+    display: grid;
+    justify-items: center;
+    text-align: center;
+    border: 1px solid color-mix(in srgb, #9ca3af 42%, transparent);
+    border-radius: 12px;
+    background: #1f2937;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  }
+
+  .auth-card h1 {
+    margin: 0;
+    color: #f9fafb;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+
+  .auth-subtitle {
+    margin: 0.75rem 0 0;
+    color: #d1d5db;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .auth-message {
+    margin: 0.75rem 0 0;
+    color: #fecaca;
+    font-size: 0.8125rem;
+  }
+
+  button.auth-login {
+    width: 100%;
+    min-height: 44px;
+    margin: 1.5rem 0 0;
+    padding: 0 0.75rem;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    background-color: #93c5fd;
+    color: #111827;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    box-shadow: none;
+  }
+
+  button.auth-login:hover:not(:disabled) {
+    background-color: #bfdbfe;
+    border-color: #bfdbfe;
+    color: #111827;
+  }
+
+  button.auth-login:active:not(:disabled) {
+    background-color: #60a5fa;
+    border-color: #60a5fa;
+    color: #111827;
+  }
+
+  @media (max-width: 768px) {
+    main.auth-gate {
+      padding-bottom: 0;
+    }
+
+    .auth-card {
+      width: min(420px, calc(100% - 1.5rem));
+      padding: 1.5rem 1.25rem 1.25rem;
+    }
+
+    button.auth-login {
+      min-height: 44px;
+      margin-bottom: 0;
+      padding: 0 0.75rem;
+      font-size: 0.875rem;
     }
   }
 </style>
