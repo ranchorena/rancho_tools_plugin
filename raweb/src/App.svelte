@@ -8,6 +8,7 @@
   import { fromLonLat, toLonLat } from 'ol/proj.js';
   import Feature from 'ol/Feature.js';
   import Point from 'ol/geom/Point.js';
+  import CircleGeom from 'ol/geom/Circle.js';
   import VectorLayer from 'ol/layer/Vector.js';
   import VectorSource from 'ol/source/Vector.js';
   import {bbox as bboxStrategy} from 'ol/loadingstrategy.js'; // Estrategia BBOX para WFS
@@ -61,6 +62,13 @@
   let mapElement;
   let map;
   let markerSource;
+  let ubicacionSource;
+  let ubicacionWatchId = null;
+  let ubicacionActiva = false;
+  let ubicacionRecibida = false;
+  let ubicacionActual = null;
+  let centrarUbicacion = false;
+  let pedidoCercanoId = null;
   let temporaryLayers = [];
 
   let showBuscarDireccionDialog = false;
@@ -279,16 +287,25 @@
     });
   }
 
+  function esPedidoCercano(feature) {
+    if (pedidoCercanoId == null) return false;
+    const id = feature.get('id');
+    if (id != null && String(id) === String(pedidoCercanoId)) return true;
+    const fid = feature.getId();
+    return fid != null && String(fid).endsWith('.' + pedidoCercanoId);
+  }
+
   function pedidoStyle(feature) {
+    const marcado = esPedidoCercano(feature);
     return new Style({
       image: new Circle({
-        radius: 6,
+        radius: marcado ? 10 : 6,
         fill: new Fill({
-          color: '#ff6b6b'
+          color: marcado ? '#f59e0b' : '#ff6b6b'
         }),
         stroke: new Stroke({
           color: '#ffffff',
-          width: 2
+          width: marcado ? 3 : 2
         })
       }),
       text: showPedidosNombre && feature.get('nombre')
@@ -353,6 +370,12 @@
           src: 'https://openlayers.org/en/latest/examples/data/icon.png'
         })
       })
+    });
+
+    ubicacionSource = new VectorSource();
+    const ubicacionLayer = new VectorLayer({
+      source: ubicacionSource,
+      style: estiloUbicacion
     });
 
     // Tooltip se maneja con CSS puro, sin overlay de OpenLayers
@@ -514,7 +537,8 @@
         tramosNombreLayer,
         clientesLayer,
         pedidosLayer, // Los pedidos ahora van encima de los clientes
-        markerLayer // Capa para los marcadores (debe estar encima de las WMS)
+        markerLayer, // Capa para los marcadores (debe estar encima de las WMS)
+        ubicacionLayer
       ],
       view: new View({
         center: fromLonLat([INITIAL_COORDINATES.lon, INITIAL_COORDINATES.lat]),
@@ -629,6 +653,7 @@
 
     // Limpiar el mapa al desmontar el componente
     return () => {
+      detenerUbicacion();
       window.removeEventListener('resize', handleResize);
       if (map) {
         map.setTarget(undefined);
@@ -891,6 +916,196 @@
     });
   }
 
+  function colorUbicacion() {
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--ds-location').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#047857';
+  }
+
+  function colorConAlfa(hex, alfa) {
+    const valor = parseInt(hex.slice(1), 16);
+    const rojo = (valor >> 16) & 255;
+    const verde = (valor >> 8) & 255;
+    const azul = valor & 255;
+    return `rgba(${rojo}, ${verde}, ${azul}, ${alfa})`;
+  }
+
+  function estiloUbicacion(feature) {
+    const color = colorUbicacion();
+    if (feature.get('tipo') === 'precision') {
+      return new Style({
+        fill: new Fill({ color: colorConAlfa(color, 0.18) }),
+        stroke: new Stroke({ color: colorConAlfa(color, 0.55), width: 1 })
+      });
+    }
+    return new Style({
+      image: new Circle({
+        radius: 7,
+        fill: new Fill({ color }),
+        stroke: new Stroke({ color: '#ffffff', width: 2 })
+      })
+    });
+  }
+
+  function mostrarAviso(message, type) {
+    handleShowGlobalNotification({ detail: { message, type } });
+  }
+
+  function actualizarUbicacion(posicion) {
+    if (!ubicacionSource || !map) return;
+    const lon = posicion.coords.longitude;
+    const lat = posicion.coords.latitude;
+    const centro = fromLonLat([lon, lat]);
+    const precision = Number(posicion.coords.accuracy);
+    ubicacionSource.clear();
+    if (Number.isFinite(precision) && precision > 0) {
+      ubicacionSource.addFeature(new Feature({
+        geometry: new CircleGeom(centro, precision),
+        tipo: 'precision'
+      }));
+    }
+    ubicacionSource.addFeature(new Feature({
+      geometry: new Point(centro),
+      tipo: 'punto'
+    }));
+    ubicacionActual = { lat, lon };
+    if (!centrarUbicacion) return;
+    centrarUbicacion = false;
+    const zoom = map.getView().getZoom();
+    map.getView().animate({
+      center: centro,
+      zoom: zoom < 16 ? 17 : zoom,
+      duration: 600
+    });
+  }
+
+  function detenerUbicacion() {
+    if (ubicacionWatchId != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(ubicacionWatchId);
+    }
+    ubicacionWatchId = null;
+    ubicacionActiva = false;
+    ubicacionRecibida = false;
+    ubicacionActual = null;
+    centrarUbicacion = false;
+    if (ubicacionSource) ubicacionSource.clear();
+    quitarPedidoCercano();
+  }
+
+  function quitarPedidoCercano() {
+    if (pedidoCercanoId == null) return;
+    pedidoCercanoId = null;
+    if (pedidosLayer) pedidosLayer.changed();
+    closeFeatureTooltip();
+  }
+
+  function posicionarTooltipEnMapa(coordinate) {
+    if (!map || !mapElement) return;
+    const pixel = map.getPixelFromCoordinate(coordinate);
+    if (!pixel) return;
+    const mapa = mapElement.getBoundingClientRect();
+    const tooltipWidth = 250;
+    const tooltipHeight = 200;
+    let x = mapa.left + pixel[0] + 15;
+    let y = mapa.top + pixel[1] - 15;
+    if (x + tooltipWidth > window.innerWidth) x = mapa.left + pixel[0] - tooltipWidth - 15;
+    if (y < 0) y = mapa.top + pixel[1] + 15;
+    if (y + tooltipHeight > window.innerHeight) y = window.innerHeight - tooltipHeight - 10;
+    if (window.innerWidth <= 768) {
+      x = Math.max(10, Math.min(x, window.innerWidth - tooltipWidth - 10));
+      y = Math.max(10, Math.min(y, window.innerHeight - tooltipHeight - 10));
+    }
+    tooltipPosition = { x, y };
+  }
+
+  function seleccionarPedidoEnMapa(pedido) {
+    const lon = Number(pedido?.longitud);
+    const lat = Number(pedido?.latitud);
+    if (!map || !Number.isFinite(lon) || !Number.isFinite(lat)) return;
+    pedidoCercanoId = pedido.id;
+    showPedidosLayer = true;
+    if (pedidosLayer) pedidosLayer.changed();
+    const coordinate = fromLonLat([lon, lat]);
+    selectedFeatureData = {
+      id: pedido.id_pedido || pedido.id || 'N/A',
+      nombre: pedido.nombre || 'N/A',
+      direccion: pedido.direccion || 'N/A',
+      cantidad: pedido.cantidad ?? 'N/A',
+      fecha: pedido.fecha || 'N/A',
+      telefono: pedido.telefono || 'N/A',
+      horario: pedido.horario || 'N/A',
+      observaciones: pedido.observaciones || 'N/A',
+      calle: pedido.calle || 'N/A',
+      altura: pedido.altura ?? 'N/A'
+    };
+    tooltipType = 'pedido';
+    showFeatureTooltip = true;
+    const mostrar = () => posicionarTooltipEnMapa(coordinate);
+    mostrar();
+    map.getView().animate({
+      center: coordinate,
+      zoom: 18,
+      duration: 700
+    }, mostrar);
+  }
+
+  async function marcarPedidoCercano() {
+    if (!ubicacionActiva || !ubicacionActual) {
+      mostrarAviso('Activá la posición del móvil para buscar el pedido más cercano.', 'warning');
+      return;
+    }
+    try {
+      const params = new URLSearchParams({
+        latitud: String(ubicacionActual.lat),
+        longitud: String(ubicacionActual.lon)
+      });
+      const response = await authorizedFetch(`${API_BASE_URL}/api/pedidos/cercano?${params}`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        mostrarAviso(data.error || 'No se pudo buscar el pedido más cercano.', 'error');
+        return;
+      }
+      if (!data.pedido) {
+        quitarPedidoCercano();
+        mostrarAviso('No hay pedidos activos para marcar.', 'warning');
+        return;
+      }
+      seleccionarPedidoEnMapa(data.pedido);
+    } catch (error) {
+      console.error('Error al buscar el pedido más cercano:', error);
+      mostrarAviso('No se pudo buscar el pedido más cercano.', 'error');
+    }
+  }
+
+  function alternarUbicacion() {
+    if (ubicacionActiva) {
+      detenerUbicacion();
+      return;
+    }
+    if (!navigator.geolocation) {
+      mostrarAviso('Este navegador no puede obtener la posición del móvil.', 'error');
+      return;
+    }
+    ubicacionActiva = true;
+    centrarUbicacion = true;
+    ubicacionWatchId = navigator.geolocation.watchPosition(
+      (posicion) => {
+        ubicacionRecibida = true;
+        actualizarUbicacion(posicion);
+      },
+      (error) => {
+        if (ubicacionRecibida) return;
+        detenerUbicacion();
+        mostrarAviso(
+          error.code === 1
+            ? 'Hay que permitir la ubicación para ver el móvil en el mapa.'
+            : 'No se pudo obtener la posición del móvil.',
+          'error'
+        );
+      },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+    );
+  }
+
   function addMarker(lon, lat, marker) {
     if (!markerSource) return;
 
@@ -923,6 +1138,7 @@
   }
 
   function limpiarMapa() {
+    quitarPedidoCercano();
     if (markerSource) markerSource.clear();
     temporaryLayers.forEach((layer) => {
       if (map) map.removeLayer(layer);
@@ -1197,6 +1413,28 @@
     <!-- Botón flotante para agregar cliente -->
     <button type="button" class="add-client-floating-btn" on:click={openAgregarCliente} title="Agregar nuevo cliente" aria-label="Agregar nuevo cliente">
       <UiIcon name="plus" size={20} />
+    </button>
+    <button
+      type="button"
+      class="ubicacion-btn"
+      class:activa={ubicacionActiva}
+      on:click={alternarUbicacion}
+      title={ubicacionActiva ? 'Ocultar posición del móvil' : 'Mostrar posición del móvil'}
+      aria-label={ubicacionActiva ? 'Ocultar posición del móvil' : 'Mostrar posición del móvil'}
+      aria-pressed={ubicacionActiva}
+    >
+      <UiIcon name="locate" size={20} />
+    </button>
+    <button
+      type="button"
+      class="pedido-cercano-btn"
+      class:activa={ubicacionActiva}
+      on:click={marcarPedidoCercano}
+      disabled={!ubicacionActiva}
+      title={ubicacionActiva ? 'Marcar el pedido más cercano' : 'Activá la posición del móvil para buscar el pedido más cercano'}
+      aria-label={ubicacionActiva ? 'Marcar el pedido más cercano' : 'Activá la posición del móvil para buscar el pedido más cercano'}
+    >
+      <UiIcon name="nearest" size={20} />
     </button>
     <button type="button" class="map-clear-btn" on:click={limpiarMapa}>Limpiar</button>
   </div>
@@ -1613,13 +1851,17 @@
   }
 
   .layer-toolbar-show-btn:focus-visible,
-  .add-client-floating-btn:focus-visible {
+  .add-client-floating-btn:focus-visible,
+  .ubicacion-btn:focus-visible,
+  .pedido-cercano-btn:focus-visible {
     outline: 2px solid var(--ds-focus);
     outline-offset: 1px;
   }
 
   :global(:root[data-theme="dark"]) .layer-toolbar-show-btn:focus-visible,
-  :global(:root[data-theme="dark"]) .add-client-floating-btn:focus-visible {
+  :global(:root[data-theme="dark"]) .add-client-floating-btn:focus-visible,
+  :global(:root[data-theme="dark"]) .ubicacion-btn:focus-visible,
+  :global(:root[data-theme="dark"]) .pedido-cercano-btn:focus-visible {
     outline: 2px solid var(--ds-focus);
     outline-offset: 1px;
   }
@@ -1654,6 +1896,67 @@
 
   .add-client-floating-btn:active {
     background: var(--ds-location-active);
+  }
+
+  .ubicacion-btn {
+    position: absolute;
+    top: calc(4.35rem + 44px + 0.5rem);
+    right: 0.75rem;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-round);
+    box-shadow: var(--ds-shadow-sm);
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ubicacion-btn:hover {
+    background: var(--ds-secondary-hover);
+  }
+
+  .ubicacion-btn.activa,
+  .ubicacion-btn.activa:hover,
+  .pedido-cercano-btn.activa,
+  .pedido-cercano-btn.activa:hover {
+    background: var(--ds-location);
+    color: var(--ds-on-location);
+    border-color: var(--ds-location);
+  }
+
+  .pedido-cercano-btn {
+    position: absolute;
+    top: calc(4.35rem + 88px + 1rem);
+    right: 0.75rem;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    background: var(--ds-surface);
+    color: var(--ds-text-muted);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-round);
+    box-shadow: var(--ds-shadow-sm);
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pedido-cercano-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--ds-surface);
+    color: var(--ds-text-muted);
+    border-color: var(--ds-border);
   }
 
   .map-clear-btn {
@@ -1903,7 +2206,9 @@
     }
 
     .layer-toolbar-show-btn,
-    .add-client-floating-btn {
+    .add-client-floating-btn,
+    .ubicacion-btn,
+    .pedido-cercano-btn {
       right: 0.5rem;
     }
 
@@ -1913,6 +2218,14 @@
 
     .add-client-floating-btn {
       top: 4rem;
+    }
+
+    .ubicacion-btn {
+      top: calc(4rem + 44px + 0.5rem);
+    }
+
+    .pedido-cercano-btn {
+      top: calc(4rem + 88px + 1rem);
     }
 
     .map-clear-btn {

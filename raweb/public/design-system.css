@@ -202,19 +202,70 @@ input.ds-date:focus,
 	box-shadow: none;
 }
 
+input.ds-time {
+	width: fit-content;
+	max-width: 100%;
+	align-self: flex-start;
+	field-sizing: content;
+	font: inherit;
+	font-size: 0.85rem;
+	color: var(--ds-text);
+	background: var(--ds-surface);
+	border: 1px solid var(--ds-border);
+	border-radius: 6px;
+	padding: 0.4rem 0.4rem 0.4rem 0.5rem;
+	margin: 0;
+	min-height: 2.325rem;
+	box-sizing: border-box;
+}
+
+input.ds-time:focus {
+	outline: 2px solid var(--ds-focus);
+	outline-offset: 1px;
+	border-color: var(--ds-focus);
+	box-shadow: none;
+}
+
+input.ds-time::-webkit-calendar-picker-indicator {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%231f2937' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='7.5'/%3E%3Cpath d='M12 8.2V12l2.6 1.6'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 16px 16px;
+	width: 16px;
+	height: 16px;
+	margin: 0 0 0 0.15rem;
+	padding: 0;
+	cursor: pointer;
+	opacity: 1;
+}
+
+:root[data-theme="dark"] input.ds-time::-webkit-calendar-picker-indicator {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f9fafb' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='7.5'/%3E%3Cpath d='M12 8.2V12l2.6 1.6'/%3E%3C/svg%3E");
+}
+
+:root[data-theme="dark"] input.ds-date::-webkit-calendar-picker-indicator {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f9fafb' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5.5' width='16' height='14.5' rx='2'/%3E%3Cpath d='M8 3.8v3.4M16 3.8v3.4M4 9.5h16'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 16px 16px;
+	cursor: pointer;
+	opacity: 1;
+}
+
 .ds-date-control {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	position: relative;
-	gap: 0.25rem;
-	width: 100%;
+	gap: 0.15rem;
+	width: fit-content;
+	max-width: 100%;
 	padding-right: 0.35rem;
 }
 
 .ds-date-control .ds-date-text {
-	flex: 1;
+	flex: 0 0 auto;
+	width: 10ch;
 	min-width: 0;
-	width: auto;
 	margin: 0;
 	padding: 0;
 	border: none;
@@ -222,6 +273,7 @@ input.ds-date:focus,
 	background: transparent;
 	color: inherit;
 	box-shadow: none;
+	font-variant-numeric: tabular-nums;
 }
 
 .ds-date-control .ds-date-text:focus {
@@ -231,9 +283,22 @@ input.ds-date:focus,
 }
 
 .ds-date-control .ds-date-picker {
+	position: relative;
 	flex: 0 0 auto;
-	width: 1.25rem;
-	height: 1.25rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+}
+
+.ds-date-control .ds-date-picker button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	min-width: 0;
 	min-height: 0;
 	margin: 0;
 	padding: 0;
@@ -242,19 +307,29 @@ input.ds-date:focus,
 	background: transparent;
 	color: var(--ds-text);
 	box-shadow: none;
+	cursor: pointer;
 }
 
 .ds-date-control .ds-date-native {
 	position: absolute;
 	z-index: 1;
-	top: 0;
-	right: 0;
-	width: 2rem;
+	inset: 0;
+	width: 100%;
 	height: 100%;
 	margin: 0;
 	padding: 0;
 	border: none;
 	opacity: 0;
+	cursor: pointer;
+}
+
+.ds-date-control .ds-date-native::-webkit-calendar-picker-indicator {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
 	cursor: pointer;
 }
 

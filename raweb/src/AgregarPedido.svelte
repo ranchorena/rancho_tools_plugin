@@ -372,17 +372,19 @@
           <label for="pedido-fecha">Fecha</label>
           <div class="ds-date-control">
             <input id="pedido-fecha" class="ds-date-text" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off" bind:value={fechaTexto} on:input={handleFechaInput} on:change={handleFecha}>
-            <button type="button" class="ds-date-picker" on:click={mostrarCalendario} aria-label="Mostrar calendario">
-              <Icon name="calendar" size={16} />
-            </button>
-            <input id="pedido-fecha-calendario" class="ds-date-native" type="date" tabindex="-1" aria-hidden="true" bind:this={calendario} value={formData.fecha} on:change={handleCalendario}>
+            <span class="ds-date-picker">
+              <button type="button" on:click={mostrarCalendario} aria-label="Mostrar calendario">
+                <Icon name="calendar" size={16} />
+              </button>
+              <input id="pedido-fecha-calendario" class="ds-date-native" type="date" tabindex="-1" aria-hidden="true" bind:this={calendario} value={formData.fecha} on:change={handleCalendario}>
+            </span>
           </div>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label for="pedido-horario">Horario Preferido</label>
-          <input id="pedido-horario" class="ds-field" type="time" bind:value={formData.horario}>
+          <input id="pedido-horario" class="ds-time" type="time" bind:value={formData.horario}>
         </div>
         <div class="form-group">
           <label for="pedido-pao">Número PAO</label>
@@ -572,6 +574,18 @@
   .checkbox-group input {
     width: auto;
     margin: 0;
+  }
+
+  .ds-date-control .ds-date-text {
+    width: 10ch;
+    flex: 0 0 auto;
+  }
+
+  input.ds-time {
+    width: fit-content;
+    max-width: 100%;
+    align-self: flex-start;
+    field-sizing: content;
   }
 
   .field-cantidad { width: 7.5rem; max-width: 100%; }

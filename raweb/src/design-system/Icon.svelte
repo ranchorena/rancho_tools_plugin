@@ -17,6 +17,12 @@
 	{#if name === 'pin'}
 		<path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z" />
 		<circle cx="12" cy="10" r="2.2" />
+	{:else if name === 'locate'}
+		<circle cx="12" cy="12" r="7" />
+		<circle cx="12" cy="12" r="2.4" />
+		<path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6" />
+	{:else if name === 'nearest'}
+		<path d="M12 3.2 14.6 9.4 21 12l-6.4 2.6L12 20.8 9.4 14.6 3 12l6.4-2.6z" />
 	{:else if name === 'user'}
 		<circle cx="12" cy="8" r="3.2" />
 		<path d="M5.5 19.2a6.5 6.5 0 0 1 13 0" />

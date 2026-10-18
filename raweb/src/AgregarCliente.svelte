@@ -34,6 +34,8 @@
   let georreferenciando = false;
   let errorMessage = '';
   let successMessage = '';
+  let fechaTexto = '';
+  let calendario;
 
   // Reactivamente mostrar las coordenadas
   $: coordenadasTexto = coordenadas ? 
@@ -56,6 +58,8 @@
       errorMessage = 'Debe seleccionar una ubicación en el mapa.';
       return;
     }
+
+    if (!aplicarFechaTexto()) return;
 
     isLoading = true;
     errorMessage = '';
@@ -163,10 +167,79 @@
     return `${fecha.getFullYear()}-${mes}-${dia}`;
   }
 
+  function isoATexto(iso) {
+    const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    return partes ? `${partes[3]}/${partes[2]}/${partes[1]}` : '';
+  }
+
+  function textoAIso(texto) {
+    const partes = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((texto || '').trim());
+    if (!partes) return null;
+    const dia = Number(partes[1]);
+    const mes = Number(partes[2]);
+    const anio = Number(partes[3]);
+    const fecha = new Date(anio, mes - 1, dia);
+    if (fecha.getFullYear() !== anio || fecha.getMonth() !== mes - 1 || fecha.getDate() !== dia) return null;
+    return `${partes[3]}-${partes[2]}-${partes[1]}`;
+  }
+
+  function formatearFecha(valor) {
+    const digitos = String(valor || '').replace(/\D/g, '').slice(0, 8);
+    if (digitos.length <= 2) return digitos;
+    if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+    return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
+  }
+
+  function aplicarFechaIso(iso) {
+    fechaTexto = iso ? isoATexto(iso) : '';
+    formData.fecha = iso || '';
+    if (iso) errorMessage = '';
+  }
+
+  function aplicarFechaTexto() {
+    fechaTexto = formatearFecha(fechaTexto);
+    if (!fechaTexto) {
+      formData.fecha = '';
+      return true;
+    }
+    const iso = textoAIso(fechaTexto);
+    if (!iso) {
+      errorMessage = 'La fecha debe tener el formato dd/mm/aaaa.';
+      return false;
+    }
+    aplicarFechaIso(iso);
+    return true;
+  }
+
+  function handleFechaInput(event) {
+    fechaTexto = formatearFecha(event.currentTarget.value);
+  }
+
+  function mostrarCalendario() {
+    if (!calendario) return;
+    const iso = textoAIso(fechaTexto) || formData.fecha || '';
+    if (iso) calendario.value = iso;
+    try {
+      if (typeof calendario.showPicker === 'function') {
+        calendario.showPicker();
+        return;
+      }
+    } catch (error) {
+      console.error('No se pudo abrir el calendario:', error);
+    }
+    calendario.focus();
+    calendario.click();
+  }
+
+  function handleCalendario(event) {
+    aplicarFechaIso(event.currentTarget.value);
+  }
+
   function handleTienePedido(event) {
     if (!event.currentTarget.checked) {
       formData.cantidad = '';
       formData.fecha = '';
+      fechaTexto = '';
       formData.nro_pao = '';
       return;
     }
@@ -174,6 +247,7 @@
     manana.setDate(manana.getDate() + 1);
     formData.cantidad = 1;
     formData.fecha = fechaLocalIso(manana);
+    fechaTexto = isoATexto(formData.fecha);
   }
 </script>
 
@@ -295,7 +369,7 @@
     font-size: 0.9rem;
   }
 
-  .form-group input:not(.ds-date),
+  .form-group input:not(.ds-date):not(.ds-date-text):not(.ds-date-native):not(.ds-time),
   .form-group textarea {
     padding: 0.75rem;
     border: 2px solid var(--ds-border);
@@ -311,7 +385,7 @@
     border-color: var(--ds-border);
   }
   /* Mantener el anillo compartido en controles y observación. */
-  .form-group input:focus,
+  .form-group input:not(.ds-date-text):not(.ds-date-native):focus,
   .form-group textarea:focus {
     outline: 2px solid var(--ds-focus);
     outline-offset: 1px;
@@ -344,6 +418,18 @@
     align-items: center;
     gap: 0.5rem;
     margin-top: 0;
+  }
+
+  .ds-date-control .ds-date-text {
+    width: 10ch;
+    flex: 0 0 auto;
+  }
+
+  input.ds-time {
+    width: fit-content;
+    max-width: 100%;
+    align-self: flex-start;
+    field-sizing: content;
   }
 
   .field-cantidad {
@@ -779,12 +865,15 @@
 
             <div class="form-group">
               <label for="fecha">Fecha</label>
-              <input
-                id="fecha"
-                type="date"
-                class="ds-date"
-                bind:value={formData.fecha}
-              />
+              <div class="ds-date-control">
+                <input id="fecha" class="ds-date-text" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off" bind:value={fechaTexto} on:input={handleFechaInput} on:change={aplicarFechaTexto}>
+                <span class="ds-date-picker">
+                  <button type="button" on:click={mostrarCalendario} aria-label="Mostrar calendario">
+                    <Icon name="calendar" size={16} />
+                  </button>
+                  <input id="fecha-calendario" class="ds-date-native" type="date" tabindex="-1" aria-hidden="true" bind:this={calendario} value={formData.fecha} on:change={handleCalendario}>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -794,7 +883,7 @@
               <input
                 id="horario"
                 type="time"
-                class="ds-field"
+                class="ds-time"
                 bind:value={formData.horario}
               />
             </div>

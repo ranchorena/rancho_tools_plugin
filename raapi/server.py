@@ -728,6 +728,55 @@ def get_pedido_de_fecha(cliente_id):
             app.logger.error(f"Error en /api/clientes/{cliente_id}/pedido: {e}")
             return jsonify({"error": "Error interno del servidor al obtener el pedido."}), 500
 
+@app.route("/api/pedidos/cercano", methods=["GET"])
+def get_pedido_cercano():
+    """
+    Devuelve el pedido activo más cercano a una latitud y longitud.
+    ---
+    tags:
+      - Pedidos
+    parameters:
+      - name: latitud
+        in: query
+        type: number
+        required: true
+      - name: longitud
+        in: query
+        type: number
+        required: true
+    responses:
+      200:
+        description: Pedido más cercano, o pedido null si no hay pedidos activos
+      400:
+        description: Coordenadas inválidas
+    """
+    def parse_coord(nombre, minimo, maximo):
+        valor = request.args.get(nombre)
+        if valor is None or valor.strip() == "":
+            return None, f"La {nombre} es requerida."
+        try:
+            numero = float(valor)
+        except ValueError:
+            return None, f"La {nombre} no es válida."
+        if numero < minimo or numero > maximo:
+            return None, f"La {nombre} no es válida."
+        return numero, None
+
+    latitud, error_lat = parse_coord("latitud", -90, 90)
+    if error_lat:
+        return jsonify({"error": error_lat}), 400
+    longitud, error_lon = parse_coord("longitud", -180, 180)
+    if error_lon:
+        return jsonify({"error": error_lon}), 400
+
+    with Session.begin() as session:
+        try:
+            pedido = API.getPedidoCercano(session, latitud, longitud)
+            return jsonify({"pedido": pedido}), 200
+        except Exception as e:
+            app.logger.error(f"Error en /api/pedidos/cercano: {e}")
+            return jsonify({"error": "Error interno del servidor al buscar el pedido más cercano."}), 500
+
 @app.route("/api/pedidos/historico", methods=["GET"])
 def get_pedidos_historico():
     """

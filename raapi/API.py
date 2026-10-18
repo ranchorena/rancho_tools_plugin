@@ -572,6 +572,64 @@ class API: # Clase contenedora renombrada a API
         return clientes
 
     @staticmethod
+    def getPedidoCercano(session, latitud, longitud):
+        """
+        Devuelve el cliente con pedido activo más cercano al punto, en metros.
+        El punto llega en EPSG:4326 y se compara en EPSG:5347.
+        """
+        punto = func.ST_Transform(func.ST_SetSRID(func.ST_MakePoint(longitud, latitud), 4326), 5347)
+        distancia = func.ST_Distance(Cliente.geometria, punto).label("distancia")
+        row = (
+            session.query(
+                Cliente.id,
+                Cliente.nombre,
+                Cliente.direccion,
+                Cliente.calle,
+                Cliente.altura,
+                Cliente.telefono,
+                Cliente.cantidad,
+                Cliente.horario,
+                Cliente.observacion,
+                func.ST_X(func.ST_Transform(Cliente.geometria, 4326)).label("longitud"),
+                func.ST_Y(func.ST_Transform(Cliente.geometria, 4326)).label("latitud"),
+                distancia,
+            )
+            .filter(and_(Cliente.tiene_pedido == 1, Cliente.geometria.isnot(None)))
+            .order_by(distancia)
+            .limit(1)
+            .first()
+        )
+        if row is None:
+            return None
+
+        pedido = API.to_dict(row)
+        if pedido.get("distancia") is not None:
+            pedido["distancia"] = int(round(pedido["distancia"]))
+        hoy = datetime.datetime.combine(datetime.date.today(), datetime.time.min)
+        pedido_fecha = (
+            session.query(Pedido.id_pedido, Pedido.fecha)
+            .filter(Pedido.id_cliente == row.id, Pedido.fecha >= hoy)
+            .order_by(Pedido.fecha.asc(), Pedido.id_pedido.asc())
+            .first()
+        )
+        if pedido_fecha is None:
+            pedido_fecha = (
+                session.query(Pedido.id_pedido, Pedido.fecha)
+                .filter(Pedido.id_cliente == row.id)
+                .order_by(Pedido.fecha.desc(), Pedido.id_pedido.desc())
+                .first()
+            )
+        if pedido_fecha is not None:
+            pedido["id_pedido"] = pedido_fecha.id_pedido
+            fecha = pedido_fecha.fecha
+            pedido["fecha"] = fecha.date().isoformat() if isinstance(fecha, datetime.datetime) else fecha.isoformat()
+        else:
+            pedido["id_pedido"] = None
+            pedido["fecha"] = None
+        pedido["observaciones"] = pedido.pop("observacion", None)
+        return pedido
+
+    @staticmethod
     def getPedidosHistorico(session, desde=None, hasta=None):
         """
         Lista pedidos de la tabla pedido entre dos fechas, inclusive.
