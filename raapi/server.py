@@ -454,6 +454,11 @@ def agregar_cliente_api():
               format: time
               description: "Horario preferido de entrega (HH:MM)"
               example: "14:30"
+            fecha:
+              type: string
+              format: date
+              description: "Fecha del pedido (YYYY-MM-DD). Vacía por defecto. Si tiene_pedido es verdadero y no se envía, se usa el día siguiente."
+              example: "2026-10-19"
             nro_pao:
               type: integer
               description: "Número de PAO"
@@ -495,6 +500,7 @@ def agregar_cliente_api():
                 telefono: "+54 11 1234-5678"
                 tiene_pedido: true
                 cantidad: 3.0
+                fecha: "2026-10-19"
                 horario: "15:00"
                 nro_pao: 456
                 observacion: "Timbre roto, golpear puerta"

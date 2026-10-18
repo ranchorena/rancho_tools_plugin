@@ -300,6 +300,17 @@ class API: # Clase contenedora renombrada a API
             if not datos_cliente.get('latitud') or not datos_cliente.get('longitud'):
                 return "validation_error", "Las coordenadas (latitud y longitud) son requeridas."
 
+            registra_pedido = 1 if datos_cliente.get('tiene_pedido') else 0
+            fecha_pedido = None
+            precio_unitario = None
+            if registra_pedido:
+                fecha_pedido = API._fecha_pedido(datos_cliente)
+                if fecha_pedido is None:
+                    return "validation_error", "La fecha del pedido no es válida."
+                precio_unitario = API._precio_unitario_vigente(session)
+                if precio_unitario is None:
+                    return "error", "No hay un precio vigente para registrar el pedido."
+
             # Preparar datos para inserción
             nuevo_cliente = {
                 'nombre': datos_cliente['nombre'].strip(),
@@ -339,6 +350,23 @@ class API: # Clase contenedora renombrada a API
             
             if result:
                 cliente_creado = API.to_dict(result)
+                if registra_pedido:
+                    cliente = session.query(Cliente).filter(Cliente.id == cliente_creado["id"]).one()
+                    session.add(Pedido(
+                        fecha=datetime.datetime.combine(fecha_pedido, datetime.time.min),
+                        id_cliente=cliente.id,
+                        nombre=cliente.nombre,
+                        turno=1,
+                        cantidad=nuevo_cliente["cantidad"],
+                        direccion=cliente.direccion,
+                        calle=cliente.calle,
+                        altura=cliente.altura,
+                        geometry=cliente.geometria,
+                        observaciones=nuevo_cliente["observacion"],
+                        precio_unitario=precio_unitario,
+                        nro_pao=nuevo_cliente["nro_pao"],
+                    ))
+                    session.flush()
                 return "success", cliente_creado
             else:
                 return "error", "No se pudo crear el cliente."

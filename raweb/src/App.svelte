@@ -786,6 +786,16 @@
   }
 
   // Funciones para agregar cliente
+  function handleUbicacionGeorreferenciada(event) {
+    const { lat, lon } = event.detail;
+    modoSeleccionPunto = false;
+    coordenadasSeleccionadas = { lat, lon };
+    if (map) {
+      map.getViewport().style.cursor = '';
+      addMarker(lon, lat);
+    }
+  }
+
   function handleSeleccionarUbicacion() {
     // Activar modo de selección de punto
     modoSeleccionPunto = true;
@@ -1226,6 +1236,7 @@
       valoresIniciales={agregarClienteInicial}
       on:close={closeDialogs}
       on:seleccionarUbicacion={handleSeleccionarUbicacion}
+      on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
       on:clienteAgregado={handleClienteAgregado}
     />
   {/if}

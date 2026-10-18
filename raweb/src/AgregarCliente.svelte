@@ -22,6 +22,7 @@
     telefono: '',
     tiene_pedido: false,
     cantidad: '',
+    fecha: '',
     horario: '',
     nro_pao: '',
     observacion: '',
@@ -30,6 +31,7 @@
 
   // Estado de la interfaz
   let isLoading = false;
+  let georreferenciando = false;
   let errorMessage = '';
   let successMessage = '';
 
@@ -69,6 +71,7 @@
         telefono: formData.telefono.trim() || undefined,
         tiene_pedido: formData.tiene_pedido,
         cantidad: formData.cantidad ? parseFloat(formData.cantidad) : undefined,
+        fecha: formData.fecha || undefined,
         horario: formData.horario || undefined,
         nro_pao: formData.nro_pao ? parseInt(formData.nro_pao) : undefined,
         observacion: formData.observacion.trim() || undefined,
@@ -118,6 +121,59 @@
 
   function handleSeleccionarUbicacion() {
     dispatch('seleccionarUbicacion');
+  }
+
+  async function handleGeorreferenciar() {
+    const direccion = formData.direccion.trim();
+    if (!direccion) {
+      errorMessage = 'Ingresá una dirección para georreferenciar.';
+      return;
+    }
+
+    georreferenciando = true;
+    errorMessage = '';
+
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/buscar_direccion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direccion })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.latitud == null || data.longitud == null) {
+        errorMessage = data.error || 'No se encontró la dirección.';
+        return;
+      }
+
+      dispatch('ubicacionGeorreferenciada', {
+        lat: Number(data.latitud),
+        lon: Number(data.longitud)
+      });
+    } catch (error) {
+      console.error('Error al georreferenciar:', error);
+      errorMessage = 'No se pudo georreferenciar la dirección.';
+    } finally {
+      georreferenciando = false;
+    }
+  }
+
+  function fechaLocalIso(fecha) {
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${fecha.getFullYear()}-${mes}-${dia}`;
+  }
+
+  function handleTienePedido(event) {
+    if (!event.currentTarget.checked) {
+      formData.cantidad = '';
+      formData.fecha = '';
+      formData.nro_pao = '';
+      return;
+    }
+    const manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+    formData.cantidad = 1;
+    formData.fecha = fechaLocalIso(manana);
   }
 </script>
 
@@ -276,11 +332,28 @@
     resize: vertical;
   }
 
+  .pedido-opciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+
   .checkbox-group {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-top: 0.5rem;
+    margin-top: 0;
+  }
+
+  .field-cantidad {
+    width: 7.5rem;
+    max-width: 100%;
+  }
+
+  .field-pao {
+    width: 8rem;
+    max-width: 100%;
   }
 
   .checkbox-group input[type="checkbox"] {
@@ -328,7 +401,50 @@
     background: var(--ds-location-active);
   }
 
+  .direccion-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .direccion-row input {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    margin-bottom: 0;
+  }
+
+  .btn-georreferenciar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    white-space: nowrap;
+    background: var(--ds-location);
+    color: var(--ds-on-location);
+    border: none;
+    padding: 0.55rem 0.9rem;
+    border-radius: var(--ds-radius-small);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-georreferenciar:hover:not(:disabled) {
+    background: var(--ds-location-hover);
+  }
+
+  .btn-georreferenciar:active:not(:disabled) {
+    background: var(--ds-location-active);
+  }
+
+  .btn-georreferenciar:disabled {
+    cursor: not-allowed;
+  }
+
   .btn-seleccionar:focus,
+  .btn-georreferenciar:focus,
   .close-button:focus,
   .checkbox-group input[type="checkbox"]:focus {
     outline: 2px solid var(--ds-focus);
@@ -557,15 +673,26 @@
 
           <div class="form-group full-width">
             <label for="direccion">Dirección *</label>
-            <input
-              id="direccion"
-              type="text"
-              class="ds-field"
-              bind:value={formData.direccion}
-              placeholder="Dirección completa"
-              maxlength="50"
-              required
-            />
+            <div class="direccion-row">
+              <input
+                id="direccion"
+                type="text"
+                class="ds-field"
+                bind:value={formData.direccion}
+                placeholder="Dirección completa"
+                maxlength="50"
+                required
+              />
+              <button
+                type="button"
+                class="btn-georreferenciar ds-button ds-button--location"
+                on:click={handleGeorreferenciar}
+                disabled={georreferenciando}
+              >
+                <Icon name="pin" size={16} />
+                {georreferenciando ? 'Buscando...' : 'Georreferenciar'}
+              </button>
+            </div>
           </div>
 
           <div class="form-row">
@@ -614,6 +741,29 @@
         <!-- Información del Pedido -->
         <div class="form-section">
           <div class="section-title">Información del pedido</div>
+
+          <div class="pedido-opciones">
+            <div class="checkbox-group">
+              <input
+                id="tiene_pedido"
+                type="checkbox"
+                class="ds-choice"
+                bind:checked={formData.tiene_pedido}
+                on:change={handleTienePedido}
+              />
+              <label for="tiene_pedido">Tiene pedido activo</label>
+            </div>
+
+            <div class="checkbox-group">
+              <input
+                id="es_regalo"
+                type="checkbox"
+                class="ds-choice"
+                bind:checked={formData.es_regalo}
+              />
+              <label for="es_regalo">Es un regalo</label>
+            </div>
+          </div>
           
           <div class="form-row">
             <div class="form-group">
@@ -621,13 +771,24 @@
               <input
                 id="cantidad"
                 type="number"
-                class="ds-field"
+                class="ds-field field-cantidad"
                 step="0.5"
                 bind:value={formData.cantidad}
-                placeholder="0"
               />
             </div>
-            
+
+            <div class="form-group">
+              <label for="fecha">Fecha</label>
+              <input
+                id="fecha"
+                type="date"
+                class="ds-field"
+                bind:value={formData.fecha}
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group">
               <label for="horario">Horario Preferido</label>
               <input
@@ -637,40 +798,15 @@
                 bind:value={formData.horario}
               />
             </div>
-          </div>
 
-          <div class="form-row">
             <div class="form-group">
               <label for="nro_pao">Número PAO</label>
               <input
                 id="nro_pao"
                 type="number"
-                class="ds-field"
+                class="ds-field field-pao"
                 bind:value={formData.nro_pao}
-                placeholder="Número de PAO"
               />
-            </div>
-            
-            <div class="form-group">
-              <div class="checkbox-group">
-                <input
-                  id="tiene_pedido"
-                  type="checkbox"
-                  class="ds-choice"
-                  bind:checked={formData.tiene_pedido}
-                />
-                <label for="tiene_pedido">Tiene pedido activo</label>
-              </div>
-              
-              <div class="checkbox-group">
-                <input
-                  id="es_regalo"
-                  type="checkbox"
-                  class="ds-choice"
-                  bind:checked={formData.es_regalo}
-                />
-                <label for="es_regalo">Es un regalo</label>
-              </div>
             </div>
           </div>
 
