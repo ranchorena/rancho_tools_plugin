@@ -161,14 +161,14 @@
     }, 3500); // Un poco más que la duración del toast para asegurar que no parpadee
   }
 
+  let pedidosSourceVersion = 0;
+
   function refreshPedidosLayerMap() {
     if (pedidosLayer) {
       const source = pedidosLayer.getSource();
-      if (source && typeof source.clear === 'function') {
-        source.clear();
-        // Forzar recarga de la fuente WFS después del clear
+      if (source && typeof source.refresh === 'function') {
+        pedidosSourceVersion += 1;
         source.refresh();
-        console.log("Capa Pedidos WFS recargada y refrescada");
       }
     }
   }
@@ -375,7 +375,7 @@
     pedidosLayer = new VectorLayer({
       source: new VectorSource({
         url: function(extent) {
-          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857';
+          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857&_=' + pedidosSourceVersion;
         },
         format: new GeoJSON(),
         strategy: bboxStrategy
@@ -882,20 +882,34 @@
     }
   }
 
-  function addMarker(lon, lat) {
+  function medialunaIcon() {
+    return new Icon({
+      src: '/imagenes/medialuna.svg?v=2',
+      width: 16,
+      height: 16,
+      anchor: [0.5, 0.5]
+    });
+  }
+
+  function addMarker(lon, lat, marker) {
     if (!markerSource) return;
 
     // Limpiar marcadores anteriores
     markerSource.clear();
 
-    const marker = new Feature({
+    const feature = new Feature({
       geometry: new Point(fromLonLat([lon, lat]))
     });
-    markerSource.addFeature(marker);
+    if (marker === 'medialuna') {
+      feature.setStyle(new Style({
+        image: medialunaIcon()
+      }));
+    }
+    markerSource.addFeature(feature);
   }
 
   function handleZoomToLocation(event) {
-    const { longitude, latitude } = event.detail;
+    const { longitude, latitude, marker } = event.detail;
     if (map && longitude && latitude) {
       // Animar el zoom al cliente seleccionado
       map.getView().animate({
@@ -903,9 +917,8 @@
         zoom: 18, // Zoom cercano para ver el cliente
         duration: 1000 // Duración de la animación en ms
       });
-      
-      // Opcionalmente agregar un marcador temporal
-      addMarker(longitude, latitude);
+
+      addMarker(longitude, latitude, marker);
     }
   }
 
@@ -938,12 +951,7 @@
     const layer = new VectorLayer({
       source,
       style: new Style({
-        image: new Icon({
-          src: '/imagenes/medialuna.svg?v=2',
-          width: 16,
-          height: 16,
-          anchor: [0.5, 0.5]
-        })
+        image: medialunaIcon()
       })
     });
     map.addLayer(layer);
@@ -1202,11 +1210,16 @@
 
   {#if showBuscarClienteDialog}
     <BuscarCliente
+      coordenadas={coordenadasSeleccionadas}
+      seleccionandoUbicacion={modoSeleccionPunto}
       on:close={closeDialogs}
       on:showGlobalNotification={handleShowGlobalNotification}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
       on:buscarDireccionCliente={handleBuscarDireccionCliente}
       on:agregarCliente={openAgregarClienteFromSearch}
+      on:zoomToLocation={handleZoomToLocation}
+      on:seleccionarUbicacion={handleSeleccionarUbicacion}
+      on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
     />
   {/if}
 

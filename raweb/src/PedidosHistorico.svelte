@@ -274,15 +274,6 @@
     font-weight: 600;
   }
 
-  .filtros-fecha input {
-    font: inherit;
-    color: var(--ds-text);
-    background: var(--ds-surface);
-    border: 1px solid var(--ds-border);
-    border-radius: 6px;
-    padding: 0.4rem 0.5rem;
-  }
-
   .filtros-fecha button {
     font: inherit;
     font-weight: 600;
@@ -296,8 +287,7 @@
     align-self: flex-end;
   }
 
-  .filtros-fecha button:focus,
-  .filtros-fecha input:focus {
+  .filtros-fecha button:focus {
     outline: 2px solid var(--ds-focus);
     outline-offset: 1px;
   }
@@ -536,11 +526,11 @@
       <form class="filtros-fecha" on:submit|preventDefault={buscar}>
         <label>
           Desde
-          <input type="date" bind:value={fechaDesde} on:change={alCambiarDesde} />
+          <input class="ds-date" type="date" bind:value={fechaDesde} on:change={alCambiarDesde} />
         </label>
         <label>
           Hasta
-          <input type="date" bind:value={fechaHasta} />
+          <input class="ds-date" type="date" bind:value={fechaHasta} />
         </label>
         <button type="submit">Buscar</button>
       </form>

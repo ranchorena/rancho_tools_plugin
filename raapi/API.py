@@ -7,6 +7,7 @@ import datetime
 import json
 import re
 from tables import Cliente, Pedido, Precio, Tramo
+from config import schema
 
 class API: # Clase contenedora renombrada a API
     @staticmethod
@@ -47,6 +48,8 @@ class API: # Clase contenedora renombrada a API
                 Cliente.direccion,
                 Cliente.calle,
                 Cliente.altura,
+                Cliente.telefono,
+                Cliente.tiene_pedido,
                 func.ST_X(func.ST_Transform(Cliente.geometria, 4326)).label("longitud"),
                 func.ST_Y(func.ST_Transform(Cliente.geometria, 4326)).label("latitud")
             )
@@ -75,6 +78,8 @@ class API: # Clase contenedora renombrada a API
                 Cliente.direccion,
                 Cliente.calle,
                 Cliente.altura,
+                Cliente.telefono,
+                Cliente.tiene_pedido,
                 func.ST_X(func.ST_Transform(Cliente.geometria, 4326)).label("longitud"),
                 func.ST_Y(func.ST_Transform(Cliente.geometria, 4326)).label("latitud")
             )
@@ -122,6 +127,8 @@ class API: # Clase contenedora renombrada a API
                 Cliente.direccion,
                 Cliente.calle,
                 Cliente.altura,
+                Cliente.telefono,
+                Cliente.tiene_pedido,
                 func.ST_X(func.ST_Transform(Cliente.geometria, 4326)).label("longitud"),
                 func.ST_Y(func.ST_Transform(Cliente.geometria, 4326)).label("latitud")
             )
@@ -143,11 +150,15 @@ class API: # Clase contenedora renombrada a API
         # Mapeo de campos del DTO a campos de la base de datos
         mapa_campos = {
             "docenas": "cantidad",
-            "nro_pao": "nro_pao", 
+            "nro_pao": "nro_pao",
             "tiene_pedido": "tiene_pedido",
             "es_regalo": "es_regalo",
             "observaciones": "observacion",
-            "horario": "horario"
+            "horario": "horario",
+            "direccion": "direccion",
+            "calle": "calle",
+            "altura": "altura",
+            "telefono": "telefono",
         }
 
         # Filtrar solo los campos permitidos
@@ -177,6 +188,22 @@ class API: # Clase contenedora renombrada a API
                 valores_actualizacion[db_column_name] = float(value_dto) if value_dto is not None else None
             elif key_dto == "nro_pao":
                 valores_actualizacion[db_column_name] = int(value_dto) if value_dto is not None else None
+            elif key_dto == "direccion":
+                texto = str(value_dto).strip() if value_dto is not None else ""
+                if not texto:
+                    return "error", "La dirección del cliente es requerida."
+                valores_actualizacion[db_column_name] = texto
+            elif key_dto == "altura":
+                if value_dto in (None, ""):
+                    valores_actualizacion[db_column_name] = None
+                else:
+                    try:
+                        valores_actualizacion[db_column_name] = int(value_dto)
+                    except (TypeError, ValueError):
+                        return "error", "La altura no es válida."
+            elif key_dto in ("calle", "telefono"):
+                texto = str(value_dto).strip() if value_dto is not None else ""
+                valores_actualizacion[db_column_name] = texto or None
             else:
                 valores_actualizacion[db_column_name] = value_dto
 
@@ -192,32 +219,165 @@ class API: # Clase contenedora renombrada a API
                 return "error", "No hay un precio vigente para registrar el pedido."
 
             cliente = session.query(Cliente).filter(Cliente.id == cliente_id).one()
+            direccion_pedido = datos_actualizados.get("direccion_pedido")
+            if isinstance(direccion_pedido, str):
+                direccion_pedido = direccion_pedido.strip() or None
+            else:
+                direccion_pedido = None
+            calle_pedido, altura_pedido = (None, None)
+            if direccion_pedido:
+                calle_pedido, altura_pedido = API.parse_direccion(direccion_pedido)
+            punto = API._punto_pedido(datos_actualizados)
+            if punto is False:
+                return "error", "La ubicación del pedido no es válida."
             datos_pedido = {
                 "fecha": datetime.datetime.combine(fecha_pedido, datetime.time.min),
                 "id_cliente": cliente_id,
                 "nombre": cliente.nombre,
                 "turno": 1,
-                "cantidad": valores_actualizacion.get("cantidad", cliente.cantidad),
-                "direccion": cliente.direccion,
-                "calle": cliente.calle,
-                "altura": cliente.altura,
-                "geometry": cliente.geometria,
+                "cantidad": valores_actualizacion["cantidad"] if "cantidad" in valores_actualizacion and valores_actualizacion["cantidad"] is not None else cliente.cantidad,
+                "direccion": direccion_pedido or cliente.direccion,
+                "calle": calle_pedido or cliente.calle,
+                "altura": altura_pedido if altura_pedido is not None else cliente.altura,
                 "observaciones": valores_actualizacion.get("observacion", cliente.observacion),
                 "precio_unitario": precio_unitario,
                 "nro_pao": valores_actualizacion.get("nro_pao", cliente.nro_pao),
             }
+            if punto is None:
+                datos_pedido["geometry"] = cliente.geometria
+            else:
+                datos_pedido["lon"] = float(datos_actualizados["longitud"])
+                datos_pedido["lat"] = float(datos_actualizados["latitud"])
 
         # Ejecutar la actualización usando ORM
         try:
             result = session.query(Cliente).filter(Cliente.id == cliente_id).update(valores_actualizacion)
             if result > 0:
                 if datos_pedido is not None:
-                    session.add(Pedido(**datos_pedido))
+                    mensaje = API._guardar_pedido(session, datos_pedido)
+                    return "success", mensaje
                 return "success", "Cliente actualizado correctamente."
             else:
                 return "error", "No se pudo actualizar el cliente."
         except Exception as e:
             raise e  # Dejar que el contexto superior maneje la excepción
+
+    @staticmethod
+    def _guardar_pedido(session, datos_pedido):
+        """Actualiza el pedido del cliente para esa fecha. Si no existe, lo inserta."""
+        inicio = datos_pedido["fecha"]
+        fin = inicio + datetime.timedelta(days=1)
+        existente = (
+            session.query(Pedido.id_pedido)
+            .filter(
+                Pedido.id_cliente == datos_pedido["id_cliente"],
+                Pedido.fecha >= inicio,
+                Pedido.fecha < fin,
+            )
+            .order_by(Pedido.id_pedido.desc())
+            .first()
+        )
+        if existente is None:
+            if "lon" in datos_pedido:
+                session.execute(text(f"""
+                    INSERT INTO {schema}.pedido
+                    (fecha, id_cliente, nombre, turno, cantidad, direccion, calle, altura, geometry, observaciones, precio_unitario, nro_pao)
+                    VALUES
+                    (:fecha, :id_cliente, :nombre, :turno, :cantidad, :direccion, :calle, :altura,
+                     ST_Transform(ST_SetSRID(ST_MakePoint(:lon, :lat), 4326), 5347),
+                     :observaciones, :precio_unitario, :nro_pao)
+                """), datos_pedido)
+            else:
+                session.add(Pedido(**datos_pedido))
+            return "Pedido registrado correctamente."
+
+        parametros = {
+            "id_pedido": existente[0],
+            "fecha": datos_pedido["fecha"],
+            "id_cliente": datos_pedido["id_cliente"],
+            "nombre": datos_pedido["nombre"],
+            "turno": datos_pedido["turno"],
+            "cantidad": datos_pedido["cantidad"],
+            "direccion": datos_pedido["direccion"],
+            "calle": datos_pedido["calle"],
+            "altura": datos_pedido["altura"],
+            "observaciones": datos_pedido["observaciones"],
+            "nro_pao": datos_pedido["nro_pao"],
+        }
+        if "lon" in datos_pedido:
+            parametros["lon"] = datos_pedido["lon"]
+            parametros["lat"] = datos_pedido["lat"]
+            geometry_sql = "ST_Transform(ST_SetSRID(ST_MakePoint(:lon, :lat), 4326), 5347)"
+        else:
+            geometry_sql = f"(SELECT geometria FROM {schema}.clientes WHERE id = :id_cliente)"
+        session.execute(text(f"""
+            UPDATE {schema}.pedido SET
+                fecha = :fecha,
+                nombre = :nombre,
+                turno = :turno,
+                cantidad = :cantidad,
+                direccion = :direccion,
+                calle = :calle,
+                altura = :altura,
+                observaciones = :observaciones,
+                nro_pao = :nro_pao,
+                geometry = {geometry_sql}
+            WHERE id_pedido = :id_pedido
+        """), parametros)
+        return "Pedido actualizado correctamente."
+
+    @staticmethod
+    def getPedidoDeFecha(session, cliente_id, fecha):
+        """Devuelve el pedido más reciente del cliente para ese día, o None."""
+        existe = session.query(Cliente.id).filter(Cliente.id == cliente_id).first()
+        if existe is None:
+            return "not_found", None
+
+        inicio = datetime.datetime.combine(fecha, datetime.time.min)
+        fin = inicio + datetime.timedelta(days=1)
+        row = (
+            session.query(
+                Pedido.id_pedido.label("id"),
+                Pedido.fecha,
+                Pedido.cantidad,
+                Pedido.direccion,
+                Pedido.calle,
+                Pedido.altura,
+                Pedido.nro_pao,
+                Pedido.observaciones.label("observacion"),
+                func.ST_X(func.ST_Transform(Pedido.geometry, 4326)).label("longitud"),
+                func.ST_Y(func.ST_Transform(Pedido.geometry, 4326)).label("latitud"),
+            )
+            .filter(
+                Pedido.id_cliente == cliente_id,
+                Pedido.fecha >= inicio,
+                Pedido.fecha < fin,
+            )
+            .order_by(Pedido.id_pedido.desc())
+            .first()
+        )
+        if row is None:
+            return "empty", None
+        pedido = API.to_dict(row)
+        if isinstance(pedido.get("fecha"), str):
+            pedido["fecha"] = pedido["fecha"][:10]
+        return "success", pedido
+
+    @staticmethod
+    def _punto_pedido(datos_actualizados):
+        """Geometría del pedido en EPSG:5347. None conserva la del cliente. False si no es válida."""
+        if "latitud" not in datos_actualizados and "longitud" not in datos_actualizados:
+            return None
+        latitud = datos_actualizados.get("latitud")
+        longitud = datos_actualizados.get("longitud")
+        if latitud in (None, "") and longitud in (None, ""):
+            return None
+        try:
+            latitud = float(latitud)
+            longitud = float(longitud)
+        except (TypeError, ValueError):
+            return False
+        return func.ST_Transform(func.ST_SetSRID(func.ST_MakePoint(longitud, latitud), 4326), 5347)
 
     @staticmethod
     def _fecha_pedido(datos_actualizados):
@@ -463,15 +623,25 @@ class API: # Clase contenedora renombrada a API
     @staticmethod
     def eliminarPedido(session, id_pedido):
         """
-        Elimina el pedido y deja al cliente sin pedido activo.
+        Elimina el pedido.
+        Si el cliente conserva otro pedido de hoy o posterior, tiene_pedido sigue en 1.
         """
         pedido = session.query(Pedido).filter(Pedido.id_pedido == id_pedido).one_or_none()
         if pedido is None:
             return "not_found", "Pedido no encontrado."
 
         id_cliente = pedido.id_cliente
-        session.delete(pedido)
+        hoy = datetime.datetime.combine(datetime.date.today(), datetime.time.min)
+        conserva_pedido = False
         if id_cliente is not None:
+            conserva_pedido = session.query(Pedido.id_pedido).filter(
+                Pedido.id_cliente == id_cliente,
+                Pedido.id_pedido != id_pedido,
+                Pedido.fecha >= hoy,
+            ).first() is not None
+
+        session.delete(pedido)
+        if id_cliente is not None and not conserva_pedido:
             session.query(Cliente).filter(Cliente.id == id_cliente).update(
                 {
                     "tiene_pedido": 0,

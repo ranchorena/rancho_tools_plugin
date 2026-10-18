@@ -24,6 +24,7 @@ ROLES_POR_ENDPOINT = {
     "buscar_clientes_api": "clientes:read",
     "get_clientes_con_pedidos": "clientes:read",
     "get_pedidos_historico": "clientes:read",
+    "get_pedido_de_fecha": "clientes:read",
     "actualizar_cliente_api": "pedidos:write",
     "eliminar_pedido_api": "pedidos:write",
     "iniciar_pedidos_api": "pedidos:write",

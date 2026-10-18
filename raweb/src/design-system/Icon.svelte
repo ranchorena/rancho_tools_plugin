@@ -22,6 +22,9 @@
 		<path d="M5.5 19.2a6.5 6.5 0 0 1 13 0" />
 	{:else if name === 'plus'}
 		<path d="M12 5.5v13M5.5 12h13" />
+	{:else if name === 'pencil'}
+		<path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
+		<path d="M13.2 6.8l3 3" />
 	{:else if name === 'search'}
 		<circle cx="11" cy="11" r="6" />
 		<path d="M16 16.5 20 20.5" />
@@ -29,6 +32,9 @@
 		<path d="M3.5 8 12 4l8.5 4L12 12 3.5 8z" />
 		<path d="M3.5 8v8L12 20l8.5-4V8" />
 		<path d="M12 12v8" />
+	{:else if name === 'calendar'}
+		<rect x="4" y="5.5" width="16" height="14.5" rx="2" />
+		<path d="M8 3.8v3.4M16 3.8v3.4M4 9.5h16" />
 	{:else if name === 'history'}
 		<path d="M4.5 12a7.5 7.5 0 1 0 2.1-5.2" />
 		<path d="M4.2 5.2v4.2h4.2" />

@@ -295,7 +295,7 @@
     font-size: 0.9rem;
   }
 
-  .form-group input,
+  .form-group input:not(.ds-date),
   .form-group textarea {
     padding: 0.75rem;
     border: 2px solid var(--ds-border);
@@ -782,7 +782,7 @@
               <input
                 id="fecha"
                 type="date"
-                class="ds-field"
+                class="ds-date"
                 bind:value={formData.fecha}
               />
             </div>

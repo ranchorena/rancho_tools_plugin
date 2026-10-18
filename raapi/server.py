@@ -340,7 +340,25 @@ def actualizar_cliente_api(cliente_id):
             fecha:
               type: string
               format: date
-              description: Fecha del pedido. Si tiene_pedido es verdadero y no se envía, se usa el día siguiente.
+              description: Fecha del pedido. Si tiene_pedido es verdadero y no se envía, se usa el día siguiente. Si el cliente ya tiene un pedido ese día, se actualiza.
+            direccion:
+              type: string
+              description: Dirección del cliente. No crea un pedido.
+            calle:
+              type: string
+            altura:
+              type: integer
+            telefono:
+              type: string
+            direccion_pedido:
+              type: string
+              description: Dirección que se guarda en el pedido. No modifica la dirección del cliente.
+            latitud:
+              type: number
+              description: Latitud del pedido. Si no se envía, el pedido usa la geometría del cliente.
+            longitud:
+              type: number
+              description: Longitud del pedido. Si no se envía, el pedido usa la geometría del cliente.
     responses:
       200:
         description: Cliente actualizado con éxito
@@ -667,6 +685,49 @@ def get_clientes_con_pedidos():
       # finally:
       #     session.close()
 
+@app.route("/api/clientes/<int:cliente_id>/pedido", methods=["GET"])
+def get_pedido_de_fecha(cliente_id):
+    """
+    Devuelve el pedido del cliente para una fecha.
+    ---
+    tags:
+      - Pedidos
+    parameters:
+      - name: cliente_id
+        in: path
+        type: integer
+        required: true
+      - name: fecha
+        in: query
+        type: string
+        format: date
+        required: true
+    responses:
+      200:
+        description: Pedido de esa fecha, o pedido null si no hay
+      400:
+        description: Fecha inválida
+      404:
+        description: Cliente no encontrado
+    """
+    valor = request.args.get("fecha")
+    if valor is None or valor.strip() == "":
+        return jsonify({"error": "La fecha del pedido es requerida."}), 400
+    try:
+        fecha = datetime.strptime(valor.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"error": "La fecha del pedido no es válida."}), 400
+
+    with Session.begin() as session:
+        try:
+            resultado, pedido = API.getPedidoDeFecha(session, cliente_id, fecha)
+            if resultado == "not_found":
+                return jsonify({"error": f"Cliente con ID {cliente_id} no encontrado."}), 404
+            return jsonify({"pedido": pedido}), 200
+        except Exception as e:
+            app.logger.error(f"Error en /api/clientes/{cliente_id}/pedido: {e}")
+            return jsonify({"error": "Error interno del servidor al obtener el pedido."}), 500
+
 @app.route("/api/pedidos/historico", methods=["GET"])
 def get_pedidos_historico():
     """
@@ -722,7 +783,7 @@ def get_pedidos_historico():
 @app.route("/api/pedidos/eliminar", methods=["POST"])
 def eliminar_pedido_api():
     """
-    Elimina un pedido y deja al cliente sin pedido activo.
+    Elimina un pedido. Si el cliente conserva otro pedido de hoy o posterior, tiene_pedido sigue en 1.
     ---
     tags:
       - Pedidos
