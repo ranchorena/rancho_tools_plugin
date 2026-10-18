@@ -138,7 +138,7 @@
     errorMessage = '';
 
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/buscar_direccion`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/api/direcciones/buscar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direccion })

@@ -23,6 +23,7 @@
   // Permitir submit con Enter en el input
   function handleKeydown(event) {
     if (event.key === 'Enter') {
+      event.preventDefault();
       handleBuscar();
     }
     if (event.key === 'Escape') {

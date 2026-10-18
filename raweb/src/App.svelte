@@ -868,12 +868,10 @@
 
   async function handleBuscarDireccion(event) {
     const direccion = event.detail.direccion;
-    // showBuscarDireccionDialog = false; // Ya no se cierra aquí, se cierra con el botón X o Cancelar del diálogo
-    closeDialogs(); // Cerrar el diálogo después de la búsqueda
     console.log("Buscando dirección:", direccion);
 
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/buscar_direccion`, { // Endpoint sin /api al inicio
+      const response = await authorizedFetch(`${API_BASE_URL}/api/direcciones/buscar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -891,12 +889,12 @@
 
       if (data.latitud && data.longitud) {
         addMarker(data.longitud, data.latitud);
-        // Centrar el mapa en el nuevo marcador
         map.getView().animate({
             center: fromLonLat([data.longitud, data.latitud]),
-            zoom: 17, // Zoom más cercano al marcador
-            duration: 1000 // Duración de la animación en ms
+            zoom: 17,
+            duration: 1000
         });
+        await closeDialogs();
       } else {
         alert("No se recibieron coordenadas válidas del backend.");
       }
@@ -1185,7 +1183,7 @@
     console.log("Buscando dirección del cliente:", direccion);
 
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/buscar_direccion`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/api/direcciones/buscar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

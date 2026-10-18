@@ -53,7 +53,7 @@ def root():
 def health():
     return jsonify({"status": "ok"})
 
-@app.route("/buscar_direccion", methods=["POST"])
+@app.route("/api/direcciones/buscar", methods=["POST"])
 def buscar_direccion():
     """
     Busca una dirección (calle y altura) y devuelve el punto medio del tramo correspondiente.
@@ -112,7 +112,7 @@ def buscar_direccion():
                 return jsonify({"error": "Error inesperado en la búsqueda."}), 500
 
         except Exception as e:
-            app.logger.error(f"Error en /buscar_direccion: {e}")
+            app.logger.error(f"Error en /api/direcciones/buscar: {e}")
             return jsonify({"error": "Error interno del servidor al procesar la búsqueda."}), 500
 
 

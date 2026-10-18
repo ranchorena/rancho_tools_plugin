@@ -36,7 +36,7 @@ npm run dev
 - Ambas URLs deben ser accesibles desde el navegador. El argumento de build predeterminado de la API en Compose, `http://backend:5000`, usa un hostname interno de Docker; configurar una `API_URL` accesible desde el navegador. GeoServer se llama directo en `http://localhost:8087/geoserver`; hay que recompilar raweb si cambia esa URL.
 - `App.svelte` carga `GeneralBelgrano:Clientes` y `GeneralBelgrano:Pedidos` mediante WFS de GeoServer en EPSG:3857. Las coordenadas REST están en EPSG:4326; las conversiones de OpenLayers usan `[longitud, latitud]`. `API.agregarCliente` transforma la geometría insertada a EPSG:5347; preservar estas diferencias entre sistemas de referencia de coordenadas.
 - Las claves del DTO de actualización difieren de las de alta y lectura: `docenas` se traduce al campo `cantidad` de la base de datos, y `observaciones` a `observacion` en `API.actualizarCliente`. No unificar estos nombres entre endpoints sin actualizar sus consumidores.
-- `GET /api/clientes/pedidos` devuelve un array cuando hay resultados, pero `{message: ...}` con HTTP 200 cuando está vacío. `/buscar_direccion` no lleva el prefijo `/api`. Preservar estos comportamientos al ajustar las llamadas.
+- `GET /api/clientes/pedidos` devuelve un array cuando hay resultados, pero `{message: ...}` con HTTP 200 cuando está vacío. La geocodificación es `POST /api/direcciones/buscar` con `{direccion}`. Preservar estos comportamientos al ajustar las llamadas.
 
 ## Infraestructura local
 

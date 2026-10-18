@@ -94,6 +94,26 @@ def _cliente(token: str, client_id: str) -> dict:
     return coincidencias[0]
 
 
+def _permitir_proxy(token: str, client_uuid: str) -> None:
+    _, cliente = _request("GET", f"{BASE}/admin/realms/{REALM}/clients/{client_uuid}", token)
+    redirects = list(cliente.get("redirectUris") or [])
+    origins = list(cliente.get("webOrigins") or [])
+    for uri in ("http://localhost:8088/", "http://localhost:8088/silent-check-sso.html"):
+        if uri not in redirects:
+            redirects.append(uri)
+    if "http://localhost:8088" not in origins:
+        origins.append("http://localhost:8088")
+    atributos = dict(cliente.get("attributes") or {})
+    logout = [parte for parte in (atributos.get("post.logout.redirect.uris") or "").split("##") if parte]
+    if "http://localhost:8088/" not in logout:
+        logout.append("http://localhost:8088/")
+    atributos["post.logout.redirect.uris"] = "##".join(logout)
+    cliente["redirectUris"] = redirects
+    cliente["webOrigins"] = origins
+    cliente["attributes"] = atributos
+    _request("PUT", f"{BASE}/admin/realms/{REALM}/clients/{client_uuid}", token, cliente)
+
+
 def _fijar_secret(token: str, client_uuid: str) -> None:
     _, cliente = _request("GET", f"{BASE}/admin/realms/{REALM}/clients/{client_uuid}", token)
     cliente["secret"] = CLIENT_SECRET
@@ -164,6 +184,8 @@ def _asignar_roles(token: str, user_id: str, raapi_uuid: str) -> None:
 
 def main() -> None:
     token = _esperar_realm(_admin_token)
+    raweb = _cliente(token, "raweb")
+    _permitir_proxy(token, raweb["id"])
     ra_mcp = _cliente(token, "ra-mcp")
     raapi = _cliente(token, "raapi")
     _fijar_secret(token, ra_mcp["id"])
