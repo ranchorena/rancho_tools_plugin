@@ -43,9 +43,12 @@ body#keycloak-bg::before {
   position: fixed;
   z-index: 0;
   inset: 0;
-  background:
+  background-image:
     linear-gradient(100deg, var(--ds-background) 0%, var(--ds-background) 34%, rgb(17 24 39 / 88%) 52%, rgb(17 24 39 / 42%) 100%),
-    url("../img/black-background.jpg") right center / cover no-repeat;
+    var(--rancho-photo, none);
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, right center;
+  background-size: auto, cover;
   content: "";
   pointer-events: none;
 }
@@ -57,31 +60,46 @@ body#keycloak-bg::before {
   min-height: 100dvh;
   padding: 0;
   background: transparent;
+  --pf-v5-c-login__container--MaxWidth: none;
+  --pf-v5-c-login__container--xl--MaxWidth: none;
+  --pf-v5-c-login__container--GridTemplateColumns: minmax(0, 1fr);
+  --pf-v5-c-login__container--xl--GridTemplateColumns: minmax(0, 1fr);
+  --pf-v5-c-login__header--MarginBottom: 0;
+  --pf-v5-c-login__header--xl--MarginTop: 0;
+  --pf-v5-c-login__header--xl--MarginBottom: 0;
+  --pf-v5-c-login__header--c-brand--MarginBottom: 0;
 }
 
-.pf-v5-c-login__container {
+.pf-v5-c-login .pf-v5-c-login__container {
   display: grid;
   grid-template-areas:
     "header"
     "main"
     "footer";
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) !important;
   grid-template-rows: 3.25rem minmax(0, 1fr) 3.25rem;
+  width: 100% !important;
+  max-width: none !important;
   min-height: 100dvh;
   padding: 0;
 }
 
+.pf-v5-c-login .pf-v5-c-login__header,
 #kc-header {
   grid-area: header;
   display: flex;
   align-items: center;
+  width: 100%;
+  max-width: none;
   height: 3.25rem;
+  margin: 0 !important;
   padding: 0 1rem;
   border-bottom: 1px solid var(--ds-divider);
   background: var(--ds-background);
 }
 
 #kc-header-wrapper {
+  margin: 0;
   color: var(--ds-text);
   font-size: 1rem;
   font-weight: 700;
@@ -357,9 +375,11 @@ a:hover {
 
 @media (max-width: 640px) {
   body#keycloak-bg::before {
-    background:
+    background-image:
       linear-gradient(180deg, var(--ds-background) 0%, rgb(17 24 39 / 82%) 100%),
-      url("../img/black-background.jpg") center / cover no-repeat;
+      var(--rancho-photo, none);
+    background-position: center, center;
+    background-size: auto, cover;
   }
 
   .pf-v5-c-login__main {

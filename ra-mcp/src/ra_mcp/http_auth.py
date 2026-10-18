@@ -62,7 +62,12 @@ def construir_proxy() -> OAuthProxy:
         client_storage=almacenamiento,
         forward_pkce=True,
         forward_resource=False,
-        allowed_client_redirect_uris=["http://localhost:*", "http://127.0.0.1:*", "cursor://*"],
+        allowed_client_redirect_uris=[
+            "http://localhost:*",
+            "http://127.0.0.1:*",
+            "cursor://anysphere.cursor-mcp/*",
+            "https://www.cursor.com/agents/mcp/oauth/callback",
+        ],
     )
 
 
