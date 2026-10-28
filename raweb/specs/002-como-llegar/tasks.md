@@ -15,6 +15,9 @@ Estado: aprobadas junto con la spec. T1–T4 completas; T5 parcial (falta el nav
 - [x] **T4. Integración en el mapa.** RF-1, RF-6, RF-7, RF-10, RF-11, RF-14
 - Hecho cuando: el recorrido se dibuja en rojo, el click de selección no abre tooltips y Limpiar lo borra.
 - Resultado: implementado y compilado; comprobación visual pendiente en T5.
+- [x] **T6. Pedido más cercano por recorrido.** RF-17, RF-18, RF-19
+- Hecho cuando: `/api/pedidos/cercano` elige el pedido de menor recorrido y devuelve la ruta, y el mapa la dibuja.
+- Resultado 2026-10-27: `pgr_withPoints` de uno a muchos sobre los 39 pedidos activos, en 0,19 s. Desde 10 posiciones coincidió con calcular la ruta a cada pedido en los 8 casos con recorrido; en 2 de ellos el elegido no es el más cercano en línea recta. Los otros 2 están en partes desconectadas del callejero y dan 404. Build y tests 45/45; desplegado en `raweb-qa`/`raapi-qa`. Falta el navegador (T5).
 - [ ] **T5. Verificación.** Criterios de finalización
 - Hecho cuando: build, tests y flujo en navegador (escritorio y 360 px) verificados o requisitos faltantes informados.
 - Bloqueo 2026-10-27: el navegador de Cursor queda en «Comprobando sesión…» porque el check-sso de Keycloak no vuelve para `localhost:8080` ni `localhost:52948`. Chrome DevTools MCP está ocupado por otra instancia. El puerto 5000 lo usa `raapi-qa`; no se tocó. Falta la prueba en navegador con sesión iniciada.

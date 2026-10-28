@@ -37,6 +37,10 @@ Quien reparte necesita saber por qué calles ir desde donde está, o desde un pu
 - RF-14: CUANDO el usuario pulsa «Limpiar» en el mapa, EL SISTEMA borra el recorrido y sus marcas.
 - RF-15: SI la ubicación se desactiva con el diálogo abierto y el origen era «Mi ubicación», ENTONCES EL SISTEMA vacía el origen.
 
+- RF-17: CUANDO el usuario pulsa «Marcar el pedido más cercano» con la posición del móvil activa, EL SISTEMA elige el pedido activo con el recorrido más corto en metros por las calles respetando el sentido, no el más cercano en línea recta.
+- RF-18: CUANDO encuentra ese pedido, EL SISTEMA lo resalta como hasta ahora, dibuja en rojo el recorrido desde la posición actual, encuadra el recorrido y muestra la distancia.
+- RF-19: SI ningún pedido activo es alcanzable por el callejero o la posición está a más de 300 m de la red, ENTONCES EL SISTEMA avisa y no marca ningún pedido.
+
 ## Requisitos no funcionales
 - RNF-1: El diálogo usa los componentes y tokens del design system de raweb (cabecera, campos, botones, foco, temas claro y oscuro).
 - RNF-2: El diálogo entra en un ancho de 360 px sin desplazamiento horizontal.
@@ -58,4 +62,4 @@ Quien reparte necesita saber por qué calles ir desde donde está, o desde un pu
 - Flujo verificado en navegador en escritorio y en 360 px, o requisitos faltantes informados.
 
 ## Dudas abiertas
-- Ninguna. Costo en metros decidido por el usuario. Enmienda 2026-10-27 a pedido del usuario («la línea debería empezar en el punto de origen»): conexión al punto más cercano del tramo en lugar del cruce (RF-13 y RF-16).
+- Ninguna. Enmienda 2026-10-27 a pedido del usuario: el pedido más cercano se mide por recorrido y marca la ruta (RF-17 a RF-19). Costo en metros decidido por el usuario. Enmienda 2026-10-27 a pedido del usuario («la línea debería empezar en el punto de origen»): conexión al punto más cercano del tramo en lugar del cruce (RF-13 y RF-16).

@@ -903,10 +903,7 @@
     ];
   }
 
-  async function handleMostrarRuta(event) {
-    const { ruta, origen, destino } = event.detail;
-    if (!rutaSource || !map) return;
-    rutaPuntos = { origen, destino };
+  function dibujarRuta(ruta, origen, destino) {
     rutaSource.clear();
     const [linea] = new GeoJSON().readFeatures(
       { type: 'Feature', geometry: ruta.geometria, properties: { tipo: 'ruta' } },
@@ -917,9 +914,25 @@
       new Feature({ geometry: new Point(fromLonLat([origen.lon, origen.lat])), tipo: 'origen' }),
       new Feature({ geometry: new Point(fromLonLat([destino.lon, destino.lat])), tipo: 'destino' })
     ]);
+  }
+
+  function encuadrarRuta(callback) {
+    map.getView().fit(rutaSource.getExtent(), {
+      padding: [64, 64, 64, 64],
+      maxZoom: 18,
+      duration: 600,
+      callback
+    });
+  }
+
+  async function handleMostrarRuta(event) {
+    const { ruta, origen, destino } = event.detail;
+    if (!rutaSource || !map) return;
+    rutaPuntos = { origen, destino };
+    dibujarRuta(ruta, origen, destino);
     mostrarAviso(`Recorrido: ${formatDistance(ruta.distancia_m)}`, 'success');
     await closeDialogs();
-    map.getView().fit(rutaSource.getExtent(), { padding: [64, 64, 64, 64], maxZoom: 18, duration: 600 });
+    encuadrarRuta();
   }
 
   function handleClienteAgregado(event) {
@@ -1105,7 +1118,7 @@
     tooltipPosition = { x, y };
   }
 
-  function seleccionarPedidoEnMapa(pedido) {
+  function seleccionarPedidoEnMapa(pedido, ruta = null, origen = null) {
     const lon = Number(pedido?.longitud);
     const lat = Number(pedido?.latitud);
     if (!map || !Number.isFinite(lon) || !Number.isFinite(lat)) return;
@@ -1129,6 +1142,11 @@
     showFeatureTooltip = true;
     const mostrar = () => posicionarTooltipEnMapa(coordinate);
     mostrar();
+    if (ruta && origen && rutaSource) {
+      dibujarRuta(ruta, origen, { lat, lon });
+      encuadrarRuta(mostrar);
+      return;
+    }
     map.getView().animate({
       center: coordinate,
       zoom: 18,
@@ -1141,15 +1159,18 @@
       mostrarAviso('Activá la posición del móvil para buscar el pedido más cercano.', 'warning');
       return;
     }
+    const origen = { lat: ubicacionActual.lat, lon: ubicacionActual.lon };
     try {
       const params = new URLSearchParams({
-        latitud: String(ubicacionActual.lat),
-        longitud: String(ubicacionActual.lon)
+        latitud: String(origen.lat),
+        longitud: String(origen.lon)
       });
       const response = await authorizedFetch(`${API_BASE_URL}/api/pedidos/cercano?${params}`);
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        mostrarAviso(data.error || 'No se pudo buscar el pedido más cercano.', 'error');
+        quitarPedidoCercano();
+        if (response.status === 404 && rutaSource) rutaSource.clear();
+        mostrarAviso(data.error || 'No se pudo buscar el pedido más cercano.', response.status === 404 ? 'warning' : 'error');
         return;
       }
       if (!data.pedido) {
@@ -1157,7 +1178,8 @@
         mostrarAviso('No hay pedidos activos para marcar.', 'warning');
         return;
       }
-      seleccionarPedidoEnMapa(data.pedido);
+      seleccionarPedidoEnMapa(data.pedido, data.ruta, origen);
+      if (data.ruta) mostrarAviso(`Pedido más cercano: ${formatDistance(data.ruta.distancia_m)} de recorrido`, 'success');
     } catch (error) {
       console.error('Error al buscar el pedido más cercano:', error);
       mostrarAviso('No se pudo buscar el pedido más cercano.', 'error');

@@ -574,11 +574,27 @@ class API: # Clase contenedora renombrada a API
     @staticmethod
     def getPedidoCercano(session, latitud, longitud):
         """
-        Devuelve el cliente con pedido activo más cercano al punto, en metros.
-        El punto llega en EPSG:4326 y se compara en EPSG:5347.
+        Devuelve (resultado, datos) con el cliente con pedido activo de menor recorrido
+        por el callejero desde el punto EPSG:4326, respetando el sentido de los tramos.
+        resultado: 'success' con {pedido, ruta}; 'empty' sin pedidos activos;
+        'out_of_network' o 'not_found' con {error}.
         """
-        punto = func.ST_Transform(func.ST_SetSRID(func.ST_MakePoint(longitud, latitud), 4326), 5347)
-        distancia = func.ST_Distance(Cliente.geometria, punto).label("distancia")
+        hay_pedidos = session.query(Cliente.id).filter(
+            and_(Cliente.tiene_pedido == 1, Cliente.geometria.isnot(None))
+        ).first()
+        if hay_pedidos is None:
+            return "empty", {"pedido": None}
+
+        origen = {"latitud": latitud, "longitud": longitud}
+        tramo_origen = API._tramo_cercano(session, origen)
+        if tramo_origen is None:
+            return "out_of_network", {
+                "error": f"La posición está a más de {API.DISTANCIA_MAXIMA_RED} m del callejero."
+            }
+        id_cliente = API._cliente_mas_cercano_por_ruta(session, tramo_origen)
+        if id_cliente is None:
+            return "not_found", {"error": "No hay recorrido posible hasta ningún pedido activo."}
+
         row = (
             session.query(
                 Cliente.id,
@@ -592,19 +608,18 @@ class API: # Clase contenedora renombrada a API
                 Cliente.observacion,
                 func.ST_X(func.ST_Transform(Cliente.geometria, 4326)).label("longitud"),
                 func.ST_Y(func.ST_Transform(Cliente.geometria, 4326)).label("latitud"),
-                distancia,
             )
-            .filter(and_(Cliente.tiene_pedido == 1, Cliente.geometria.isnot(None)))
-            .order_by(distancia)
-            .limit(1)
+            .filter(Cliente.id == id_cliente)
             .first()
         )
-        if row is None:
-            return None
+        resultado, ruta = API.calcularRuta(
+            session, origen, {"latitud": row.latitud, "longitud": row.longitud}
+        )
+        if resultado != "success":
+            return resultado, ruta
 
         pedido = API.to_dict(row)
-        if pedido.get("distancia") is not None:
-            pedido["distancia"] = int(round(pedido["distancia"]))
+        pedido["distancia"] = ruta["distancia_m"]
         hoy = datetime.datetime.combine(datetime.date.today(), datetime.time.min)
         pedido_fecha = (
             session.query(Pedido.id_pedido, Pedido.fecha)
@@ -627,9 +642,71 @@ class API: # Clase contenedora renombrada a API
             pedido["id_pedido"] = None
             pedido["fecha"] = None
         pedido["observaciones"] = pedido.pop("observacion", None)
-        return pedido
+        return "success", {"pedido": pedido, "ruta": ruta}
 
     DISTANCIA_MAXIMA_RED = 300
+
+    @staticmethod
+    def _aristas_sql():
+        # pgRouting descarta las aristas con costo negativo: así se respeta el sentido.
+        return f"""
+            SELECT id, source, target,
+                   CASE WHEN sentido = 1 THEN -1 ELSE ST_Length(the_geom) END AS cost,
+                   CASE WHEN sentido = 0 THEN -1 ELSE ST_Length(the_geom) END AS reverse_cost
+            FROM {schema}.callejero
+            WHERE source IS NOT NULL AND target IS NOT NULL
+        """
+
+    @staticmethod
+    def _tramo_cercano(session, punto):
+        """(id del tramo, fracción sobre el tramo) más cercano al punto EPSG:4326, o None si está fuera de la red."""
+        punto_sql = "ST_Transform(ST_SetSRID(ST_MakePoint(:lon, :lat), 4326), 5347)"
+        tramo = session.execute(text(f"""
+            SELECT id, ST_Distance(the_geom, {punto_sql}) AS distancia,
+                   ST_LineLocatePoint(the_geom, {punto_sql}) AS fraccion
+            FROM {schema}.callejero
+            WHERE source IS NOT NULL AND target IS NOT NULL
+            ORDER BY the_geom <-> {punto_sql}
+            LIMIT 1
+        """), {"lon": punto["longitud"], "lat": punto["latitud"]}).first()
+        if tramo is None or tramo.distancia > API.DISTANCIA_MAXIMA_RED:
+            return None
+        return int(tramo.id), float(tramo.fraccion)
+
+    @staticmethod
+    def _cliente_mas_cercano_por_ruta(session, tramo_origen):
+        """Id del cliente con pedido activo de menor recorrido en metros desde el punto del tramo, o None."""
+        tramo_o, fraccion_o = tramo_origen
+        # pid 1 es el origen; cada cliente usa pid = id + 1 para no chocar con él.
+        clientes_sql = f"""
+            SELECT c.id + 1 AS pid, e.id AS edge_id, ST_LineLocatePoint(e.the_geom, c.geometria) AS fraction
+            FROM {schema}.clientes c
+            CROSS JOIN LATERAL (
+                SELECT id, the_geom FROM {schema}.callejero
+                WHERE source IS NOT NULL AND target IS NOT NULL
+                ORDER BY the_geom <-> c.geometria
+                LIMIT 1
+            ) e
+            WHERE c.tiene_pedido = 1 AND c.geometria IS NOT NULL
+              AND ST_DWithin(e.the_geom, c.geometria, {API.DISTANCIA_MAXIMA_RED})
+        """
+        puntos_sql = f"""
+            SELECT 1 AS pid, {tramo_o} AS edge_id, {fraccion_o!r}::float AS fraction
+            UNION ALL {clientes_sql}
+        """
+        destinos = [-int(fila.pid) for fila in session.execute(text(clientes_sql))]
+        if not destinos:
+            return None
+        fila = session.execute(text("""
+            SELECT -end_pid - 1 AS id_cliente, max(agg_cost) AS costo
+            FROM public.pgr_withPoints(CAST(:aristas AS text), CAST(:puntos AS text), -1,
+                                       CAST(:destinos AS bigint[]),
+                                       directed := true, driving_side := 'b')
+            GROUP BY end_pid
+            ORDER BY costo
+            LIMIT 1
+        """), {"aristas": API._aristas_sql(), "puntos": puntos_sql, "destinos": destinos}).first()
+        return None if fila is None else int(fila.id_cliente)
 
     @staticmethod
     def calcularRuta(session, origen, destino):
@@ -639,33 +716,17 @@ class API: # Clase contenedora renombrada a API
         de su tramo y los tramos extremos se recortan.
         Retorna (resultado, datos): 'success', 'out_of_network' o 'not_found'.
         """
-        punto_sql = "ST_Transform(ST_SetSRID(ST_MakePoint(:lon, :lat), 4326), 5347)"
-        tramo_sql = text(f"""
-            SELECT id, ST_Distance(the_geom, {punto_sql}) AS distancia,
-                   ST_LineLocatePoint(the_geom, {punto_sql}) AS fraccion
-            FROM {schema}.callejero
-            WHERE source IS NOT NULL AND target IS NOT NULL
-            ORDER BY the_geom <-> {punto_sql}
-            LIMIT 1
-        """)
         tramos = {}
         for rol, punto in (("origen", origen), ("destino", destino)):
-            tramo = session.execute(tramo_sql, {"lon": punto["longitud"], "lat": punto["latitud"]}).first()
-            if tramo is None or tramo.distancia > API.DISTANCIA_MAXIMA_RED:
+            tramo = API._tramo_cercano(session, punto)
+            if tramo is None:
                 return "out_of_network", {
                     "error": f"El {rol} está a más de {API.DISTANCIA_MAXIMA_RED} m del callejero."
                 }
-            tramos[rol] = (int(tramo.id), float(tramo.fraccion))
+            tramos[rol] = tramo
 
         (tramo_o, fraccion_o), (tramo_d, fraccion_d) = tramos["origen"], tramos["destino"]
-        # pgRouting descarta las aristas con costo negativo: así se respeta el sentido.
-        aristas_sql = f"""
-            SELECT id, source, target,
-                   CASE WHEN sentido = 1 THEN -1 ELSE ST_Length(the_geom) END AS cost,
-                   CASE WHEN sentido = 0 THEN -1 ELSE ST_Length(the_geom) END AS reverse_cost
-            FROM {schema}.callejero
-            WHERE source IS NOT NULL AND target IS NOT NULL
-        """
+        aristas_sql = API._aristas_sql()
         puntos_sql = (
             f"SELECT 1 AS pid, {tramo_o} AS edge_id, {fraccion_o!r}::float AS fraction "
             f"UNION ALL SELECT 2, {tramo_d}, {fraccion_d!r}::float"

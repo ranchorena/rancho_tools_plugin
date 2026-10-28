@@ -731,7 +731,8 @@ def get_pedido_de_fecha(cliente_id):
 @app.route("/api/pedidos/cercano", methods=["GET"])
 def get_pedido_cercano():
     """
-    Devuelve el pedido activo más cercano a una latitud y longitud.
+    Devuelve el pedido activo con el recorrido más corto por el callejero desde una latitud y longitud,
+    respetando el sentido de los tramos, junto con ese recorrido.
     ---
     tags:
       - Pedidos
@@ -746,9 +747,11 @@ def get_pedido_cercano():
         required: true
     responses:
       200:
-        description: Pedido más cercano, o pedido null si no hay pedidos activos
+        description: "{pedido, ruta}: pedido con distancia en metros de recorrido y ruta como en /api/rutas/calcular. Pedido null si no hay pedidos activos."
       400:
         description: Coordenadas inválidas
+      404:
+        description: Posición fuera del callejero o sin recorrido posible hasta ningún pedido activo
     """
     def parse_coord(nombre, minimo, maximo):
         valor = request.args.get(nombre)
@@ -771,8 +774,10 @@ def get_pedido_cercano():
 
     with Session.begin() as session:
         try:
-            pedido = API.getPedidoCercano(session, latitud, longitud)
-            return jsonify({"pedido": pedido}), 200
+            resultado, datos = API.getPedidoCercano(session, latitud, longitud)
+            if resultado in ("success", "empty"):
+                return jsonify(datos), 200
+            return jsonify(datos), 404
         except Exception as e:
             app.logger.error(f"Error en /api/pedidos/cercano: {e}")
             return jsonify({"error": "Error interno del servidor al buscar el pedido más cercano."}), 500
