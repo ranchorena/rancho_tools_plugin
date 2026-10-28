@@ -629,6 +629,93 @@ class API: # Clase contenedora renombrada a API
         pedido["observaciones"] = pedido.pop("observacion", None)
         return pedido
 
+    DISTANCIA_MAXIMA_RED = 300
+
+    @staticmethod
+    def calcularRuta(session, origen, destino):
+        """
+        Recorrido más corto en metros entre dos puntos EPSG:4326 sobre el callejero,
+        sin recorrer tramos a contramano. Cada punto se conecta al punto más cercano
+        de su tramo y los tramos extremos se recortan.
+        Retorna (resultado, datos): 'success', 'out_of_network' o 'not_found'.
+        """
+        punto_sql = "ST_Transform(ST_SetSRID(ST_MakePoint(:lon, :lat), 4326), 5347)"
+        tramo_sql = text(f"""
+            SELECT id, ST_Distance(the_geom, {punto_sql}) AS distancia,
+                   ST_LineLocatePoint(the_geom, {punto_sql}) AS fraccion
+            FROM {schema}.callejero
+            WHERE source IS NOT NULL AND target IS NOT NULL
+            ORDER BY the_geom <-> {punto_sql}
+            LIMIT 1
+        """)
+        tramos = {}
+        for rol, punto in (("origen", origen), ("destino", destino)):
+            tramo = session.execute(tramo_sql, {"lon": punto["longitud"], "lat": punto["latitud"]}).first()
+            if tramo is None or tramo.distancia > API.DISTANCIA_MAXIMA_RED:
+                return "out_of_network", {
+                    "error": f"El {rol} está a más de {API.DISTANCIA_MAXIMA_RED} m del callejero."
+                }
+            tramos[rol] = (int(tramo.id), float(tramo.fraccion))
+
+        (tramo_o, fraccion_o), (tramo_d, fraccion_d) = tramos["origen"], tramos["destino"]
+        # pgRouting descarta las aristas con costo negativo: así se respeta el sentido.
+        aristas_sql = f"""
+            SELECT id, source, target,
+                   CASE WHEN sentido = 1 THEN -1 ELSE ST_Length(the_geom) END AS cost,
+                   CASE WHEN sentido = 0 THEN -1 ELSE ST_Length(the_geom) END AS reverse_cost
+            FROM {schema}.callejero
+            WHERE source IS NOT NULL AND target IS NOT NULL
+        """
+        puntos_sql = (
+            f"SELECT 1 AS pid, {tramo_o} AS edge_id, {fraccion_o!r}::float AS fraction "
+            f"UNION ALL SELECT 2, {tramo_d}, {fraccion_d!r}::float"
+        )
+        # Los puntos de pgr_withPoints son nodos con id negativo: -1 origen, -2 destino.
+        fila = session.execute(text(f"""
+            WITH ruta AS (
+                SELECT seq, node, edge, LEAD(node) OVER (ORDER BY seq) AS siguiente
+                FROM public.pgr_withPoints(CAST(:aristas AS text), CAST(:puntos AS text), -1, -2,
+                                           directed := true, driving_side := 'b')
+            ),
+            tramos AS (
+                SELECT r.seq AS orden, c.the_geom AS geom,
+                       CASE WHEN r.node = -1 THEN :f_o WHEN r.node = -2 THEN :f_d
+                            WHEN r.node = c.source THEN 0.0 ELSE 1.0 END AS desde,
+                       CASE WHEN r.siguiente = -1 THEN :f_o WHEN r.siguiente = -2 THEN :f_d
+                            WHEN r.siguiente = c.source THEN 0.0 ELSE 1.0 END AS hasta
+                FROM ruta r
+                JOIN {schema}.callejero c ON c.id = r.edge
+            ),
+            partes AS (
+                SELECT 0 AS orden, ST_Transform(ST_SetSRID(ST_MakePoint(:lon_o, :lat_o), 4326), 5347) AS geom
+                UNION ALL
+                SELECT orden, CASE WHEN desde <= hasta THEN ST_LineSubstring(geom, desde, hasta)
+                                   ELSE ST_Reverse(ST_LineSubstring(geom, hasta, desde)) END
+                FROM tramos
+                UNION ALL SELECT 2147483647, ST_Transform(ST_SetSRID(ST_MakePoint(:lon_d, :lat_d), 4326), 5347)
+            ),
+            linea AS (SELECT ST_MakeLine(geom ORDER BY orden) AS geom FROM partes)
+            SELECT (SELECT count(*) FROM tramos) AS cantidad,
+                   ST_Length(geom) AS distancia,
+                   ST_AsGeoJSON(ST_Transform(geom, 4326)) AS geojson
+            FROM linea
+        """), {
+            "aristas": aristas_sql,
+            "puntos": puntos_sql,
+            "f_o": fraccion_o, "f_d": fraccion_d,
+            "lon_o": origen["longitud"], "lat_o": origen["latitud"],
+            "lon_d": destino["longitud"], "lat_d": destino["latitud"],
+        }).first()
+
+        mismo_lugar = tramo_o == tramo_d and abs(fraccion_o - fraccion_d) < 1e-9
+        if fila.cantidad == 0 and not mismo_lugar:
+            return "not_found", {"error": "No hay recorrido posible entre los puntos elegidos."}
+        return "success", {
+            "geometria": json.loads(fila.geojson),
+            "distancia_m": int(round(fila.distancia)),
+            "tramos": int(fila.cantidad),
+        }
+
     @staticmethod
     def getPedidosHistorico(session, desde=None, hasta=None):
         """

@@ -777,6 +777,90 @@ def get_pedido_cercano():
             app.logger.error(f"Error en /api/pedidos/cercano: {e}")
             return jsonify({"error": "Error interno del servidor al buscar el pedido más cercano."}), 500
 
+@app.route("/api/rutas/calcular", methods=["POST"])
+def calcular_ruta_api():
+    """
+    Calcula el recorrido más corto en metros entre dos puntos respetando el sentido de los tramos.
+    ---
+    tags:
+      - Rutas
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - origen
+            - destino
+          properties:
+            origen:
+              type: object
+              properties:
+                latitud:
+                  type: number
+                  example: -34.5959
+                longitud:
+                  type: number
+                  example: -58.3893
+            destino:
+              type: object
+              properties:
+                latitud:
+                  type: number
+                longitud:
+                  type: number
+    responses:
+      200:
+        description: Recorrido como GeoJSON LineString en EPSG:4326, distancia en metros y cantidad de tramos
+        schema:
+          type: object
+          properties:
+            geometria:
+              type: object
+            distancia_m:
+              type: integer
+            tramos:
+              type: integer
+      400:
+        description: Coordenadas inválidas
+      404:
+        description: Sin recorrido posible o punto fuera del callejero
+      500:
+        description: Error interno del servidor
+    """
+    datos = request.get_json(silent=True) or {}
+
+    def parse_punto(nombre):
+        punto = datos.get(nombre)
+        if not isinstance(punto, dict):
+            return None, f"El {nombre} es requerido."
+        try:
+            latitud = float(punto.get("latitud"))
+            longitud = float(punto.get("longitud"))
+        except (TypeError, ValueError):
+            return None, f"Las coordenadas del {nombre} no son válidas."
+        if not (-90 <= latitud <= 90 and -180 <= longitud <= 180):
+            return None, f"Las coordenadas del {nombre} no son válidas."
+        return {"latitud": latitud, "longitud": longitud}, None
+
+    origen, error = parse_punto("origen")
+    if error:
+        return jsonify({"error": error}), 400
+    destino, error = parse_punto("destino")
+    if error:
+        return jsonify({"error": error}), 400
+
+    with Session.begin() as session:
+        try:
+            resultado, ruta = API.calcularRuta(session, origen, destino)
+            if resultado == "success":
+                return jsonify(ruta), 200
+            return jsonify(ruta), 404
+        except Exception as e:
+            app.logger.error(f"Error en /api/rutas/calcular: {e}")
+            return jsonify({"error": "Error interno del servidor al calcular el recorrido."}), 500
+
 @app.route("/api/pedidos/historico", methods=["GET"])
 def get_pedidos_historico():
     """

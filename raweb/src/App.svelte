@@ -26,6 +26,8 @@
   import Pedidos from './Pedidos.svelte'; // Importar el componente Pedidos
   import PedidosHistorico from './PedidosHistorico.svelte';
   import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
+  import ComoLlegarDialog from './ComoLlegarDialog.svelte';
+  import { formatDistance } from './route-planner.mjs';
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
   import AccountMenu from './AccountMenu.svelte';
   import UiIcon from './design-system/Icon.svelte';
@@ -77,6 +79,13 @@
   let showPedidosHistoricoDialog = false;
   let showAgregarClienteDialog = false;
   let agregarClienteInicial = null;
+  let showComoLlegarDialog = false;
+
+  // Variables para Cómo llegar
+  let rutaSource;
+  let modoSeleccionRuta = null; // 'origen' | 'destino' | null
+  let puntoSeleccionadoRuta = null;
+  let rutaPuntos = null;
 
   // Variables para agregar cliente
   let modoSeleccionPunto = false;
@@ -378,6 +387,12 @@
       style: estiloUbicacion
     });
 
+    rutaSource = new VectorSource();
+    const rutaLayer = new VectorLayer({
+      source: rutaSource,
+      style: estiloRuta
+    });
+
     // Tooltip se maneja con CSS puro, sin overlay de OpenLayers
 
     // Definición de las capas base
@@ -538,6 +553,7 @@
         clientesLayer,
         pedidosLayer, // Los pedidos ahora van encima de los clientes
         markerLayer, // Capa para los marcadores (debe estar encima de las WMS)
+        rutaLayer,
         ubicacionLayer
       ],
       view: new View({
@@ -548,6 +564,14 @@
 
     // Evento de click para mostrar información de pedidos y clientes (WFS)
     map.on('singleclick', function(evt) {
+      if (modoSeleccionRuta) {
+        const [lon, lat] = toLonLat(evt.coordinate);
+        puntoSeleccionadoRuta = { rol: modoSeleccionRuta, lat, lon };
+        modoSeleccionRuta = null;
+        map.getViewport().style.cursor = '';
+        return;
+      }
+
       // Si estamos en modo selección de punto para agregar cliente
       if (modoSeleccionPunto) {
         const coordinate = evt.coordinate;
@@ -722,6 +746,7 @@
     showPedidosDialog = false;
     showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
+    showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
@@ -732,6 +757,7 @@
     showPedidosDialog = false;
     showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
+    showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
@@ -742,6 +768,7 @@
     showBuscarClienteDialog = false;
     showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
+    showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
@@ -752,6 +779,19 @@
     showBuscarDireccionDialog = false;
     showBuscarClienteDialog = false;
     showAgregarClienteDialog = false;
+    showComoLlegarDialog = false;
+    closeMobileMenu();
+  }
+
+  function openComoLlegar(event) {
+    captureDialogTrigger(event);
+    showComoLlegarDialog = true;
+    showBuscarDireccionDialog = false;
+    showBuscarClienteDialog = false;
+    showPedidosDialog = false;
+    showPedidosHistoricoDialog = false;
+    showAgregarClienteDialog = false;
+    puntoSeleccionadoRuta = null;
     closeMobileMenu();
   }
 
@@ -763,6 +803,7 @@
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
     showPedidosHistoricoDialog = false;
+    showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
 
@@ -773,6 +814,7 @@
     showBuscarDireccionDialog = false;
     showPedidosDialog = false;
     showPedidosHistoricoDialog = false;
+    showComoLlegarDialog = false;
   }
 
   async function closeDialogs() {
@@ -783,9 +825,13 @@
     showPedidosDialog = false;
     showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
+    showComoLlegarDialog = false;
     modoSeleccionPunto = false;
     coordenadasSeleccionadas = null;
+    modoSeleccionRuta = null;
+    puntoSeleccionadoRuta = null;
     if (map) {
+      map.getViewport().style.cursor = '';
       // Pequeño delay para asegurar que el DOM está actualizado si se re-renderiza el mapa
       setTimeout(() => {
         map.updateSize();
@@ -794,7 +840,8 @@
     // Solo el cierre final devuelve foco; los cambios internos y el mapa no pasan aquí.
     await tick();
     if (!origin || dialogOrigin || showBuscarDireccionDialog || showBuscarClienteDialog ||
-        showPedidosDialog || showPedidosHistoricoDialog || showAgregarClienteDialog) return;
+        showPedidosDialog || showPedidosHistoricoDialog || showAgregarClienteDialog ||
+        showComoLlegarDialog) return;
     const destination = chooseFocusReturn({
       triggerPresent: origin.trigger.isConnected,
       triggerVisible: isFocusTargetVisible(origin.trigger),
@@ -830,6 +877,49 @@
     if (map) {
       map.getViewport().style.cursor = 'crosshair';
     }
+  }
+
+  function handleSeleccionarPuntoRuta(event) {
+    modoSeleccionRuta = event.detail.rol;
+    if (map) map.getViewport().style.cursor = 'crosshair';
+  }
+
+  const COLOR_RUTA = '#d32f2f';
+
+  function estiloRuta(feature) {
+    const tipo = feature.get('tipo');
+    if (tipo === 'origen' || tipo === 'destino') {
+      return new Style({
+        image: new Circle({
+          radius: 8,
+          fill: new Fill({ color: tipo === 'origen' ? '#2e7d32' : COLOR_RUTA }),
+          stroke: new Stroke({ color: '#ffffff', width: 2 })
+        })
+      });
+    }
+    return [
+      new Style({ stroke: new Stroke({ color: '#ffffff', width: 8, lineCap: 'round', lineJoin: 'round' }) }),
+      new Style({ stroke: new Stroke({ color: COLOR_RUTA, width: 5, lineCap: 'round', lineJoin: 'round' }) })
+    ];
+  }
+
+  async function handleMostrarRuta(event) {
+    const { ruta, origen, destino } = event.detail;
+    if (!rutaSource || !map) return;
+    rutaPuntos = { origen, destino };
+    rutaSource.clear();
+    const [linea] = new GeoJSON().readFeatures(
+      { type: 'Feature', geometry: ruta.geometria, properties: { tipo: 'ruta' } },
+      { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }
+    );
+    rutaSource.addFeatures([
+      linea,
+      new Feature({ geometry: new Point(fromLonLat([origen.lon, origen.lat])), tipo: 'origen' }),
+      new Feature({ geometry: new Point(fromLonLat([destino.lon, destino.lat])), tipo: 'destino' })
+    ]);
+    mostrarAviso(`Recorrido: ${formatDistance(ruta.distancia_m)}`, 'success');
+    await closeDialogs();
+    map.getView().fit(rutaSource.getExtent(), { padding: [64, 64, 64, 64], maxZoom: 18, duration: 600 });
   }
 
   function handleClienteAgregado(event) {
@@ -1138,6 +1228,7 @@
   function limpiarMapa() {
     quitarPedidoCercano();
     if (markerSource) markerSource.clear();
+    if (rutaSource) rutaSource.clear();
     temporaryLayers.forEach((layer) => {
       if (map) map.removeLayer(layer);
     });
@@ -1282,6 +1373,10 @@
         <UiIcon name="history" size={16} />
         <span>Pedidos histórico</span>
       </button>
+      <button on:click={openComoLlegar} class:active={showComoLlegarDialog}>
+        <UiIcon name="route" size={16} />
+        <span>Cómo llegar</span>
+      </button>
     </div>
 
     <div class="navbar-tools">
@@ -1315,6 +1410,10 @@
     <button type="button" on:click={openPedidosHistorico} class:active={showPedidosHistoricoDialog}>
       <span class="bottom-nav-mark"><UiIcon name="history" size={18} /></span>
       <span>Historial</span>
+    </button>
+    <button type="button" on:click={openComoLlegar} class:active={showComoLlegarDialog}>
+      <span class="bottom-nav-mark"><UiIcon name="route" size={18} /></span>
+      <span>Ruta</span>
     </button>
   </nav>
 
@@ -1487,6 +1586,19 @@
       on:seleccionarUbicacion={handleSeleccionarUbicacion}
       on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
       on:clienteAgregado={handleClienteAgregado}
+    />
+  {/if}
+
+  {#if showComoLlegarDialog}
+    <ComoLlegarDialog
+      {ubicacionActiva}
+      {ubicacionActual}
+      puntoSeleccionado={puntoSeleccionadoRuta}
+      seleccionando={modoSeleccionRuta !== null}
+      puntosIniciales={rutaPuntos}
+      on:close={closeDialogs}
+      on:seleccionarPunto={handleSeleccionarPuntoRuta}
+      on:mostrarRuta={handleMostrarRuta}
     />
   {/if}
 
@@ -2181,7 +2293,7 @@
 
     .bottom-nav {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       align-items: center;
       gap: 0.15rem;
       position: fixed;
