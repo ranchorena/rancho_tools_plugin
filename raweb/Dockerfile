@@ -4,7 +4,19 @@ FROM node:18-alpine AS builder
 # Establecer el directorio de trabajo
 WORKDIR /app
 
-# Argumentos de build que pueden ser pasados desde docker-compose
+# Instalar las dependencias primero: esta capa se reutiliza mientras no cambie package*.json
+COPY package*.json ./
+RUN npm install
+
+# Copiar los archivos de la aplicación Raweb
+COPY rollup.config.js ./
+# COPY svelte.config.js ./ # Archivo no encontrado en el proyecto, comentado/eliminado
+COPY public public/
+COPY src src/
+COPY scripts scripts/
+
+# Argumentos de build que pueden ser pasados desde docker-compose.
+# Van justo antes de compilar: si PUBLIC_URL cambia solo se repite el build, no npm install.
 ARG API_URL
 ARG GEOSERVER_URL
 ARG KEYCLOAK_URL
@@ -13,17 +25,6 @@ ARG KEYCLOAK_URL
 ENV API_URL=${API_URL}
 ENV GEOSERVER_URL=${GEOSERVER_URL}
 ENV KEYCLOAK_URL=${KEYCLOAK_URL}
-
-# Copiar los archivos de la aplicación Raweb
-COPY package*.json ./
-COPY rollup.config.js ./
-# COPY svelte.config.js ./ # Archivo no encontrado en el proyecto, comentado/eliminado
-COPY public public/
-COPY src src/
-COPY scripts scripts/
-
-# Instalar las dependencias
-RUN npm install
 
 # Construir la aplicación
 RUN npm run build

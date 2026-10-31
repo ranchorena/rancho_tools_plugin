@@ -84,7 +84,7 @@
         longitud: coordenadas.lon
       };
 
-      const response = await authorizedFetch(`${API_BASE_URL}/api/clientes/agregar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/clientes/agregar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +138,7 @@
     errorMessage = '';
 
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/api/direcciones/buscar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/direcciones/buscar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direccion })

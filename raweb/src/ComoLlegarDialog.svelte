@@ -88,7 +88,7 @@
     buscando = rol;
     mensajeError = '';
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/api/direcciones/buscar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/direcciones/buscar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direccion })
@@ -128,7 +128,7 @@
     calculando = true;
     mensajeError = '';
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/api/rutas/calcular`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/rutas/calcular`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request.payload)

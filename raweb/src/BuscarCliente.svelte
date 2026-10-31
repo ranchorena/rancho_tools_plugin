@@ -69,7 +69,7 @@
       return;
     }
 
-    const results = await fetchData(`${API_BASE_URL}/api/clientes/buscar`, {
+    const results = await fetchData(`${API_BASE_URL}/clientes/buscar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(decision.payload)
@@ -189,7 +189,7 @@
       telefono: editableFields.telefono.trim() || null
     };
 
-    const result = await fetchData(`${API_BASE_URL}/api/clientes/actualizar/${selectedClient.id}`, {
+    const result = await fetchData(`${API_BASE_URL}/clientes/actualizar/${selectedClient.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)

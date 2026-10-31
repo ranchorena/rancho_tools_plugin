@@ -53,7 +53,7 @@
   }
 
   async function loadInicial() {
-    const results = await fetchData(`${API_BASE_URL}/api/pedidos/historico`);
+    const results = await fetchData(`${API_BASE_URL}/pedidos/historico`);
     if (results) aplicarResultado(results);
   }
 
@@ -69,7 +69,7 @@
       return;
     }
     const params = new URLSearchParams({ desde: fechaDesde, hasta: fechaHasta });
-    const results = await fetchData(`${API_BASE_URL}/api/pedidos/historico?${params}`);
+    const results = await fetchData(`${API_BASE_URL}/pedidos/historico?${params}`);
     if (results) aplicarResultado(results);
   }
 
@@ -131,7 +131,7 @@
     eliminandoId = pedido.id;
     errorMessage = "";
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/api/pedidos/eliminar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/pedidos/eliminar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id_pedido: pedido.id })

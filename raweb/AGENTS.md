@@ -26,6 +26,7 @@ Estas instrucciones complementan `../AGENTS.md` y se aplican a `raweb/`.
 ## Contratos REST y mapa
 
 - Antes de cambiar payloads o respuestas, revisar `../raapi/server.py` y `../raapi/API.py`. La edición QGIS usa proveedores de capas directamente; comprobar sus campos si se modifican datos compartidos.
+- `API_BASE_URL` (de `API_URL`) ya incluye `/api`: las llamadas se escriben `${API_BASE_URL}/clientes/buscar`, no `${API_BASE_URL}/api/clientes/buscar`. Las rutas de Flask completas se indican abajo.
 - Buscar clientes: `POST /api/clientes/buscar` con `criterio` (`nombre`, `direccion` o `calle_altura`). Buscar dirección: `POST /api/direcciones/buscar` con `{direccion}`.
 - Actualizar: `PUT /api/clientes/actualizar/<id>` recibe `docenas` y `observaciones`; alta y lectura usan `cantidad` y `observacion`. El backend realiza esa traducción; conservar la diferencia.
 - Alta: `POST /api/clientes/agregar` devuelve `{mensaje, cliente}`. `GET /api/clientes/pedidos` devuelve una lista o, si está vacío, `{message: ...}` con HTTP 200; no asumir que toda respuesta exitosa es un array.

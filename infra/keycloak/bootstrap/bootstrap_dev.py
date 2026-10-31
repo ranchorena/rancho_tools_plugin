@@ -34,6 +34,10 @@ DEMO_PASSWORD = _exigir("RANCHO_DEMO_PASSWORD")
 CLIENT_SECRET = _exigir("KEYCLOAK_CLIENT_SECRET")
 REALM = "rancho"
 ROLES = ("clientes:read", "pedidos:write")
+# Dirección con la que el navegador entra a raweb (ra-proxy o ngrok), sin barra final.
+PUBLIC_URL = _exigir("PUBLIC_URL").rstrip("/")
+# Frontend servido directo por Compose. Sigue permitido junto a PUBLIC_URL.
+ORIGENES_DIRECTOS = ("http://localhost:8082",)
 
 
 def _request(method: str, url: str, token: str | None = None, body: dict | list | None = None, form: dict | None = None):
@@ -94,22 +98,25 @@ def _cliente(token: str, client_id: str) -> dict:
     return coincidencias[0]
 
 
-def _permitir_proxy(token: str, client_uuid: str) -> None:
+def _sin_repetidos(valores: list[str]) -> list[str]:
+    return list(dict.fromkeys(valores))
+
+
+def _sincronizar_urls_raweb(token: str, client_uuid: str) -> None:
+    """Deja en el cliente raweb solo las direcciones de PUBLIC_URL y del frontend directo (8082).
+
+    Reemplaza la lista en lugar de sumar: una URL de ngrok anterior no queda registrada.
+    """
     _, cliente = _request("GET", f"{BASE}/admin/realms/{REALM}/clients/{client_uuid}", token)
-    redirects = list(cliente.get("redirectUris") or [])
-    origins = list(cliente.get("webOrigins") or [])
-    for uri in ("http://localhost:8088/", "http://localhost:8088/silent-check-sso.html"):
-        if uri not in redirects:
-            redirects.append(uri)
-    if "http://localhost:8088" not in origins:
-        origins.append("http://localhost:8088")
+    origenes = _sin_repetidos([PUBLIC_URL, *ORIGENES_DIRECTOS])
     atributos = dict(cliente.get("attributes") or {})
-    logout = [parte for parte in (atributos.get("post.logout.redirect.uris") or "").split("##") if parte]
-    if "http://localhost:8088/" not in logout:
-        logout.append("http://localhost:8088/")
-    atributos["post.logout.redirect.uris"] = "##".join(logout)
-    cliente["redirectUris"] = redirects
-    cliente["webOrigins"] = origins
+    atributos["post.logout.redirect.uris"] = "##".join(f"{origen}/" for origen in origenes)
+    cliente["redirectUris"] = [
+        direccion
+        for origen in origenes
+        for direccion in (f"{origen}/", f"{origen}/silent-check-sso.html")
+    ]
+    cliente["webOrigins"] = origenes
     cliente["attributes"] = atributos
     _request("PUT", f"{BASE}/admin/realms/{REALM}/clients/{client_uuid}", token, cliente)
 
@@ -185,7 +192,7 @@ def _asignar_roles(token: str, user_id: str, raapi_uuid: str) -> None:
 def main() -> None:
     token = _esperar_realm(_admin_token)
     raweb = _cliente(token, "raweb")
-    _permitir_proxy(token, raweb["id"])
+    _sincronizar_urls_raweb(token, raweb["id"])
     ra_mcp = _cliente(token, "ra-mcp")
     raapi = _cliente(token, "raapi")
     _fijar_secret(token, ra_mcp["id"])

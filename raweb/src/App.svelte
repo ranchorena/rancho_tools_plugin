@@ -974,7 +974,7 @@
     console.log("Buscando dirección:", direccion);
 
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/api/direcciones/buscar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/direcciones/buscar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1165,7 +1165,7 @@
         latitud: String(origen.lat),
         longitud: String(origen.lon)
       });
-      const response = await authorizedFetch(`${API_BASE_URL}/api/pedidos/cercano?${params}`);
+      const response = await authorizedFetch(`${API_BASE_URL}/pedidos/cercano?${params}`);
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         quitarPedidoCercano();
@@ -1296,7 +1296,7 @@
     console.log("Buscando dirección del cliente:", direccion);
 
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/api/direcciones/buscar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/direcciones/buscar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

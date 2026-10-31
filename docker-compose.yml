@@ -6,10 +6,15 @@ services:
       context: ./raweb
       dockerfile: Dockerfile
       args:
-        API_URL: ${API_URL:-http://localhost:5000} # El navegador llama a la API; backend:5000 no resuelve fuera de Docker
-        GEOSERVER_URL: ${GEOSERVER_URL:-http://localhost:8087/geoserver} # Asume que GeoServer corre en el host o es accesible
-        KEYCLOAK_URL: ${KEYCLOAK_URL:-http://localhost:8081}
+        # Las tres salen de PUBLIC_URL: el navegador entra por ra-proxy y este reparte a API, GeoServer y Keycloak.
+        # Se graban en el bundle al compilar: si PUBLIC_URL cambia hay que reconstruir la imagen.
+        API_URL: ${PUBLIC_URL:-http://localhost:8088}/api
+        GEOSERVER_URL: ${PUBLIC_URL:-http://localhost:8088}/geoserver
+        KEYCLOAK_URL: ${PUBLIC_URL:-http://localhost:8088}
     image: raweb:qa
+    # Las URLs se graban en el bundle al compilar: `docker compose up -d` debe reconstruir siempre.
+    # Con la capa de npm install en caché, si nada cambió el build es casi inmediato.
+    pull_policy: build
     container_name: raweb-qa
     ports:
       - "8082:8080"
@@ -21,8 +26,8 @@ services:
       # Estas variables también se pasan al entorno de ejecución del contenedor,
       # aunque para Svelte/Rollup, los valores importantes son los usados en tiempo de BUILD (ver build.args).
       # Podrían ser útiles si el entrypoint del contenedor las usara para alguna tarea (no es el caso aquí).
-      - API_URL=${API_URL:-http://localhost:5000}
-      - GEOSERVER_URL=${GEOSERVER_URL:-http://localhost:8087/geoserver}
+      - API_URL=${PUBLIC_URL:-http://localhost:8088}/api
+      - GEOSERVER_URL=${PUBLIC_URL:-http://localhost:8088}/geoserver
 
   backend:
     build:
@@ -51,10 +56,10 @@ services:
       - FLASK_APP=server.py
       - FLASK_RUN_HOST=0.0.0.0
       - FLASK_ENV=${FLASK_ENV:-production} # o development
-      - KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER:-http://localhost:8081/realms/rancho}
+      - KEYCLOAK_ISSUER=${PUBLIC_URL:-http://localhost:8088}/realms/rancho
       - KEYCLOAK_JWKS_URL=${KEYCLOAK_JWKS_URL_DOCKER:-http://keycloak:8080/realms/rancho/protocol/openid-connect/certs}
       - RA_API_AUDIENCE=${RA_API_AUDIENCE:-raapi}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8082}
+      - CORS_ORIGINS=${CORS_ORIGINS:-${PUBLIC_URL:-http://localhost:8088},http://localhost:8082}
     volumes:
       - ./raapi:/app # Opcional: para desarrollo, montar el código local en el contenedor
 
@@ -65,7 +70,7 @@ services:
   db:
     profiles: ["standalone"]
     image: postgres:13-alpine
-    container_name: raweb-db-qa
+    container_name: radb-qa
     ports:
       - "5433:5432" # Exponer puerto de la BD al host (5433) para evitar conflicto con local 5432
     environment:
@@ -88,7 +93,7 @@ services:
   # Base interna de Keycloak. No comparte schema ni volumen con la base de negocio.
   keycloak-db:
     image: postgres:16-alpine
-    container_name: rancho-keycloak-db
+    container_name: rakeycloak-db
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: ${KEYCLOAK_DB_USER}
@@ -106,7 +111,7 @@ services:
   # start-dev es exclusivo de este Compose local. Producción usa `start` con HTTPS.
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.1
-    container_name: rancho-keycloak
+    container_name: rakeycloak
     command:
       - start-dev
       - --import-realm
@@ -120,7 +125,10 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HEALTH_ENABLED: "true"
       KC_HTTP_ENABLED: "true"
-      KC_HOSTNAME: http://localhost:8081
+      # Dirección pública con la que el navegador llega a Keycloak (por ra-proxy). El claim iss sale de aquí.
+      KC_HOSTNAME: ${PUBLIC_URL:-http://localhost:8088}
+      # ra-proxy envía X-Forwarded-*; con ngrok el esquema real es https.
+      KC_PROXY_HEADERS: xforwarded
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_PORT: "8080"
     ports:
@@ -143,7 +151,7 @@ services:
   # Una origen para el navegador. No reemplaza los puertos 8082, 5000, 8081 y 8087.
   proxy:
     image: nginx:1.27-alpine
-    container_name: ra-proxy
+    container_name: raproxy
     ports:
       - "8088:80"
     volumes:
@@ -159,9 +167,10 @@ services:
 
   keycloak-bootstrap:
     image: python:3.12-alpine
-    container_name: rancho-keycloak-bootstrap
+    container_name: rakeycloak-bootstrap
     environment:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8088}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       RANCHO_DEMO_USER: ${RANCHO_DEMO_USER:-rancho}

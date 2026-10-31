@@ -39,7 +39,7 @@
   }
 
   async function loadPedidos() {
-    const results = await fetchData(`${API_BASE_URL}/api/clientes/pedidos`, {
+    const results = await fetchData(`${API_BASE_URL}/clientes/pedidos`, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
@@ -101,7 +101,7 @@
     iniciando = true;
     errorMessage = "";
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/api/pedidos/iniciar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/pedidos/iniciar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });

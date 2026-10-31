@@ -72,7 +72,12 @@ Comprueba discovery, JWKS, clientes, theme, usuario DEV, el access token
 real de `raweb` (Authorization Code + PKCE, sin Direct Access Grant) y el
 Token Exchange V2.
 
-El claim `iss` es siempre `http://localhost:8081/realms/rancho`.
+El claim `iss` es siempre `${PUBLIC_URL}/realms/rancho` (`KC_HOSTNAME` sale de
+`PUBLIC_URL`; por defecto `http://localhost:8088`, entrando por `ra-proxy`).
+Los ejemplos de abajo con `http://localhost:8081` son del esquema anterior:
+ajustarlos a `PUBLIC_URL`. `ra-mcp` y `verify_dev.py` deben usar el mismo emisor.
+`keycloak-bootstrap` deja en el cliente `raweb` solo las direcciones de
+`PUBLIC_URL` y de `http://localhost:8082`.
 `KEYCLOAK_JWKS_URL` en el host es
 `http://127.0.0.1:8081/realms/rancho/protocol/openid-connect/certs`.
 El contenedor `backend` no reutiliza esa variable: usa

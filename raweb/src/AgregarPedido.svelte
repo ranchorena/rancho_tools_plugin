@@ -112,7 +112,7 @@
     errorMessage = '';
     try {
       const response = await authorizedFetch(
-        `${API_BASE_URL}/api/clientes/${cliente.id}/pedido?fecha=${encodeURIComponent(fecha)}`
+        `${API_BASE_URL}/clientes/${cliente.id}/pedido?fecha=${encodeURIComponent(fecha)}`
       );
       const data = await response.json().catch(() => ({}));
       if (token !== cargaToken || formData.fecha !== fecha) return;
@@ -229,7 +229,7 @@
     georreferenciando = true;
     errorMessage = '';
     try {
-      const response = await authorizedFetch(`${API_BASE_URL}/api/direcciones/buscar`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/direcciones/buscar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ direccion })
@@ -273,7 +273,7 @@
         latitud: punto.lat,
         longitud: punto.lon
       };
-      const response = await authorizedFetch(`${API_BASE_URL}/api/clientes/actualizar/${cliente.id}`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/clientes/actualizar/${cliente.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
