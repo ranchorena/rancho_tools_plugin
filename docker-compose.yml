@@ -63,6 +63,43 @@ services:
     volumes:
       - ./raapi:/app # Opcional: para desarrollo, montar el código local en el contenedor
 
+  # Reemplazo de raapi. ra-proxy envía /api y /health acá. raapi queda en el puerto 5000.
+  ra-ng-api:
+    build:
+      context: ./ra-ng-api
+      dockerfile: Dockerfile
+    image: ra-ng-api:qa
+    container_name: rangapi-qa
+    ports:
+      - "5001:8000"
+    networks:
+      - raweb-network
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD debe estar definida en .env}
+      - DB_HOST=${DB_HOST_DOCKER:-host.docker.internal}
+      - DB_PORT=${DB_PORT_DOCKER:-5432}
+      - DB_NAME=${DB_NAME:-postgres}
+      - DB_SCHEMA=${DB_SCHEMA:-generalbelgrano}
+      - KEYCLOAK_ISSUER=${PUBLIC_URL:-http://localhost:8088}/realms/rancho
+      - KEYCLOAK_JWKS_URL=${KEYCLOAK_JWKS_URL_DOCKER:-http://keycloak:8080/realms/rancho/protocol/openid-connect/certs}
+      - RA_API_AUDIENCE=${RA_API_AUDIENCE:-raapi}
+      - CORS_ORIGINS=${CORS_ORIGINS:-${PUBLIC_URL:-http://localhost:8088},http://localhost:8082,http://localhost:8080}
+    volumes:
+      - ./ra-ng-api:/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   # No forma parte del DEV habitual. La PostgreSQL de referencia corre en el host, puerto 5432.
   # Este servicio es para una instalación desde cero: docker compose --profile standalone up -d
   # y DB_HOST_DOCKER=db. La imagen sigue en postgres:13-alpine; no restaura el dump 1.16.
@@ -161,6 +198,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - ra-ng-api
       - keycloak
     networks:
       - raweb-network

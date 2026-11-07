@@ -1,5 +1,6 @@
 # Ignorar el entorno virtual de Python
 /raapi/venv/
+/ra-ng-api/.venv/
 
 # Ignorar dependencias de Node.js
 /raweb/node_modules/

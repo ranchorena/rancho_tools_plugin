@@ -1,0 +1,1980 @@
+openapi: 3.1.0
+info:
+  title: ra-ng-api
+  description: API de clientes, pedidos, direcciones y rutas del rancho. El contrato
+    versionado está en /api/v1. Las mismas operaciones están en /api para que raweb
+    siga usando las rutas actuales.
+  version: 1.0.0
+paths:
+  /api/v1/direcciones/buscar:
+    post:
+      tags:
+      - Direcciones
+      summary: Busca una dirección y devuelve el centroide del tramo
+      operationId: buscar_direccion_v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuscarDireccionIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuscarDireccionOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/clientes/buscar:
+    post:
+      tags:
+      - Clientes
+      summary: Busca clientes por nombre, dirección o calle y altura
+      operationId: buscar_clientes_v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuscarClientesIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ClienteBusquedaOut'
+                type: array
+                title: Response Buscar Clientes V1
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/clientes/actualizar/{cliente_id}:
+    put:
+      tags:
+      - Clientes
+      summary: Actualiza un cliente y registra o actualiza su pedido
+      operationId: actualizar_cliente_v1
+      parameters:
+      - name: cliente_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Cliente Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarClienteIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensajeOut'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/clientes/agregar:
+    post:
+      tags:
+      - Clientes
+      summary: Agrega un cliente
+      operationId: agregar_cliente_v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgregarClienteIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgregarClienteOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/clientes/pedidos:
+    get:
+      tags:
+      - Clientes
+      summary: Lista los clientes con pedido activo
+      operationId: listar_clientes_con_pedido_v1
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - items:
+                    $ref: '#/components/schemas/ClientePedidoOut'
+                  type: array
+                - $ref: '#/components/schemas/SinPedidosOut'
+                title: Response Listar Clientes Con Pedido V1
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+  /api/v1/clientes/{cliente_id}/pedido:
+    get:
+      tags:
+      - Pedidos
+      summary: Devuelve el pedido del cliente para una fecha
+      operationId: obtener_pedido_de_fecha_v1
+      parameters:
+      - name: cliente_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Cliente Id
+      - name: fecha
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoDeFechaOut'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/pedidos/cercano:
+    get:
+      tags:
+      - Pedidos
+      summary: Devuelve el pedido activo de menor recorrido
+      operationId: obtener_pedido_cercano_v1
+      parameters:
+      - name: latitud
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Latitud
+      - name: longitud
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Longitud
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoCercanoRespuesta'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/rutas/calcular:
+    post:
+      tags:
+      - Rutas
+      summary: Calcula el recorrido más corto entre dos puntos
+      operationId: calcular_ruta_v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcularRutaIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RutaOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/pedidos/historico:
+    get:
+      tags:
+      - Pedidos
+      summary: Lista los pedidos entre dos fechas
+      operationId: listar_historico_v1
+      parameters:
+      - name: desde
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Desde
+      - name: hasta
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Hasta
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricoOut'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/pedidos/eliminar:
+    post:
+      tags:
+      - Pedidos
+      summary: Elimina un pedido
+      operationId: eliminar_pedido_v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EliminarPedidoIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensajeOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/pedidos/iniciar:
+    post:
+      tags:
+      - Pedidos
+      summary: Deja sin pedido activo a los clientes
+      operationId: iniciar_pedidos_v1
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensajeOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+  /api/direcciones/buscar:
+    post:
+      tags:
+      - Direcciones
+      summary: Busca una dirección y devuelve el centroide del tramo
+      operationId: buscar_direccion_compat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuscarDireccionIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuscarDireccionOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/clientes/buscar:
+    post:
+      tags:
+      - Clientes
+      summary: Busca clientes por nombre, dirección o calle y altura
+      operationId: buscar_clientes_compat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuscarClientesIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ClienteBusquedaOut'
+                type: array
+                title: Response Buscar Clientes Compat
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/clientes/actualizar/{cliente_id}:
+    put:
+      tags:
+      - Clientes
+      summary: Actualiza un cliente y registra o actualiza su pedido
+      operationId: actualizar_cliente_compat
+      parameters:
+      - name: cliente_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Cliente Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarClienteIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensajeOut'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/clientes/agregar:
+    post:
+      tags:
+      - Clientes
+      summary: Agrega un cliente
+      operationId: agregar_cliente_compat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgregarClienteIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgregarClienteOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/clientes/pedidos:
+    get:
+      tags:
+      - Clientes
+      summary: Lista los clientes con pedido activo
+      operationId: listar_clientes_con_pedido_compat
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - items:
+                    $ref: '#/components/schemas/ClientePedidoOut'
+                  type: array
+                - $ref: '#/components/schemas/SinPedidosOut'
+                title: Response Listar Clientes Con Pedido Compat
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+  /api/clientes/{cliente_id}/pedido:
+    get:
+      tags:
+      - Pedidos
+      summary: Devuelve el pedido del cliente para una fecha
+      operationId: obtener_pedido_de_fecha_compat
+      parameters:
+      - name: cliente_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Cliente Id
+      - name: fecha
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoDeFechaOut'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/pedidos/cercano:
+    get:
+      tags:
+      - Pedidos
+      summary: Devuelve el pedido activo de menor recorrido
+      operationId: obtener_pedido_cercano_compat
+      parameters:
+      - name: latitud
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Latitud
+      - name: longitud
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Longitud
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoCercanoRespuesta'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/rutas/calcular:
+    post:
+      tags:
+      - Rutas
+      summary: Calcula el recorrido más corto entre dos puntos
+      operationId: calcular_ruta_compat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcularRutaIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RutaOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/pedidos/historico:
+    get:
+      tags:
+      - Pedidos
+      summary: Lista los pedidos entre dos fechas
+      operationId: listar_historico_compat
+      parameters:
+      - name: desde
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Desde
+      - name: hasta
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Hasta
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricoOut'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/pedidos/eliminar:
+    post:
+      tags:
+      - Pedidos
+      summary: Elimina un pedido
+      operationId: eliminar_pedido_compat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EliminarPedidoIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensajeOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/pedidos/iniciar:
+    post:
+      tags:
+      - Pedidos
+      summary: Deja sin pedido activo a los clientes
+      operationId: iniciar_pedidos_compat
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MensajeOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+  /health:
+    get:
+      tags:
+      - Sistema
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+components:
+  schemas:
+    ActualizarClienteIn:
+      properties:
+        docenas:
+          title: Docenas
+        nro_pao:
+          title: Nro Pao
+        tiene_pedido:
+          title: Tiene Pedido
+        es_regalo:
+          title: Es Regalo
+        observaciones:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observaciones
+        horario:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Horario
+        fecha:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Calle
+        altura:
+          title: Altura
+        telefono:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Telefono
+        direccion_pedido:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion Pedido
+        latitud:
+          title: Latitud
+        longitud:
+          title: Longitud
+      type: object
+      title: ActualizarClienteIn
+      description: '`docenas` se guarda en cantidad y `observaciones` en observacion.'
+    AgregarClienteIn:
+      properties:
+        nombre:
+          type: string
+          title: Nombre
+        direccion:
+          type: string
+          title: Direccion
+        latitud:
+          title: Latitud
+        longitud:
+          title: Longitud
+        calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Calle
+        altura:
+          title: Altura
+        telefono:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Telefono
+        tiene_pedido:
+          title: Tiene Pedido
+        cantidad:
+          title: Cantidad
+        horario:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Horario
+        fecha:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha
+        nro_pao:
+          title: Nro Pao
+        observacion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observacion
+        es_regalo:
+          title: Es Regalo
+      type: object
+      required:
+      - nombre
+      - direccion
+      - latitud
+      - longitud
+      title: AgregarClienteIn
+    AgregarClienteOut:
+      properties:
+        mensaje:
+          type: string
+          title: Mensaje
+        cliente:
+          $ref: '#/components/schemas/ClienteCreadoOut'
+      type: object
+      required:
+      - mensaje
+      - cliente
+      title: AgregarClienteOut
+    BuscarClientesIn:
+      properties:
+        criterio:
+          type: string
+          title: Criterio
+          examples:
+          - nombre
+        nombre_cliente:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre Cliente
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Calle
+        altura:
+          title: Altura
+      type: object
+      required:
+      - criterio
+      title: BuscarClientesIn
+    BuscarDireccionIn:
+      properties:
+        direccion:
+          type: string
+          title: Direccion
+          examples:
+          - SARMIENTO 550
+      type: object
+      required:
+      - direccion
+      title: BuscarDireccionIn
+    BuscarDireccionOut:
+      properties:
+        latitud:
+          type: number
+          title: Latitud
+        longitud:
+          type: number
+          title: Longitud
+        tramo_info:
+          $ref: '#/components/schemas/TramoInfoOut'
+      type: object
+      required:
+      - latitud
+      - longitud
+      - tramo_info
+      title: BuscarDireccionOut
+    CalcularRutaIn:
+      properties:
+        origen:
+          anyOf:
+          - $ref: '#/components/schemas/PuntoIn'
+          - type: 'null'
+        destino:
+          anyOf:
+          - $ref: '#/components/schemas/PuntoIn'
+          - type: 'null'
+      type: object
+      title: CalcularRutaIn
+    ClienteBusquedaOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        nombre:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Calle
+        altura:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Altura
+        telefono:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Telefono
+        tiene_pedido:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tiene Pedido
+        longitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitud
+        latitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitud
+      type: object
+      required:
+      - id
+      title: ClienteBusquedaOut
+    ClienteCreadoOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        nombre:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Calle
+        altura:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Altura
+        longitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitud
+        latitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitud
+      type: object
+      required:
+      - id
+      title: ClienteCreadoOut
+    ClientePedidoOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        nombre:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Calle
+        altura:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Altura
+        tiene_pedido:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tiene Pedido
+        telefono:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Telefono
+        cantidad:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Cantidad
+        horario:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Horario
+        nro_pao:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Nro Pao
+        observacion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observacion
+        es_regalo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Es Regalo
+        longitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitud
+        latitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitud
+      type: object
+      required:
+      - id
+      title: ClientePedidoOut
+    EliminarPedidoIn:
+      properties:
+        id_pedido:
+          title: Id Pedido
+      type: object
+      title: EliminarPedidoIn
+    ErrorOut:
+      properties:
+        error:
+          type: string
+          title: Error
+      type: object
+      required:
+      - error
+      title: ErrorOut
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HistoricoOut:
+      properties:
+        fecha_desde:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha Desde
+        fecha_hasta:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha Hasta
+        pedidos:
+          items:
+            $ref: '#/components/schemas/PedidoHistoricoOut'
+          type: array
+          title: Pedidos
+      type: object
+      required:
+      - pedidos
+      title: HistoricoOut
+    MensajeOut:
+      properties:
+        mensaje:
+          type: string
+          title: Mensaje
+      type: object
+      required:
+      - mensaje
+      title: MensajeOut
+    PedidoCercanoOut:
+      properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        nombre:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Calle
+        altura:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Altura
+        telefono:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Telefono
+        cantidad:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Cantidad
+        horario:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Horario
+        longitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitud
+        latitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitud
+        distancia:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Distancia
+        id_pedido:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id Pedido
+        fecha:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha
+        observaciones:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observaciones
+      type: object
+      title: PedidoCercanoOut
+    PedidoCercanoRespuesta:
+      properties:
+        pedido:
+          anyOf:
+          - $ref: '#/components/schemas/PedidoCercanoOut'
+          - type: 'null'
+        ruta:
+          anyOf:
+          - $ref: '#/components/schemas/RutaOut'
+          - type: 'null'
+      type: object
+      title: PedidoCercanoRespuesta
+    PedidoDeFechaOut:
+      properties:
+        pedido:
+          anyOf:
+          - $ref: '#/components/schemas/PedidoFechaOut'
+          - type: 'null'
+      type: object
+      title: PedidoDeFechaOut
+    PedidoFechaOut:
+      properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        fecha:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha
+        cantidad:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Cantidad
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Calle
+        altura:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Altura
+        nro_pao:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Nro Pao
+        observacion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observacion
+        longitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitud
+        latitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitud
+      type: object
+      title: PedidoFechaOut
+    PedidoHistoricoOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        fecha:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fecha
+        id_cliente:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id Cliente
+        nombre:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        cantidad:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Cantidad
+        telefono:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Telefono
+        horario:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Horario
+        nro_pao:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Nro Pao
+        es_regalo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Es Regalo
+        precio_unitario:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Precio Unitario
+        observacion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Observacion
+        longitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Longitud
+        latitud:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latitud
+      type: object
+      required:
+      - id
+      title: PedidoHistoricoOut
+    PuntoIn:
+      properties:
+        latitud:
+          title: Latitud
+        longitud:
+          title: Longitud
+      type: object
+      title: PuntoIn
+    RutaOut:
+      properties:
+        geometria:
+          type: object
+          title: Geometria
+        distancia_m:
+          type: integer
+          title: Distancia M
+        tramos:
+          type: integer
+          title: Tramos
+      type: object
+      required:
+      - geometria
+      - distancia_m
+      - tramos
+      title: RutaOut
+    SinPedidosOut:
+      properties:
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - message
+      title: SinPedidosOut
+    TramoInfoOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        nombre_calle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre Calle
+        desde:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Desde
+        hasta:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Hasta
+      type: object
+      required:
+      - id
+      title: TramoInfoOut
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
