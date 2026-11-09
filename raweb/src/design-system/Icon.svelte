@@ -53,6 +53,8 @@
 		<path d="M12 4.5 4 8.5 12 12.5 20 8.5 12 4.5z" />
 		<path d="M4 12.5 12 16.5 20 12.5" />
 		<path d="M4 16 12 20 20 16" />
+	{:else if name === 'check'}
+		<path d="M5 12.5 9.2 16.5 19 7.5" />
 	{:else if name === 'close'}
 		<path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5" />
 	{:else if name === 'alert'}

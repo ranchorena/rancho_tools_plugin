@@ -23,6 +23,8 @@
   let buscando = null;
   let calculando = false;
   let mensajeError = '';
+  let origenBusqueda = origen ? 'ok' : null;
+  let destinoBusqueda = destino ? 'ok' : null;
   let ultimoPuntoAplicado = puntoSeleccionado;
 
   $: hayUbicacion = ubicacionActiva && Boolean(ubicacionActual);
@@ -36,6 +38,7 @@
     } else {
       origen = null;
       origenTexto = '';
+      origenBusqueda = null;
     }
   }
 
@@ -49,8 +52,19 @@
     if (!origen && hayUbicacion) usarMiUbicacion();
   });
 
+  function marcarBusqueda(rol, estado) {
+    if (rol === 'origen') origenBusqueda = estado;
+    else destinoBusqueda = estado;
+  }
+
+  function descartarPunto(rol) {
+    if (rol === 'origen') origen = null;
+    else destino = null;
+  }
+
   function fijarPunto(rol, punto) {
     mensajeError = '';
+    marcarBusqueda(rol, punto ? 'ok' : null);
     if (rol === 'origen') {
       origen = punto;
       origenTexto = punto?.label ?? '';
@@ -73,9 +87,12 @@
   function editarTexto(rol) {
     const punto = rol === 'origen' ? origen : destino;
     const texto = rol === 'origen' ? origenTexto : destinoTexto;
+    const estado = rol === 'origen' ? origenBusqueda : destinoBusqueda;
     if (punto && texto !== punto.label) {
-      if (rol === 'origen') origen = null;
-      else destino = null;
+      descartarPunto(rol);
+      marcarBusqueda(rol, null);
+    } else if (estado === 'error') {
+      marcarBusqueda(rol, null);
     }
   }
 
@@ -83,10 +100,12 @@
     const direccion = (rol === 'origen' ? origenTexto : destinoTexto).trim();
     if (!direccion) {
       mensajeError = `Ingresá una dirección para el ${rol}.`;
+      marcarBusqueda(rol, null);
       return;
     }
     buscando = rol;
     mensajeError = '';
+    marcarBusqueda(rol, null);
     try {
       const response = await authorizedFetch(`${API_BASE_URL}/direcciones/buscar`, {
         method: 'POST',
@@ -95,12 +114,16 @@
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !Number.isFinite(data.latitud) || !Number.isFinite(data.longitud)) {
+        descartarPunto(rol);
+        marcarBusqueda(rol, 'error');
         mensajeError = data.error || 'No se pudo encontrar la dirección.';
         return;
       }
       fijarPunto(rol, { lat: data.latitud, lon: data.longitud, label: direccion });
     } catch (error) {
       console.error('Error al buscar dirección:', error);
+      descartarPunto(rol);
+      marcarBusqueda(rol, 'error');
       mensajeError = 'No se pudo buscar la dirección.';
     } finally {
       buscando = null;
@@ -117,6 +140,7 @@
     origen = swapped.origin;
     destino = swapped.destination ? { ...swapped.destination, actual: false } : null;
     [origenTexto, destinoTexto] = [destinoTexto, origenTexto];
+    [origenBusqueda, destinoBusqueda] = [destinoBusqueda, origenBusqueda];
   }
 
   async function verRecorrido() {
@@ -200,6 +224,15 @@
                 placeholder="Dirección, ej: SARMIENTO 550"
                 autocomplete="off"
               />
+              {#if origenBusqueda === 'ok'}
+                <span class="search-status search-status--ok" role="img" aria-label="Dirección de origen encontrada" title="Dirección encontrada">
+                  <Icon name="check" size={16} />
+                </span>
+              {:else if origenBusqueda === 'error'}
+                <span class="search-status search-status--error" role="img" aria-label="Dirección de origen no encontrada" title="Dirección no encontrada">
+                  <Icon name="close" size={16} />
+                </span>
+              {/if}
               <button type="button" class="icon-btn ds-button" on:click={() => buscarDireccion('origen')}
                       disabled={buscando === 'origen'} title="Buscar dirección de origen" aria-label="Buscar dirección de origen">
                 <Icon name="search" size={16} />
@@ -230,6 +263,15 @@
                 placeholder="Dirección, ej: ITALIA 50"
                 autocomplete="off"
               />
+              {#if destinoBusqueda === 'ok'}
+                <span class="search-status search-status--ok" role="img" aria-label="Dirección de destino encontrada" title="Dirección encontrada">
+                  <Icon name="check" size={16} />
+                </span>
+              {:else if destinoBusqueda === 'error'}
+                <span class="search-status search-status--error" role="img" aria-label="Dirección de destino no encontrada" title="Dirección no encontrada">
+                  <Icon name="close" size={16} />
+                </span>
+              {/if}
               <button type="button" class="icon-btn ds-button" on:click={() => buscarDireccion('destino')}
                       disabled={buscando === 'destino'} title="Buscar dirección de destino" aria-label="Buscar dirección de destino">
                 <Icon name="search" size={16} />
@@ -390,23 +432,26 @@
 
   .point-field input[type="text"] {
     flex: 1 1 auto;
+    width: auto;
     min-width: 0;
-    min-height: 2.625rem;
-    padding: 0.55rem 0.75rem;
-    border: 1px solid var(--ds-border);
-    border-radius: 999px;
-    font-size: var(--ds-type-body);
-    background: var(--ds-background);
-    color: var(--ds-text);
-    box-sizing: border-box;
     margin: 0;
   }
 
-  .point-field input[type="text"]:focus-visible {
-    outline: 2px solid var(--ds-focus);
-    outline-offset: 1px;
-    border-color: var(--ds-focus);
-    box-shadow: none;
+  .search-status {
+    flex: 0 0 auto;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .search-status--ok {
+    color: var(--ds-success);
+  }
+
+  .search-status--error {
+    color: var(--ds-error);
   }
 
   .icon-btn {
@@ -509,10 +554,6 @@
 
     .modal-footer {
       padding: 0.75rem 1rem 1rem;
-    }
-
-    .point-field input[type="text"] {
-      font-size: 16px; /* Evita zoom en iOS */
     }
   }
 
