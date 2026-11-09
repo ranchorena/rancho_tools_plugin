@@ -63,6 +63,12 @@ class PedidoRepository:
         texto = fecha.date().isoformat() if isinstance(fecha, datetime.datetime) else fecha.isoformat()
         return fila.id_pedido, texto
 
+    def primera_fecha(self) -> datetime.date | None:
+        primera = self._session.execute(select(func.min(Pedido.fecha))).scalar()
+        if primera is None:
+            return None
+        return primera.date() if isinstance(primera, datetime.datetime) else primera
+
     def ultima_fecha(self) -> datetime.date | None:
         ultima = self._session.execute(select(func.max(Pedido.fecha))).scalar()
         if ultima is None:

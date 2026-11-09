@@ -25,6 +25,11 @@
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
   import Pedidos from './Pedidos.svelte'; // Importar el componente Pedidos
   import PedidosHistorico from './PedidosHistorico.svelte';
+  import HistoricoTimeline from './HistoricoTimeline.svelte';
+  import {
+    agruparPedidos,
+    fechaSiguiente
+  } from './historico-timeline.mjs';
   import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
   import ComoLlegarDialog from './ComoLlegarDialog.svelte';
   import { formatDistance } from './route-planner.mjs';
@@ -72,6 +77,16 @@
   let centrarUbicacion = false;
   let pedidoCercanoId = null;
   let temporaryLayers = [];
+  let historicoActivo = false;
+  let historicoCargando = false;
+  let historicoFechas = [];
+  let historicoPedidosPorFecha = {};
+  let historicoFecha = '';
+  let historicoReproduciendo = false;
+  let historicoIntervalo = 1;
+  let historicoTimer = null;
+  let historicoSource = null;
+  let historicoLayer = null;
 
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
@@ -143,7 +158,8 @@
   // Reacciones para actualizar la visibilidad de las capas cuando cambian los checkboxes
   $: if (osmLayer) osmLayer.setVisible(showOSMLayer);
   $: if (satelliteLayer) satelliteLayer.setVisible(showSatelliteLayer);
-  $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer);
+  $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer && !historicoActivo);
+  $: if (historicoLayer) historicoLayer.setVisible(historicoActivo);
   $: if (pedidosLayer) {
     showPedidosNombre;
     pedidosLayer.setStyle(pedidoStyle);
@@ -422,6 +438,13 @@
       visible: showPedidosLayer
     });
 
+    historicoSource = new VectorSource();
+    historicoLayer = new VectorLayer({
+      source: historicoSource,
+      style: new Style({ image: medialunaIcon() }),
+      visible: false
+    });
+
     // Definición de la capa de Barrios (WFS). En el mapa queda debajo de Clientes.
     barriosLayer = new VectorLayer({
       source: new VectorSource({
@@ -538,7 +561,7 @@
       target: mapElement,
       controls: defaultControls({
         rotate: false, // Desactivar el control de rotación
-        attribution: true,
+        attribution: false,
         zoom: true
       }),
       layers: [
@@ -552,6 +575,7 @@
         tramosNombreLayer,
         clientesLayer,
         pedidosLayer, // Los pedidos ahora van encima de los clientes
+        historicoLayer,
         markerLayer, // Capa para los marcadores (debe estar encima de las WMS)
         rutaLayer,
         ubicacionLayer
@@ -599,7 +623,7 @@
       
       // Buscar features de pedidos, la capa temporal o clientes en el pixel clickeado
       map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
-        const esCapaTemporal = temporaryLayers.includes(layer);
+        const esCapaTemporal = temporaryLayers.includes(layer) || layer === historicoLayer;
         if (esCapaTemporal || layer === pedidosLayer || layer === clientesLayer) {
           foundFeature = feature;
           foundLayer = layer;
@@ -611,7 +635,7 @@
         const properties = foundFeature.getProperties();
         
         // Determinar el tipo de feature
-        const isPedido = foundLayer === pedidosLayer || temporaryLayers.includes(foundLayer);
+        const isPedido = foundLayer === pedidosLayer || temporaryLayers.includes(foundLayer) || foundLayer === historicoLayer;
         
         selectedFeatureData = {
           id: properties.id_pedido || properties.id || 'N/A',
@@ -677,6 +701,7 @@
 
     // Limpiar el mapa al desmontar el componente
     return () => {
+      detenerReproduccionHistorica();
       detenerUbicacion();
       window.removeEventListener('resize', handleResize);
       if (map) {
@@ -1247,15 +1272,150 @@
     }
   }
 
-  function limpiarMapa() {
-    quitarPedidoCercano();
-    if (markerSource) markerSource.clear();
-    if (rutaSource) rutaSource.clear();
+  function quitarCapasTemporales() {
     temporaryLayers.forEach((layer) => {
       if (map) map.removeLayer(layer);
     });
     temporaryLayers = [];
+  }
+
+  function detenerReproduccionHistorica() {
+    historicoReproduciendo = false;
+    if (historicoTimer != null) {
+      clearTimeout(historicoTimer);
+      historicoTimer = null;
+    }
+  }
+
+  function programarSaltoHistorico() {
+    if (historicoTimer != null) clearTimeout(historicoTimer);
+    const espera = Math.max(0.2, Number(historicoIntervalo) || 1) * 1000;
+    historicoTimer = setTimeout(() => {
+      historicoTimer = null;
+      if (!historicoReproduciendo) return;
+      const proxima = fechaSiguiente(historicoFecha, historicoFechas);
+      if (!proxima) {
+        detenerReproduccionHistorica();
+        return;
+      }
+      historicoFecha = proxima;
+      mostrarPedidosHistoricos(proxima, false);
+      if (fechaSiguiente(proxima, historicoFechas)) programarSaltoHistorico();
+      else detenerReproduccionHistorica();
+    }, espera);
+  }
+
+  function iniciarReproduccionHistorica() {
+    if (!fechaSiguiente(historicoFecha, historicoFechas)) return;
+    detenerReproduccionHistorica();
+    historicoReproduciendo = true;
+    programarSaltoHistorico();
+  }
+
+  function mostrarPedidosHistoricos(fecha, ajustar) {
+    if (!historicoSource) return;
+    historicoSource.clear();
+    const pedidos = historicoPedidosPorFecha[fecha] || [];
+    const features = [];
+    for (const pedido of pedidos) {
+      const lon = Number(pedido.longitud);
+      const lat = Number(pedido.latitud);
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+      features.push(new Feature({
+        geometry: new Point(fromLonLat([lon, lat])),
+        id: pedido.id,
+        nombre: pedido.nombre || 'N/A',
+        direccion: pedido.direccion || 'N/A',
+        cantidad: pedido.cantidad ?? 'N/A',
+        fecha,
+        telefono: pedido.telefono || 'N/A',
+        horario: pedido.horario || 'N/A',
+        observaciones: pedido.observacion || pedido.observaciones || 'N/A',
+        calle: pedido.calle || 'N/A',
+        altura: pedido.altura ?? 'N/A'
+      }));
+    }
+    if (features.length) historicoSource.addFeatures(features);
+    if (!ajustar || !features.length || !map) return;
+    const extent = historicoSource.getExtent();
+    if (extent && extent.every((value) => Number.isFinite(value))) {
+      map.getView().fit(extent, {
+        padding: [48, 48, 72, 48],
+        maxZoom: 17,
+        duration: 600
+      });
+    }
+  }
+
+  function cerrarHistorico() {
+    detenerReproduccionHistorica();
+    historicoActivo = false;
+    historicoFecha = '';
+    historicoFechas = [];
+    historicoPedidosPorFecha = {};
+    if (historicoSource) historicoSource.clear();
     closeFeatureTooltip();
+  }
+
+  async function alternarHistorico() {
+    if (historicoActivo) {
+      cerrarHistorico();
+      return;
+    }
+    if (historicoCargando || !map) return;
+    historicoCargando = true;
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/pedidos/historico?completo=true`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        mostrarAviso(data.error || 'No se pudo cargar el historial de pedidos.', 'error');
+        return;
+      }
+      const { fechas, pedidosPorFecha } = agruparPedidos(data.pedidos || []);
+      if (!fechas.length) {
+        mostrarAviso('No hay pedidos registrados.', 'warning');
+        return;
+      }
+      quitarCapasTemporales();
+      closeFeatureTooltip();
+      historicoFechas = fechas;
+      historicoPedidosPorFecha = pedidosPorFecha;
+      historicoFecha = fechas[fechas.length - 1];
+      mostrarPedidosHistoricos(historicoFecha, true);
+      historicoActivo = true;
+    } catch (error) {
+      console.error('Error al cargar el historial de pedidos:', error);
+      mostrarAviso('No se pudo cargar el historial de pedidos.', 'error');
+    } finally {
+      historicoCargando = false;
+    }
+  }
+
+  function alCambiarFechaHistorica(event) {
+    detenerReproduccionHistorica();
+    const fecha = event.detail.fecha;
+    if (!fecha || !historicoFechas.includes(fecha)) return;
+    historicoFecha = fecha;
+    mostrarPedidosHistoricos(fecha, false);
+  }
+
+  function alReproducirHistorico(event) {
+    if (event.detail.activo) iniciarReproduccionHistorica();
+    else detenerReproduccionHistorica();
+  }
+
+  function alCambiarIntervaloHistorico(event) {
+    const segundos = Number(event.detail.segundos);
+    if (!Number.isFinite(segundos)) return;
+    historicoIntervalo = Math.max(0.2, segundos);
+  }
+
+  function limpiarMapa() {
+    quitarPedidoCercano();
+    if (markerSource) markerSource.clear();
+    if (rutaSource) rutaSource.clear();
+    quitarCapasTemporales();
+    cerrarHistorico();
   }
 
   function handleVerHistoricoEnMapa(event) {
@@ -1439,7 +1599,7 @@
     </button>
   </nav>
 
-  <div class="map-container" bind:this={mapElement}>
+  <div class="map-container" class:historico-abierto={historicoActivo} bind:this={mapElement}>
     <!-- El mapa siempre está presente en el DOM -->
     
     <!-- Toolbar de capas flotante -->
@@ -1556,6 +1716,30 @@
       <UiIcon name="nearest" size={20} />
     </button>
     <button type="button" class="map-clear-btn" on:click={limpiarMapa}>Limpiar</button>
+    <button
+      type="button"
+      class="historico-mapa-btn"
+      class:activa={historicoActivo}
+      on:click={alternarHistorico}
+      disabled={historicoCargando}
+      title={historicoActivo ? 'Cerrar pedidos históricos' : 'Ver pedidos históricos en el mapa'}
+      aria-label={historicoActivo ? 'Cerrar pedidos históricos' : 'Ver pedidos históricos en el mapa'}
+      aria-pressed={historicoActivo}
+    >
+      <UiIcon name="history" size={20} />
+    </button>
+    {#if historicoActivo}
+      <HistoricoTimeline
+        fechas={historicoFechas}
+        fechaActual={historicoFecha}
+        reproduciendo={historicoReproduciendo}
+        intervaloSegundos={historicoIntervalo}
+        on:cambiarFecha={alCambiarFechaHistorica}
+        on:reproducir={alReproducirHistorico}
+        on:intervalo={alCambiarIntervaloHistorico}
+        on:cerrar={cerrarHistorico}
+      />
+    {/if}
   </div>
 
   {#if showBuscarDireccionDialog}
@@ -1985,7 +2169,8 @@
   .layer-toolbar-show-btn:focus-visible,
   .add-client-floating-btn:focus-visible,
   .ubicacion-btn:focus-visible,
-  .pedido-cercano-btn:focus-visible {
+  .pedido-cercano-btn:focus-visible,
+  .historico-mapa-btn:focus-visible {
     outline: 2px solid var(--ds-focus);
     outline-offset: 1px;
   }
@@ -1993,7 +2178,8 @@
   :global(:root[data-theme="dark"]) .layer-toolbar-show-btn:focus-visible,
   :global(:root[data-theme="dark"]) .add-client-floating-btn:focus-visible,
   :global(:root[data-theme="dark"]) .ubicacion-btn:focus-visible,
-  :global(:root[data-theme="dark"]) .pedido-cercano-btn:focus-visible {
+  :global(:root[data-theme="dark"]) .pedido-cercano-btn:focus-visible,
+  :global(:root[data-theme="dark"]) .historico-mapa-btn:focus-visible {
     outline: 2px solid var(--ds-focus);
     outline-offset: 1px;
   }
@@ -2057,7 +2243,9 @@
   .ubicacion-btn.activa,
   .ubicacion-btn.activa:hover,
   .pedido-cercano-btn.activa,
-  .pedido-cercano-btn.activa:hover {
+  .pedido-cercano-btn.activa:hover,
+  .historico-mapa-btn.activa,
+  .historico-mapa-btn.activa:hover {
     background: var(--ds-location);
     color: var(--ds-on-location);
     border-color: var(--ds-location);
@@ -2089,6 +2277,35 @@
     background: var(--ds-surface);
     color: var(--ds-text-muted);
     border-color: var(--ds-border);
+  }
+
+  .historico-mapa-btn {
+    position: absolute;
+    top: calc(4.35rem + 132px + 1.5rem);
+    right: 0.75rem;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-round);
+    box-shadow: var(--ds-shadow-sm);
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .historico-mapa-btn:hover {
+    background: var(--ds-secondary-hover);
+  }
+
+  .historico-mapa-btn:disabled {
+    opacity: 0.45;
+    cursor: wait;
   }
 
   .map-clear-btn {
@@ -2172,6 +2389,14 @@
     touch-action: pan-x pan-y;
     overflow: hidden;
     background: var(--ds-background);
+  }
+
+  .map-container.historico-abierto .map-clear-btn {
+    bottom: 3.25rem;
+  }
+
+  .map-container.historico-abierto :global(.ol-attribution) {
+    bottom: 6rem;
   }
 
   /* Estilos para OpenLayers */
@@ -2340,7 +2565,8 @@
     .layer-toolbar-show-btn,
     .add-client-floating-btn,
     .ubicacion-btn,
-    .pedido-cercano-btn {
+    .pedido-cercano-btn,
+    .historico-mapa-btn {
       right: 0.5rem;
     }
 
@@ -2360,8 +2586,20 @@
       top: calc(4rem + 88px + 1rem);
     }
 
+    .historico-mapa-btn {
+      top: calc(4rem + 132px + 1.5rem);
+    }
+
     .map-clear-btn {
       bottom: 0.75rem;
+    }
+
+    .map-container.historico-abierto .map-clear-btn {
+      bottom: 3.5rem;
+    }
+
+    .map-container.historico-abierto :global(.ol-attribution) {
+      bottom: 8.5rem;
     }
 
     @media (max-width: 480px) {

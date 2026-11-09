@@ -59,7 +59,7 @@ export default {
 			preventAssignment: true,
 			values: {
 				// Usar las variables de entorno directamente, ya están en el formato correcto
-				'__API_URL__': process.env.API_URL || "http://localhost:5000/api",
+				'__API_URL__': process.env.API_URL || "http://localhost:5001/api/v1",
 				'__GEOSERVER_URL__': process.env.GEOSERVER_URL || "http://localhost:8087/geoserver",
 				'__KEYCLOAK_URL__': process.env.KEYCLOAK_URL || "http://localhost:8081"
 			}

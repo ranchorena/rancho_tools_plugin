@@ -1,6 +1,6 @@
 # Keycloak DEV — realm rancho
 
-Keycloak **26.8.1** es el identity provider de `raweb`, `raapi` y `ra-mcp`.
+Keycloak **26.8.1** es el identity provider de `raweb`, `ra-ng-api` y `ra-mcp`.
 `start-dev` en este Compose es solo para la máquina local. Un ambiente real
 usa `start`, HTTPS y un reverse proxy, sin usuario demo y sin este bootstrap.
 
@@ -36,7 +36,7 @@ aud:     http://localhost:8000/mcp
 tipo:    JWT firmado por RA_MCP_JWT_SIGNING_KEY
          No se envía a raapi.
 
-Token intercambiado enviado a raapi
+Token intercambiado enviado a ra-ng-api
 issuer:  http://localhost:8081/realms/rancho
 azp:     ra-mcp
 aud:     raapi
@@ -51,6 +51,8 @@ Legacy Token Exchange V1 no se habilita.
 
 Los permisos son client roles de `raapi`: `clientes:read` y `pedidos:write`.
 No hay un segundo sistema de scopes OAuth con los mismos nombres.
+El clientId no pasa a `ra-ng-api`: raweb y ra-mcp ya emiten `aud=raapi`, y
+`--import-realm` no reescribe un realm existente.
 
 ## Variables
 
@@ -80,7 +82,7 @@ ajustarlos a `PUBLIC_URL`. `ra-mcp` y `verify_dev.py` deben usar el mismo emisor
 `PUBLIC_URL` y de `http://localhost:8082`.
 `KEYCLOAK_JWKS_URL` en el host es
 `http://127.0.0.1:8081/realms/rancho/protocol/openid-connect/certs`.
-El contenedor `backend` no reutiliza esa variable: usa
+El contenedor `ra-ng-api` no reutiliza esa variable: usa
 `KEYCLOAK_JWKS_URL_DOCKER`
 (`http://keycloak:8080/realms/rancho/protocol/openid-connect/certs`).
 `fullScopeAllowed`, los client scopes, los audience mappers y los scope
@@ -96,7 +98,7 @@ Admin:             http://localhost:8081/admin
 Realm:             http://localhost:8081/realms/rancho
 OIDC discovery:    http://localhost:8081/realms/rancho/.well-known/openid-configuration
 raweb:             http://localhost:8080
-raapi:             http://localhost:5000
+ra-ng-api:         http://localhost:5001
 ra-mcp:            http://localhost:8000/mcp
 ```
 
@@ -123,7 +125,7 @@ docker compose up -d keycloak-db keycloak keycloak-bootstrap
 | Cliente | Tipo | Uso |
 | --- | --- | --- |
 | `raweb` | público, PKCE S256 | Authorization Code desde el navegador |
-| `raapi` | sin flujos interactivos | audiencia y roles |
+| `raapi` | sin flujos interactivos | audiencia y roles que valida ra-ng-api |
 | `ra-mcp` | confidencial | OAuthProxy y Token Exchange V2 |
 
 Redirects DEV exactos: `http://localhost:8080/`, `http://localhost:8080/silent-check-sso.html` y `http://localhost:8000/auth/callback`.

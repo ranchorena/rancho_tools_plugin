@@ -45,6 +45,10 @@
 		<path d="M4.5 12a7.5 7.5 0 1 0 2.1-5.2" />
 		<path d="M4.2 5.2v4.2h4.2" />
 		<path d="M12 8.5V12l2.6 1.8" />
+	{:else if name === 'play'}
+		<path d="M8 5.8v12.4l10.2-6.2L8 5.8z" />
+	{:else if name === 'pause'}
+		<path d="M8 5.5v13M16 5.5v13" />
 	{:else if name === 'layers'}
 		<path d="M12 4.5 4 8.5 12 12.5 20 8.5 12 4.5z" />
 		<path d="M4 12.5 12 16.5 20 12.5" />

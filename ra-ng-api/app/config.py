@@ -1,11 +1,30 @@
-"""Configuración leída del entorno del proceso. No usa archivo .env."""
+"""Configuración del proceso. Un .env local completa las variables que no vinieron del entorno."""
 
 from __future__ import annotations
 
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import quote_plus
+
+
+def _cargar_env() -> None:
+    """No pisa variables ya definidas: en Docker manda lo que inyecta Compose."""
+    ruta = Path(__file__).resolve().parents[1] / ".env"
+    if not ruta.is_file():
+        return
+    for linea in ruta.read_text(encoding="utf-8").splitlines():
+        texto = linea.strip()
+        if not texto or texto.startswith("#") or "=" not in texto:
+            continue
+        clave, _, valor = texto.partition("=")
+        clave = clave.strip()
+        if clave and clave not in os.environ:
+            os.environ[clave] = valor.strip().strip('"').strip("'")
+
+
+_cargar_env()
 
 
 def _schema(valor: str) -> str:
@@ -45,7 +64,10 @@ class Settings:
         )
         origenes = [
             origen.strip()
-            for origen in os.environ.get("CORS_ORIGINS", "http://localhost:8080").split(",")
+            for origen in os.environ.get(
+                "CORS_ORIGINS",
+                "http://localhost:8088,http://localhost:8082,http://localhost:8080",
+            ).split(",")
             if origen.strip()
         ]
         return cls(

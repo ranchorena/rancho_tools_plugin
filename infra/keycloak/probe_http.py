@@ -1,6 +1,6 @@
 """Prueba HTTP de la frontera raapi con tokens reales de Keycloak.
 
-Llama a raapi ya levantado en el puerto 5000 con tokens de Authorization
+Llama a ra-ng-api ya levantado en el puerto 5001 con tokens de Authorization
 Code. No inicia otro servidor.
 """
 
@@ -36,7 +36,7 @@ def _cargar_env() -> None:
     os.environ["FLASK_DEBUG"] = "0"
 
 
-API = "http://127.0.0.1:5000"
+API = "http://127.0.0.1:5001"
 
 
 def _http(method: str, path: str, token: str | None = None, body: dict | None = None, origin: str | None = None):
@@ -213,7 +213,7 @@ def main() -> None:
     estado, _, _ = _http("GET", "/health")
     print("health", estado, flush=True)
     if estado != 200:
-        raise SystemExit("raapi no responde en el puerto 5000")
+        raise SystemExit("ra-ng-api no responde en el puerto 5001")
 
     raapi = verify_dev._cliente("raapi")
     _restaurar_demo()
@@ -254,12 +254,12 @@ def main() -> None:
 
     estado, _, _ = _http("GET", "/health")
     _exigir(estado == 200, "GET /health sin token -> 200")
-    estado, cuerpo, _ = _http("POST", "/api/clientes/buscar", body={"criterio": "nombre", "nombre_cliente": "Silvia"})
+    estado, cuerpo, _ = _http("POST", "/api/v1/clientes/buscar", body={"criterio": "nombre", "nombre_cliente": "Silvia"})
     _exigir(estado == 401 and cuerpo.get("error"), f"POST sin token -> 401 ({cuerpo})")
-    estado, _, _ = _http("POST", "/api/clientes/buscar", token="no-es-jwt", body={"criterio": "nombre", "nombre_cliente": "Silvia"})
+    estado, _, _ = _http("POST", "/api/v1/clientes/buscar", token="no-es-jwt", body={"criterio": "nombre", "nombre_cliente": "Silvia"})
     _exigir(estado == 401, "POST bearer inválido -> 401")
     alterado = web_token[:-2] + ("a" if not web_token.endswith("a") else "b")
-    estado, _, _ = _http("POST", "/api/clientes/buscar", token=alterado, body={"criterio": "nombre", "nombre_cliente": "Silvia"})
+    estado, _, _ = _http("POST", "/api/v1/clientes/buscar", token=alterado, body={"criterio": "nombre", "nombre_cliente": "Silvia"})
     _exigir(estado == 401, "POST token alterado -> 401")
     web_claims = verify_dev._claims(web_token)
     down_claims = verify_dev._claims(down)
@@ -267,20 +267,20 @@ def main() -> None:
     print(json.dumps(verify_dev._resumen(down_claims, "token-exchange"), ensure_ascii=False))
     _exigir(web_claims.get("azp") == "raweb" and web_claims.get("aud") == "raapi", "claims raweb")
     _exigir(down_claims.get("aud") == "raapi" and down_claims.get("sub") == web_claims.get("sub"), "claims exchange")
-    estado, cuerpo, _ = _http("POST", "/api/clientes/buscar", token=web_token, body={"criterio": "nombre", "nombre_cliente": "Silvia"})
+    estado, cuerpo, _ = _http("POST", "/api/v1/clientes/buscar", token=web_token, body={"criterio": "nombre", "nombre_cliente": "Silvia"})
     _exigir(
         estado == 200 and isinstance(cuerpo, list),
         f"POST raweb con clientes:read -> 200 ({estado}, {cuerpo if isinstance(cuerpo, dict) else type(cuerpo).__name__})",
     )
-    estado, cuerpo, _ = _http("POST", "/api/clientes/buscar", token=limitado_token, body={"criterio": "nombre", "nombre_cliente": "Silvia"})
+    estado, cuerpo, _ = _http("POST", "/api/v1/clientes/buscar", token=limitado_token, body={"criterio": "nombre", "nombre_cliente": "Silvia"})
     _exigir(estado == 403, f"POST sin clientes:read -> 403 ({cuerpo})")
-    estado, _, _ = _http("GET", "/api/pedidos/historico", token=limitado_token)
+    estado, _, _ = _http("GET", "/api/v1/pedidos/historico", token=limitado_token)
     _exigir(estado == 403, "GET historico sin clientes:read -> 403")
-    estado, cuerpo, _ = _http("PUT", "/api/clientes/actualizar/1", token=limitado_token, body={})
+    estado, cuerpo, _ = _http("PUT", "/api/v1/clientes/actualizar/1", token=limitado_token, body={})
     _exigir(estado == 403, f"PUT sin pedidos:write -> 403 ({cuerpo})")
-    estado, cuerpo, _ = _http("POST", "/api/clientes/buscar", token=down, body={"criterio": "nombre", "nombre_cliente": "Silvia"})
+    estado, cuerpo, _ = _http("POST", "/api/v1/clientes/buscar", token=down, body={"criterio": "nombre", "nombre_cliente": "Silvia"})
     _exigir(estado == 200 and isinstance(cuerpo, list), f"POST con token intercambiado -> 200 ({estado})")
-    estado, _, headers = _http("OPTIONS", "/api/clientes/buscar", origin="http://localhost:8080")
+    estado, _, headers = _http("OPTIONS", "/api/v1/clientes/buscar", origin="http://localhost:8080")
     permitido = headers.get("Access-Control-Allow-Origin")
     _exigir(estado in (200, 204) and permitido == "http://localhost:8080", f"CORS origen exacto ({permitido})")
     _exigir(headers.get("Access-Control-Allow-Origin") != "*", "CORS no usa comodín")

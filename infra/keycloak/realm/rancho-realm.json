@@ -211,7 +211,7 @@
     {
       "clientId": "raapi",
       "name": "raapi",
-      "description": "Resource server. Audiencia de los access tokens downstream.",
+      "description": "Audiencia y roles del resource server. ra-ng-api valida este clientId; raweb y ra-mcp lo emiten.",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,

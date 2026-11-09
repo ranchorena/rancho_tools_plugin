@@ -18,11 +18,7 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI(
     title="ra-ng-api",
     version="1.0.0",
-    description=(
-        "API de clientes, pedidos, direcciones y rutas del rancho. "
-        "El contrato versionado está en /api/v1. Las mismas operaciones están en /api "
-        "para que raweb siga usando las rutas actuales."
-    ),
+    description="API de clientes, pedidos, direcciones y rutas del rancho. Contrato en /api/v1.",
     openapi_version="3.1.0",
 )
 instalar_manejadores(app)
@@ -34,7 +30,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 app.include_router(construir_router("v1"), prefix="/api/v1")
-app.include_router(construir_router("compat"), prefix="/api")
 
 
 @app.get("/", include_in_schema=False)

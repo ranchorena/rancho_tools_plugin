@@ -8,7 +8,7 @@ La base de referencia es la PostgreSQL que ya corre en el host, puerto **5432**.
 Contiene los datos vigentes. Keycloak sigue en su propio `keycloak-db` de Docker
 y no usa esta base.
 
-raapi en Windows:
+ra-ng-api en Windows (también puede leer `ra-ng-api/.env`):
 
 ```text
 DB_HOST=localhost
@@ -18,7 +18,7 @@ DB_PORT=5432
 Si `localhost` resolviera solo a `::1` y la conexión fallara, el valor de
 trabajo es `127.0.0.1` en el mismo puerto.
 
-raapi dentro de Docker Desktop:
+ra-ng-api dentro de Docker Desktop:
 
 ```text
 DB_HOST=host.docker.internal
@@ -28,12 +28,12 @@ DB_PORT=5432
 `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `DB_SCHEMA` salen de las mismas variables
 en los dos casos. `DB_SCHEMA` por defecto es `generalbelgrano`.
 
-El proceso de Windows lee el entorno del proceso, no `.env`. El contenedor
+Fuera de Docker, `ra-ng-api` completa con `ra-ng-api/.env` las variables que el proceso no trae. El contenedor
 no debe heredar `DB_HOST=localhost`: dentro de la red de Docker ese nombre es
 el propio contenedor. Compose usa `DB_HOST_DOCKER` y `DB_PORT_DOCKER`.
 
 ```powershell
-docker compose up -d backend
+docker compose up -d ra-ng-api
 ```
 
 Ese comando no levanta el servicio `db`.
@@ -46,10 +46,10 @@ completa. El servicio `db` está en el perfil `standalone`.
 ```powershell
 $env:DB_HOST_DOCKER = "db"
 $env:DB_PORT_DOCKER = "5432"
-docker compose --profile standalone up -d db backend
+docker compose --profile standalone up -d db ra-ng-api
 ```
 
-Dentro de la red, raapi usa `DB_HOST=db` y el puerto 5432 del contenedor.
+Dentro de la red, ra-ng-api usa `DB_HOST=db` y el puerto 5432 del contenedor.
 Desde Windows, ese PostgreSQL queda publicado en el puerto **5433** para no
 pisar el 5432 del host.
 

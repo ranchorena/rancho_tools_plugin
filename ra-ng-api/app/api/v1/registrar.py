@@ -1,4 +1,4 @@
-"""Mismas operaciones en /api (raweb) y en /api/v1 (contrato versionado)."""
+"""Operaciones de /api/v1."""
 
 from __future__ import annotations
 
@@ -170,10 +170,11 @@ def construir_router(version: str) -> APIRouter:
     def get_historico(
         desde: str | None = None,
         hasta: str | None = None,
+        completo: bool = False,
         uow: UnitOfWork = UowDep,
         _identidad: dict = RolLectura,
     ):
-        return listar_historico(uow, desde, hasta)
+        return listar_historico(uow, desde, hasta, completo)
 
     @router.post(
         "/pedidos/eliminar",

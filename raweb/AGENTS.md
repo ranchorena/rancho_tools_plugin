@@ -14,7 +14,7 @@ Estas instrucciones complementan `../AGENTS.md` y se aplican a `raweb/`.
 
 - `rollup.config.js` carga `.env` desde el directorio de ejecución y reemplaza `__API_URL__` y `__GEOSERVER_URL__` en `src/config.js` durante la compilación. Configurar `raweb/.env` usando `.env.example`; no publicar sus valores sensibles.
 - Los valores por defecto locales son `http://localhost:5000` y `http://localhost:8087/geoserver`. Cambiar variables del contenedor en ejecución no modifica el bundle: hay que recompilar.
-- Compose usa el `.env` de la raíz y pasa argumentos de build. Su API por defecto (`http://backend:5000`) es un hostname interno de Docker; las dos URLs deben ser resolubles desde el navegador. GeoServer se consume en el puerto 8087.
+- Compose usa el `.env` de la raíz y pasa argumentos de build. `API_URL` queda en `PUBLIC_URL/api/v1` y debe ser resoluble desde el navegador. GeoServer se consume en el puerto 8087.
 
 ## Organización y eventos
 
@@ -26,10 +26,10 @@ Estas instrucciones complementan `../AGENTS.md` y se aplican a `raweb/`.
 ## Contratos REST y mapa
 
 - Antes de cambiar payloads o respuestas, revisar `../raapi/server.py` y `../raapi/API.py`. La edición QGIS usa proveedores de capas directamente; comprobar sus campos si se modifican datos compartidos.
-- `API_BASE_URL` (de `API_URL`) ya incluye `/api`: las llamadas se escriben `${API_BASE_URL}/clientes/buscar`, no `${API_BASE_URL}/api/clientes/buscar`. Las rutas de Flask completas se indican abajo.
-- Buscar clientes: `POST /api/clientes/buscar` con `criterio` (`nombre`, `direccion` o `calle_altura`). Buscar dirección: `POST /api/direcciones/buscar` con `{direccion}`.
+- `API_BASE_URL` (de `API_URL`) ya incluye `/api/v1`: las llamadas se escriben `${API_BASE_URL}/clientes/buscar`, no `${API_BASE_URL}/api/v1/clientes/buscar`.
+- Buscar clientes: `POST /api/v1/clientes/buscar` con `criterio` (`nombre`, `direccion` o `calle_altura`). Buscar dirección: `POST /api/v1/direcciones/buscar` con `{direccion}`.
 - Actualizar: `PUT /api/clientes/actualizar/<id>` recibe `docenas` y `observaciones`; alta y lectura usan `cantidad` y `observacion`. El backend realiza esa traducción; conservar la diferencia.
-- Alta: `POST /api/clientes/agregar` devuelve `{mensaje, cliente}`. `GET /api/clientes/pedidos` devuelve una lista o, si está vacío, `{message: ...}` con HTTP 200; no asumir que toda respuesta exitosa es un array.
+- Alta: `POST /api/v1/clientes/agregar` devuelve `{mensaje, cliente}`. `GET /api/v1/clientes/pedidos` devuelve una lista o, si está vacío, `{message: ...}` con HTTP 200; no asumir que toda respuesta exitosa es un array.
 - Las capas de clientes y pedidos se consultan por WFS en `/ows`, con nombres `GeneralBelgrano:Clientes` y `GeneralBelgrano:Pedidos`, GeoJSON y EPSG:3857. Sus datos vienen de GeoServer, mientras las grillas y los guardados usan REST; revisar el refresco de fuentes después de mutaciones.
 - REST entrega y recibe coordenadas EPSG:4326. Usar `fromLonLat([longitud, latitud])` para centrar o crear geometrías y `toLonLat` para convertir clics; no intercambiar ejes. El backend transforma las altas a EPSG:5347.
 - `docs/` contiene reportes históricos de cambios WMS/WFS; contrastar sus ejemplos con `App.svelte` antes de reutilizarlos.

@@ -22,7 +22,7 @@ Proponme para raweb un docs/constitution.md con 6 principios innegociables, cort
 Con una URL nueva de ngrok
 
 - Poner PUBLIC_URL=https://… en el .env de la raíz.
-- Ejecutar docker compose up -d --build frontend backend keycloak proxy.
+- Ejecutar docker compose up -d --build frontend ra-ng-api keycloak proxy.
 - Ejecutar docker compose run --rm --no-deps keycloak-bootstrap.
 - Apuntar ngrok al puerto 8088.
 
