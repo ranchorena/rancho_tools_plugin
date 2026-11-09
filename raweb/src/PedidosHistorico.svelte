@@ -6,7 +6,11 @@
   import Icon from './design-system/Icon.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
   import { shouldActivateRow } from './design-system/keyboard.mjs';
+  import AgregarPedido from './AgregarPedido.svelte';
   const dispatch = createEventDispatcher();
+
+  export let coordenadas = null;
+  export let seleccionandoUbicacion = false;
 
   let pedidos = [];
   let isLoading = false;
@@ -165,6 +169,66 @@
     onPedidoClick(pedido);
   }
 
+  let mostrarAlta = false;
+  let confirmarInicio = false;
+  let iniciando = false;
+
+  function puedeCerrar() {
+    return !pedidoAEliminar && !confirmarInicio && !mostrarAlta && !seleccionandoUbicacion && !iniciando;
+  }
+
+  function cancelarInicio() {
+    if (iniciando) return;
+    confirmarInicio = false;
+  }
+
+  async function iniciar_pedidos() {
+    if (iniciando) return;
+    iniciando = true;
+    errorMessage = "";
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/pedidos/iniciar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const body = await response.json().catch(() => ({ error: "Error desconocido" }));
+      if (!response.ok) {
+        throw new Error(body.error || `Error ${response.status}: ${response.statusText}`);
+      }
+      confirmarInicio = false;
+      dispatch('refreshPedidosLayer');
+      dispatch('showGlobalNotification', {
+        message: body.mensaje || 'Pedidos iniciados.',
+        type: 'success'
+      });
+    } catch (err) {
+      errorMessage = err.message;
+      console.error("Error al iniciar pedidos:", err);
+      confirmarInicio = false;
+    } finally {
+      iniciando = false;
+    }
+  }
+
+  async function alGuardarPedido(event) {
+    mostrarAlta = false;
+    const fecha = event.detail.fecha;
+    dispatch('refreshPedidosLayer');
+    dispatch('showGlobalNotification', {
+      message: event.detail.message || 'Pedido registrado correctamente.',
+      type: 'success'
+    });
+    if (fecha && (!fechaDesde || !fechaHasta || fecha < fechaDesde || fecha > fechaHasta)) {
+      fechaDesde = fecha;
+      fechaHasta = fecha;
+    }
+    if (fechaDesde && fechaHasta) {
+      await buscar();
+    } else {
+      await loadInicial();
+    }
+  }
+
   loadInicial();
 </script>
 
@@ -183,6 +247,16 @@
     padding: 1rem;
     box-sizing: border-box;
     backdrop-filter: blur(2px);
+  }
+
+  .modal-backdrop.seleccionando-ubicacion {
+    pointer-events: none;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .modal-backdrop.seleccionando-ubicacion .modal-content {
+    visibility: hidden;
   }
 
   .modal-content {
@@ -498,11 +572,68 @@
     cursor: default;
     opacity: 0.7;
   }
+
+  .pedidos-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .pedidos-section-header h3 {
+    margin: 0;
+  }
+
+  .pedidos-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .pedidos-acciones button {
+    width: auto;
+    min-height: 32px;
+    margin: 0;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .accion-secundaria {
+    color: var(--ds-text);
+    background: transparent;
+    border: 1px solid var(--ds-divider);
+  }
+
+  .accion-primaria {
+    color: var(--ds-on-primary);
+    background: var(--ds-primary);
+    border: none;
+  }
+
+  .pedidos-acciones button:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .confirm-iniciar {
+    color: var(--ds-on-primary);
+    background: var(--ds-primary);
+    border: none;
+  }
 </style>
 
 <div class="modal-backdrop"
-     on:click={() => !pedidoAEliminar && dispatch('close')}
-     on:keydown={(e) => e.key === 'Escape' && !pedidoAEliminar && dispatch('close')}
+     class:seleccionando-ubicacion={seleccionandoUbicacion}
+     on:click={() => puedeCerrar() && dispatch('close')}
+     on:keydown={(e) => e.key === 'Escape' && puedeCerrar() && dispatch('close')}
      role="button"
      tabindex="0"
      aria-label="Cerrar modal">
@@ -511,11 +642,11 @@
        on:keydown|stopPropagation
        use:dialogFocus
        role="dialog"
-       aria-labelledby="pedidos-historico-title">
+       aria-labelledby="pedidos-title">
     <div class="modal-header">
-      <DialogHeader titleId="pedidos-historico-title">
-        <Icon name="history" size={18} />
-        Pedidos histórico
+      <DialogHeader titleId="pedidos-title">
+        <Icon name="box" size={18} />
+        Pedidos
         <svelte:fragment slot="close">
           <button type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={() => dispatch('close')} aria-label="Cerrar"><Icon name="close" size={16} /></button>
         </svelte:fragment>
@@ -544,7 +675,13 @@
       {/if}
 
       <div class="pedidos-section">
-        <h3>Pedidos</h3>
+        <div class="pedidos-section-header">
+          <h3>Pedidos</h3>
+          <div class="pedidos-acciones">
+            <button type="button" class="accion-secundaria ds-focus" on:click={() => mostrarAlta = true}>Agregar Pedido</button>
+            <button type="button" class="accion-primaria ds-focus" on:click={() => confirmarInicio = true} disabled={iniciando}>Iniciar Pedidos</button>
+          </div>
+        </div>
 
         {#if pedidos.length > 0}
           <div class="table-container">
@@ -661,4 +798,46 @@
       </div>
     </div>
   </div>
+{/if}
+
+{#if confirmarInicio}
+  <div class="confirm-backdrop"
+       on:click={cancelarInicio}
+       on:keydown={(e) => e.key === 'Escape' && cancelarInicio()}
+       role="presentation">
+    <div class="confirm-dialog"
+         on:click|stopPropagation
+         on:keydown|stopPropagation={(e) => e.key === 'Escape' && cancelarInicio()}
+         use:dialogFocus
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="iniciar-pedidos-title">
+      <div class="modal-header">
+        <DialogHeader titleId="iniciar-pedidos-title">
+          Iniciar pedidos
+          <svelte:fragment slot="close">
+            <button type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={cancelarInicio} aria-label="Cerrar" disabled={iniciando}><Icon name="close" size={16} /></button>
+          </svelte:fragment>
+        </DialogHeader>
+      </div>
+      <div class="confirm-body">
+        <p>Los clientes que tienen un pedido activo quedarán sin pedido, con cantidad 1, sin horario, sin número de PaO y sin marca de regalo.</p>
+        <div class="confirm-actions">
+          <button type="button" class="confirm-cancelar ds-focus" data-dialog-initial-focus on:click={cancelarInicio} disabled={iniciando}>Cancelar</button>
+          <button type="button" class="confirm-iniciar ds-focus" on:click={iniciar_pedidos} disabled={iniciando}>Iniciar Pedidos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if mostrarAlta}
+  <AgregarPedido
+    {coordenadas}
+    {seleccionandoUbicacion}
+    on:close={() => mostrarAlta = false}
+    on:guardado={alGuardarPedido}
+    on:seleccionarUbicacion
+    on:ubicacionGeorreferenciada
+  />
 {/if}

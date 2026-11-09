@@ -23,7 +23,6 @@
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
-  import Pedidos from './Pedidos.svelte'; // Importar el componente Pedidos
   import PedidosHistorico from './PedidosHistorico.svelte';
   import HistoricoTimeline from './HistoricoTimeline.svelte';
   import {
@@ -91,7 +90,6 @@
   let showBuscarDireccionDialog = false;
   let showBuscarClienteDialog = false;
   let showPedidosDialog = false;
-  let showPedidosHistoricoDialog = false;
   let showAgregarClienteDialog = false;
   let agregarClienteInicial = null;
   let showComoLlegarDialog = false;
@@ -769,7 +767,6 @@
     showBuscarDireccionDialog = true;
     showBuscarClienteDialog = false; // Asegurar que los otros diálogos estén cerrados
     showPedidosDialog = false;
-    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
@@ -780,7 +777,6 @@
     showBuscarClienteDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showPedidosDialog = false;
-    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
@@ -791,21 +787,9 @@
     showPedidosDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
-    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
-  }
-
-  function openPedidosHistorico(event) {
-    captureDialogTrigger(event);
-    showPedidosHistoricoDialog = true;
-    showPedidosDialog = false;
-    showBuscarDireccionDialog = false;
-    showBuscarClienteDialog = false;
-    showAgregarClienteDialog = false;
-    showComoLlegarDialog = false;
-    closeMobileMenu();
   }
 
   function openComoLlegar(event) {
@@ -814,7 +798,6 @@
     showBuscarDireccionDialog = false;
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
-    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     puntoSeleccionadoRuta = null;
     closeMobileMenu();
@@ -827,7 +810,6 @@
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
-    showPedidosHistoricoDialog = false;
     showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
@@ -838,7 +820,6 @@
     showBuscarClienteDialog = false;
     showBuscarDireccionDialog = false;
     showPedidosDialog = false;
-    showPedidosHistoricoDialog = false;
     showComoLlegarDialog = false;
   }
 
@@ -848,7 +829,6 @@
     showBuscarDireccionDialog = false;
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
-    showPedidosHistoricoDialog = false;
     showAgregarClienteDialog = false;
     showComoLlegarDialog = false;
     modoSeleccionPunto = false;
@@ -865,7 +845,7 @@
     // Solo el cierre final devuelve foco; los cambios internos y el mapa no pasan aquí.
     await tick();
     if (!origin || dialogOrigin || showBuscarDireccionDialog || showBuscarClienteDialog ||
-        showPedidosDialog || showPedidosHistoricoDialog || showAgregarClienteDialog ||
+        showPedidosDialog || showAgregarClienteDialog ||
         showComoLlegarDialog) return;
     const destination = chooseFocusReturn({
       triggerPresent: origin.trigger.isConnected,
@@ -1551,10 +1531,6 @@
         <UiIcon name="box" size={16} />
         <span>Pedidos</span>
       </button>
-      <button on:click={openPedidosHistorico} class:active={showPedidosHistoricoDialog}>
-        <UiIcon name="history" size={16} />
-        <span>Pedidos histórico</span>
-      </button>
       <button on:click={openComoLlegar} class:active={showComoLlegarDialog}>
         <UiIcon name="route" size={16} />
         <span>Cómo llegar</span>
@@ -1588,10 +1564,6 @@
     <button type="button" on:click={handlePedidosAction} class:active={showPedidosDialog}>
       <span class="bottom-nav-mark"><UiIcon name="box" size={18} /></span>
       <span>Pedidos</span>
-    </button>
-    <button type="button" on:click={openPedidosHistorico} class:active={showPedidosHistoricoDialog}>
-      <span class="bottom-nav-mark"><UiIcon name="history" size={18} /></span>
-      <span>Historial</span>
     </button>
     <button type="button" on:click={openComoLlegar} class:active={showComoLlegarDialog}>
       <span class="bottom-nav-mark"><UiIcon name="route" size={18} /></span>
@@ -1766,21 +1738,16 @@
   {/if}
 
   {#if showPedidosDialog}
-    <Pedidos
-      on:close={closeDialogs}
-      on:zoomToLocation={handleZoomToLocation}
-      on:refreshPedidosLayer={refreshPedidosLayerMap}
-      on:showGlobalNotification={handleShowGlobalNotification}
-    />
-  {/if}
-
-  {#if showPedidosHistoricoDialog}
     <PedidosHistorico
+      coordenadas={coordenadasSeleccionadas}
+      seleccionandoUbicacion={modoSeleccionPunto}
       on:close={closeDialogs}
       on:zoomToLocation={handleZoomToLocation}
       on:verEnMapa={handleVerHistoricoEnMapa}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
       on:showGlobalNotification={handleShowGlobalNotification}
+      on:seleccionarUbicacion={handleSeleccionarUbicacion}
+      on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
     />
   {/if}
 

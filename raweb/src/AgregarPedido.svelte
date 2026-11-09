@@ -5,10 +5,15 @@
   import DialogHeader from './design-system/DialogHeader.svelte';
   import Icon from './design-system/Icon.svelte';
   import { dialogFocus } from './design-system/dialog-focus.mjs';
+  import { shouldActivateRow } from './design-system/keyboard.mjs';
+  import { resolveClientSearch } from './client-search.mjs';
 
-  export let cliente;
+  export let cliente = null;
   export let coordenadas = null;
   export let seleccionandoUbicacion = false;
+
+  let clienteActivo = cliente;
+  const buscarCliente = cliente == null;
 
   const dispatch = createEventDispatcher();
 
@@ -58,10 +63,16 @@
     horario: '',
     nro_pao: '',
     observacion: '',
-    direccion: cliente?.direccion || ''
+    direccion: clienteActivo?.direccion || ''
   };
 
-  let punto = puntoInicial(cliente);
+  let punto = puntoInicial(clienteActivo);
+  let searchTermCliente = '';
+  let searchTermDireccion = '';
+  let searchTermCalle = '';
+  let searchTermAltura = '';
+  let searchResults = [];
+  let buscando = false;
   let esperandoMapa = false;
   let puntoAlPedirMapa = null;
   let georreferenciando = false;
@@ -80,7 +91,7 @@
       horario: '',
       nro_pao: '',
       observacion: '',
-      direccion: cliente?.direccion || ''
+      direccion: clienteActivo?.direccion || ''
     };
   }
 
@@ -88,7 +99,7 @@
     fechaTexto = isoATexto(fecha);
     if (!pedido) {
       formData = pedidoNuevo(fecha);
-      punto = puntoInicial(cliente);
+      punto = puntoInicial(clienteActivo);
       return;
     }
     formData = {
@@ -99,20 +110,20 @@
       horario: '',
       nro_pao: pedido.nro_pao ?? '',
       observacion: pedido.observacion || '',
-      direccion: pedido.direccion || cliente?.direccion || ''
+      direccion: pedido.direccion || clienteActivo?.direccion || ''
     };
     const lat = Number(pedido.latitud);
     const lon = Number(pedido.longitud);
-    punto = Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : puntoInicial(cliente);
+    punto = Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : puntoInicial(clienteActivo);
   }
 
   async function cargarPedidoDeLaFecha(fecha) {
     const token = ++cargaToken;
-    if (!fecha) return;
+    if (!fecha || !clienteActivo?.id) return;
     errorMessage = '';
     try {
       const response = await authorizedFetch(
-        `${API_BASE_URL}/clientes/${cliente.id}/pedido?fecha=${encodeURIComponent(fecha)}`
+        `${API_BASE_URL}/clientes/${clienteActivo.id}/pedido?fecha=${encodeURIComponent(fecha)}`
       );
       const data = await response.json().catch(() => ({}));
       if (token !== cargaToken || formData.fecha !== fecha) return;
@@ -130,8 +141,82 @@
   }
 
   onMount(() => {
-    cargarPedidoDeLaFecha(formData.fecha);
+    if (clienteActivo) cargarPedidoDeLaFecha(formData.fecha);
   });
+
+  function volverABuscar() {
+    clienteActivo = null;
+    searchResults = [];
+    const fecha = fechaManana();
+    formData = pedidoNuevo(fecha);
+    fechaTexto = isoATexto(fecha);
+    punto = null;
+    errorMessage = '';
+  }
+
+  async function buscarClientes() {
+    const decision = resolveClientSearch({
+      nombre: searchTermCliente,
+      direccion: searchTermDireccion,
+      calle: searchTermCalle,
+      altura: searchTermAltura
+    });
+    if (!decision.ok) {
+      errorMessage = decision.message;
+      searchResults = [];
+      return;
+    }
+    buscando = true;
+    errorMessage = '';
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/clientes/buscar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(decision.payload)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        errorMessage = data.error || 'No se pudo buscar el cliente.';
+        searchResults = [];
+        return;
+      }
+      searchResults = Array.isArray(data) ? data : [];
+      if (searchResults.length === 0) errorMessage = decision.emptyMessage;
+    } catch (error) {
+      console.error('Error al buscar clientes:', error);
+      errorMessage = 'No se pudo buscar el cliente.';
+      searchResults = [];
+    } finally {
+      buscando = false;
+    }
+  }
+
+  function buscarConEnter(event) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    buscarClientes();
+  }
+
+  function elegirCliente(resultado) {
+    clienteActivo = resultado;
+    searchResults = [];
+    errorMessage = '';
+    if (!formData.tiene_pedido) {
+      punto = puntoInicial(resultado);
+      formData.direccion = resultado.direccion || '';
+      return;
+    }
+    const fecha = formData.fecha || fechaManana();
+    formData.fecha = fecha;
+    fechaTexto = isoATexto(fecha);
+    cargarPedidoDeLaFecha(fecha);
+  }
+
+  function activarResultado(event, resultado) {
+    if (!shouldActivateRow(event.key, event.repeat, event.target === event.currentTarget)) return;
+    event.preventDefault();
+    elegirCliente(resultado);
+  }
 
   $: if (
     esperandoMapa &&
@@ -250,7 +335,7 @@
   }
 
   async function guardar() {
-    if (!formData.tiene_pedido || !punto) return;
+    if (!clienteActivo || !formData.tiene_pedido || !punto) return;
     const fechaIso = textoAIso(fechaTexto);
     if (!fechaIso) {
       errorMessage = 'La fecha debe tener el formato dd/mm/aaaa.';
@@ -273,7 +358,7 @@
         latitud: punto.lat,
         longitud: punto.lon
       };
-      const response = await authorizedFetch(`${API_BASE_URL}/clientes/actualizar/${cliente.id}`, {
+      const response = await authorizedFetch(`${API_BASE_URL}/clientes/actualizar/${clienteActivo.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -286,7 +371,8 @@
       dispatch('guardado', {
         message: data.mensaje || 'Pedido registrado correctamente.',
         latitud: punto.lat,
-        longitud: punto.lon
+        longitud: punto.lon,
+        fecha: fechaIso
       });
     } catch (error) {
       console.error('Error al guardar el pedido:', error);
@@ -331,26 +417,79 @@
         <div class="alert"><Icon name="alert" size={16} /> {errorMessage}</div>
       {/if}
 
-      <div class="form-row">
+      {#if clienteActivo}
+        {#if buscarCliente}
+          <div class="cliente-elegido">
+            <span class="section-title">Cliente</span>
+            <button type="button" class="cambiar-cliente ds-button" on:click={volverABuscar}>Cambiar cliente</button>
+          </div>
+        {/if}
+        <div class="form-row">
+          <div class="form-group">
+            <label for="pedido-cliente-id">ID Cliente</label>
+            <input id="pedido-cliente-id" class="ds-field" type="text" value={clienteActivo.id} readonly>
+          </div>
+          <div class="form-group">
+            <label for="pedido-cliente-nombre">Nombre</label>
+            <input id="pedido-cliente-nombre" class="ds-field" type="text" value={clienteActivo.nombre || ''} readonly>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="pedido-cliente-direccion">Dirección</label>
+            <input id="pedido-cliente-direccion" class="ds-field" type="text" value={clienteActivo.direccion || ''} readonly>
+          </div>
+          <div class="form-group">
+            <label for="pedido-cliente-telefono">Teléfono</label>
+            <input id="pedido-cliente-telefono" class="ds-field" type="text" value={clienteActivo.telefono || ''} readonly>
+          </div>
+        </div>
+      {:else}
+        <div class="section-title">Buscar cliente</div>
         <div class="form-group">
-          <label for="pedido-cliente-id">ID Cliente</label>
-          <input id="pedido-cliente-id" class="ds-field" type="text" value={cliente.id} readonly>
+          <label for="pedido-buscar-nombre">Buscar por nombre</label>
+          <input id="pedido-buscar-nombre" class="ds-field" type="text" data-dialog-initial-focus bind:value={searchTermCliente} placeholder="Nombre del cliente" on:keydown={buscarConEnter}>
         </div>
         <div class="form-group">
-          <label for="pedido-cliente-nombre">Nombre</label>
-          <input id="pedido-cliente-nombre" class="ds-field" type="text" value={cliente.nombre || ''} readonly>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="pedido-cliente-direccion">Dirección</label>
-          <input id="pedido-cliente-direccion" class="ds-field" type="text" value={cliente.direccion || ''} readonly>
+          <label for="pedido-buscar-direccion">Buscar por dirección</label>
+          <input id="pedido-buscar-direccion" class="ds-field" type="text" bind:value={searchTermDireccion} placeholder="Parte de la dirección" on:keydown={buscarConEnter}>
         </div>
         <div class="form-group">
-          <label for="pedido-cliente-telefono">Teléfono</label>
-          <input id="pedido-cliente-telefono" class="ds-field" type="text" value={cliente.telefono || ''} readonly>
+          <label for="pedido-buscar-calle">Buscar por calle y altura</label>
+          <div class="direccion-row">
+            <input id="pedido-buscar-calle" class="ds-field" type="text" bind:value={searchTermCalle} placeholder="Nombre de la calle" aria-label="Nombre de la calle" on:keydown={buscarConEnter}>
+            <input class="ds-field field-altura" type="text" bind:value={searchTermAltura} placeholder="Altura" aria-label="Altura de la calle" on:keydown={buscarConEnter}>
+          </div>
         </div>
-      </div>
+        <div class="buscar-acciones">
+          <button type="button" class="ds-button ds-button--primary" on:click={buscarClientes} disabled={buscando}>
+            <Icon name="search" size={16} />
+            {buscando ? 'Buscando...' : 'Buscar'}
+          </button>
+        </div>
+        {#if searchResults.length > 0}
+          <div class="resultados">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Dirección</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each searchResults as resultado (resultado.id)}
+                  <tr tabindex="0" on:click={() => elegirCliente(resultado)} on:keydown={(event) => activarResultado(event, resultado)}>
+                    <td>{resultado.id}</td>
+                    <td>{resultado.nombre || ''}</td>
+                    <td>{resultado.direccion || ''}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      {/if}
 
       <div class="section-title">Información del pedido</div>
       <div class="pedido-opciones">
@@ -417,7 +556,7 @@
 
     <div class="modal-footer">
       <button type="button" class="ds-button" on:click={cerrar} disabled={guardando}>Cancelar</button>
-      <button type="button" class="ds-button ds-button--primary" on:click={guardar} disabled={guardando || !punto || !formData.tiene_pedido}>
+      <button type="button" class="ds-button ds-button--primary" on:click={guardar} disabled={guardando || !clienteActivo || !punto || !formData.tiene_pedido}>
         {guardando ? 'Guardando...' : 'Guardar'}
       </button>
     </div>
@@ -602,6 +741,70 @@
   .coordenadas-info {
     margin-bottom: 0.75rem;
     font-family: 'Courier New', monospace;
+  }
+
+  .cliente-elegido {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .cliente-elegido .section-title {
+    margin-bottom: 0.35rem;
+  }
+
+  .cambiar-cliente,
+  .buscar-acciones button {
+    width: auto;
+    margin: 0;
+  }
+
+  .buscar-acciones {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+  }
+
+  .buscar-acciones button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .direccion-row .field-altura {
+    width: 7rem;
+    flex: 0 0 7rem;
+  }
+
+  .resultados {
+    max-height: 180px;
+    overflow: auto;
+    margin-bottom: 1rem;
+    border: 1px solid var(--ds-border);
+    border-radius: 8px;
+  }
+
+  .resultados table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .resultados th,
+  .resultados td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--ds-border);
+  }
+
+  .resultados tbody tr {
+    cursor: pointer;
+  }
+
+  .resultados tbody tr:hover,
+  .resultados tbody tr:focus-visible {
+    background: var(--ds-selected);
+    outline: none;
   }
 
   @media (max-width: 640px) {
