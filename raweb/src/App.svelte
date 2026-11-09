@@ -1732,6 +1732,7 @@
       <HistoricoTimeline
         fechas={historicoFechas}
         fechaActual={historicoFecha}
+        pedidos={historicoPedidosPorFecha[historicoFecha] || []}
         reproduciendo={historicoReproduciendo}
         intervaloSegundos={historicoIntervalo}
         on:cambiarFecha={alCambiarFechaHistorica}
@@ -2392,7 +2393,7 @@
   }
 
   .map-container.historico-abierto .map-clear-btn {
-    bottom: 3.25rem;
+    bottom: 4.75rem;
   }
 
   .map-container.historico-abierto :global(.ol-attribution) {
@@ -2595,7 +2596,7 @@
     }
 
     .map-container.historico-abierto .map-clear-btn {
-      bottom: 3.5rem;
+      bottom: 5rem;
     }
 
     .map-container.historico-abierto :global(.ol-attribution) {

@@ -8,14 +8,18 @@
     fechaAnterior,
     fechaDesdePosicion,
     fechaSiguiente,
+    estadisticasFecha,
     parseFechaEditable,
     posicionFecha,
+    textoCantidad,
     textoDiaMesAnio,
-    textoFecha
+    textoFecha,
+    textoValor
   } from './historico-timeline.mjs';
 
   export let fechas = [];
   export let fechaActual = '';
+  export let pedidos = [];
   export let reproduciendo = false;
   export let intervaloSegundos = 1;
 
@@ -34,6 +38,7 @@
   $: siguiente = fechaSiguiente(fechaActual, fechas);
   $: indice = Math.max(0, fechas.indexOf(fechaActual));
   $: texto = textoFecha(fechaActual);
+  $: estadisticas = estadisticasFecha(pedidos);
   $: if (!editandoFecha) textoEdicion = texto;
   $: posicion = arrastrando && posicionArrastre != null
     ? posicionArrastre
@@ -174,23 +179,30 @@
       <Icon name="close" size={16} />
     </button>
     <span class="paso">
-      <button type="button" aria-label="Fecha anterior" title="Fecha anterior" disabled={!anterior} on:click={() => emitirFecha(anterior)}>&lt;</button>
-      <input
-        class="fecha"
-        class:invalida={fechaInvalida}
-        type="text"
-        inputmode="numeric"
-        autocomplete="off"
-        spellcheck="false"
-        aria-label="Fecha. Escribí día/mes/año y presioná Enter"
-        title="Escribí una fecha y presioná Enter para ir a la más cercana con pedidos"
-        bind:value={textoEdicion}
-        on:focus={alFocoFecha}
-        on:keydown={alTeclaFecha}
-        on:blur={alBlurFecha}
-        on:input={() => fechaInvalida = false}
-      />
-      <button type="button" aria-label="Fecha siguiente" title="Fecha siguiente" disabled={!siguiente} on:click={() => emitirFecha(siguiente)}>&gt;</button>
+      <span class="fila-fecha">
+        <button type="button" aria-label="Fecha anterior" title="Fecha anterior" disabled={!anterior} on:click={() => emitirFecha(anterior)}>&lt;</button>
+        <input
+          class="fecha"
+          class:invalida={fechaInvalida}
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Fecha. Escribí día/mes/año y presioná Enter"
+          title="Escribí una fecha y presioná Enter para ir a la más cercana con pedidos"
+          bind:value={textoEdicion}
+          on:focus={alFocoFecha}
+          on:keydown={alTeclaFecha}
+          on:blur={alBlurFecha}
+          on:input={() => fechaInvalida = false}
+        />
+        <button type="button" aria-label="Fecha siguiente" title="Fecha siguiente" disabled={!siguiente} on:click={() => emitirFecha(siguiente)}>&gt;</button>
+      </span>
+      <span class="estadisticas" aria-label="Estadísticas del día">
+        <span title="Cantidad total"><span class="dato">cant.</span> {textoCantidad(estadisticas.cantidadTotal)}</span>
+        <span title="Cantidad vendida"><span class="dato">tot.</span> {textoCantidad(estadisticas.cantidadVendidas)}</span>
+        <span title="Valor total"><span class="dato">val.</span> {textoValor(estadisticas.valorTotal)}</span>
+      </span>
     </span>
     <button type="button" class="salto" aria-label="Ir a la última fecha" title="Ir a la última fecha" disabled={!siguiente} on:click={() => emitirFecha(fechas[fechas.length - 1])}>&gt;|</button>
     <button
@@ -258,7 +270,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem 0.45rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem 0.5rem 0.95rem;
     background: rgb(17 24 39 / 92%);
     color: #f9fafb;
     border-radius: var(--ds-radius-large);
@@ -321,6 +333,14 @@
   }
 
   .paso {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .fila-fecha {
     display: inline-flex;
     align-items: center;
     gap: 0;
@@ -328,6 +348,28 @@
 
   .paso button {
     width: 16px;
+  }
+
+  .estadisticas {
+    position: absolute;
+    top: calc(100% + 1px);
+    left: 50%;
+    display: flex;
+    gap: 0.4rem;
+    color: #e5e7eb;
+    font-size: 0.625rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .dato {
+    margin-right: 0.12rem;
+    color: #9ca3af;
+    font-size: 0.5625rem;
+    font-weight: 600;
   }
 
   .fecha {
@@ -365,15 +407,17 @@
   .intervalo {
     display: inline-flex;
     align-items: center;
+    height: 26px;
     gap: 0.2rem;
     margin-left: 0.15rem;
     color: #e5e7eb;
     font-size: 0.75rem;
+    line-height: 1;
   }
 
   .intervalo input {
     width: 2rem;
-    height: 24px;
+    height: 26px;
     margin: 0;
     padding: 0 0.15rem;
     text-align: center;

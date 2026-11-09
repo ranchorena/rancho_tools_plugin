@@ -31,6 +31,31 @@ export function isoDesdeDia(dia) {
   return `${fecha.getUTCFullYear()}-${mes}-${numero}`;
 }
 
+export function estadisticasFecha(pedidos) {
+  let cantidadTotal = 0;
+  let cantidadVendidas = 0;
+  let valorTotal = 0;
+  for (const pedido of pedidos || []) {
+    const cantidad = Number(pedido?.cantidad) || 0;
+    const precio = Number(pedido?.precio_unitario) || 0;
+    cantidadTotal += cantidad;
+    if (Number(pedido?.es_regalo) !== 1) {
+      cantidadVendidas += cantidad;
+      valorTotal += cantidad * precio;
+    }
+  }
+  return { cantidadTotal, cantidadVendidas, valorTotal };
+}
+
+export function textoCantidad(numero) {
+  const texto = (Number(numero) || 0).toFixed(1);
+  return texto.endsWith('.0') ? texto.slice(0, -2) : texto;
+}
+
+export function textoValor(numero) {
+  return `$ ${(Number(numero) || 0).toFixed(2)}`;
+}
+
 export function agruparPedidos(pedidos) {
   const pedidosPorFecha = {};
   for (const pedido of pedidos || []) {
