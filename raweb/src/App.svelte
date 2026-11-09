@@ -24,6 +24,7 @@
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
   import PedidosHistorico from './PedidosHistorico.svelte';
+  import AgregarPedido from './AgregarPedido.svelte';
   import HistoricoTimeline from './HistoricoTimeline.svelte';
   import {
     agruparPedidos,
@@ -91,6 +92,7 @@
   let showBuscarClienteDialog = false;
   let showPedidosDialog = false;
   let showAgregarClienteDialog = false;
+  let showAgregarPedidoDialog = false;
   let agregarClienteInicial = null;
   let showComoLlegarDialog = false;
 
@@ -768,6 +770,7 @@
     showBuscarClienteDialog = false; // Asegurar que los otros diálogos estén cerrados
     showPedidosDialog = false;
     showAgregarClienteDialog = false;
+    showAgregarPedidoDialog = false;
     showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
@@ -778,6 +781,7 @@
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showPedidosDialog = false;
     showAgregarClienteDialog = false;
+    showAgregarPedidoDialog = false;
     showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
@@ -788,6 +792,7 @@
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
     showAgregarClienteDialog = false;
+    showAgregarPedidoDialog = false;
     showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
@@ -799,6 +804,7 @@
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
     showAgregarClienteDialog = false;
+    showAgregarPedidoDialog = false;
     puntoSeleccionadoRuta = null;
     closeMobileMenu();
   }
@@ -810,6 +816,7 @@
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
+    showAgregarPedidoDialog = false;
     showComoLlegarDialog = false;
     closeMobileMenu(); // Cerrar menú móvil si está abierto
   }
@@ -820,6 +827,7 @@
     showBuscarClienteDialog = false;
     showBuscarDireccionDialog = false;
     showPedidosDialog = false;
+    showAgregarPedidoDialog = false;
     showComoLlegarDialog = false;
   }
 
@@ -830,6 +838,7 @@
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
     showAgregarClienteDialog = false;
+    showAgregarPedidoDialog = false;
     showComoLlegarDialog = false;
     modoSeleccionPunto = false;
     coordenadasSeleccionadas = null;
@@ -845,7 +854,7 @@
     // Solo el cierre final devuelve foco; los cambios internos y el mapa no pasan aquí.
     await tick();
     if (!origin || dialogOrigin || showBuscarDireccionDialog || showBuscarClienteDialog ||
-        showPedidosDialog || showAgregarClienteDialog ||
+        showPedidosDialog || showAgregarClienteDialog || showAgregarPedidoDialog ||
         showComoLlegarDialog) return;
     const destination = chooseFocusReturn({
       triggerPresent: origin.trigger.isConnected,
@@ -860,6 +869,38 @@
 
   function handlePedidosAction(event) {
     openPedidos(event);
+  }
+
+  function openAgregarPedido(event) {
+    captureDialogTrigger(event);
+    modoSeleccionPunto = false;
+    showAgregarPedidoDialog = true;
+    showBuscarDireccionDialog = false;
+    showBuscarClienteDialog = false;
+    showPedidosDialog = false;
+    showAgregarClienteDialog = false;
+    showComoLlegarDialog = false;
+    closeMobileMenu();
+  }
+
+  function handlePedidoGuardado(event) {
+    handleShowGlobalNotification({
+      detail: {
+        message: event.detail.message || 'Pedido registrado correctamente.',
+        type: 'success'
+      }
+    });
+    refreshPedidosLayerMap();
+    if (event.detail.longitud != null && event.detail.latitud != null) {
+      handleZoomToLocation({
+        detail: {
+          longitude: event.detail.longitud,
+          latitude: event.detail.latitud,
+          marker: 'medialuna'
+        }
+      });
+    }
+    closeDialogs();
   }
 
   // Funciones para agregar cliente
@@ -1527,6 +1568,10 @@
         <UiIcon name="plus" size={16} />
         <span>Agregar cliente</span>
       </button>
+      <button on:click={openAgregarPedido} class:active={showAgregarPedidoDialog}>
+        <UiIcon name="box" size={16} />
+        <span>Agregar pedido</span>
+      </button>
       <button on:click={handlePedidosAction} class:active={showPedidosDialog}>
         <UiIcon name="box" size={16} />
         <span>Pedidos</span>
@@ -1560,6 +1605,10 @@
     <button type="button" class="bottom-nav-add" on:click={openAgregarCliente} class:active={showAgregarClienteDialog}>
       <span class="bottom-nav-mark"><UiIcon name="plus" size={18} /></span>
       <span>Agregar</span>
+    </button>
+    <button type="button" on:click={openAgregarPedido} class:active={showAgregarPedidoDialog}>
+      <span class="bottom-nav-mark"><UiIcon name="box" size={18} /></span>
+      <span>Pedido</span>
     </button>
     <button type="button" on:click={handlePedidosAction} class:active={showPedidosDialog}>
       <span class="bottom-nav-mark"><UiIcon name="box" size={18} /></span>
@@ -1665,6 +1714,9 @@
     <button type="button" class="add-client-floating-btn" on:click={openAgregarCliente} title="Agregar nuevo cliente" aria-label="Agregar nuevo cliente">
       <UiIcon name="plus" size={20} />
     </button>
+    <button type="button" class="add-pedido-floating-btn" on:click={openAgregarPedido} title="Agregar pedido" aria-label="Agregar pedido">
+      <UiIcon name="box" size={20} />
+    </button>
     <button
       type="button"
       class="ubicacion-btn"
@@ -1746,6 +1798,17 @@
       on:verEnMapa={handleVerHistoricoEnMapa}
       on:refreshPedidosLayer={refreshPedidosLayerMap}
       on:showGlobalNotification={handleShowGlobalNotification}
+      on:seleccionarUbicacion={handleSeleccionarUbicacion}
+      on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
+    />
+  {/if}
+
+  {#if showAgregarPedidoDialog}
+    <AgregarPedido
+      coordenadas={coordenadasSeleccionadas}
+      seleccionandoUbicacion={modoSeleccionPunto}
+      on:close={closeDialogs}
+      on:guardado={handlePedidoGuardado}
       on:seleccionarUbicacion={handleSeleccionarUbicacion}
       on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
     />
@@ -2136,6 +2199,7 @@
 
   .layer-toolbar-show-btn:focus-visible,
   .add-client-floating-btn:focus-visible,
+  .add-pedido-floating-btn:focus-visible,
   .ubicacion-btn:focus-visible,
   .pedido-cercano-btn:focus-visible,
   .historico-mapa-btn:focus-visible {
@@ -2145,6 +2209,7 @@
 
   :global(:root[data-theme="dark"]) .layer-toolbar-show-btn:focus-visible,
   :global(:root[data-theme="dark"]) .add-client-floating-btn:focus-visible,
+  :global(:root[data-theme="dark"]) .add-pedido-floating-btn:focus-visible,
   :global(:root[data-theme="dark"]) .ubicacion-btn:focus-visible,
   :global(:root[data-theme="dark"]) .pedido-cercano-btn:focus-visible,
   :global(:root[data-theme="dark"]) .historico-mapa-btn:focus-visible {
@@ -2184,9 +2249,38 @@
     background: var(--ds-location-active);
   }
 
-  .ubicacion-btn {
+  .add-pedido-floating-btn {
     position: absolute;
     top: calc(4.35rem + 44px + 0.5rem);
+    right: 0.75rem;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    background: var(--ds-location);
+    border: 1px solid var(--ds-location);
+    border-radius: var(--ds-radius-round);
+    box-shadow: var(--ds-shadow-sm);
+    cursor: pointer;
+    color: var(--ds-on-location);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .add-pedido-floating-btn:hover {
+    background: var(--ds-location-hover);
+    border-color: var(--ds-location-hover);
+  }
+
+  .add-pedido-floating-btn:active {
+    background: var(--ds-location-active);
+  }
+
+  .ubicacion-btn {
+    position: absolute;
+    top: calc(4.35rem + 88px + 1rem);
     right: 0.75rem;
     width: 44px;
     height: 44px;
@@ -2221,7 +2315,7 @@
 
   .pedido-cercano-btn {
     position: absolute;
-    top: calc(4.35rem + 88px + 1rem);
+    top: calc(4.35rem + 132px + 1.5rem);
     right: 0.75rem;
     width: 44px;
     height: 44px;
@@ -2249,7 +2343,7 @@
 
   .historico-mapa-btn {
     position: absolute;
-    top: calc(4.35rem + 132px + 1.5rem);
+    top: calc(4.35rem + 176px + 2rem);
     right: 0.75rem;
     width: 44px;
     height: 44px;
@@ -2532,6 +2626,7 @@
 
     .layer-toolbar-show-btn,
     .add-client-floating-btn,
+    .add-pedido-floating-btn,
     .ubicacion-btn,
     .pedido-cercano-btn,
     .historico-mapa-btn {
@@ -2546,16 +2641,20 @@
       top: 4rem;
     }
 
-    .ubicacion-btn {
+    .add-pedido-floating-btn {
       top: calc(4rem + 44px + 0.5rem);
     }
 
-    .pedido-cercano-btn {
+    .ubicacion-btn {
       top: calc(4rem + 88px + 1rem);
     }
 
-    .historico-mapa-btn {
+    .pedido-cercano-btn {
       top: calc(4rem + 132px + 1.5rem);
+    }
+
+    .historico-mapa-btn {
+      top: calc(4rem + 176px + 2rem);
     }
 
     .map-clear-btn {
