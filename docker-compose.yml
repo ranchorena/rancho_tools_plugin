@@ -67,11 +67,12 @@ services:
 
   # No forma parte del DEV habitual. La PostgreSQL de referencia corre en el host, puerto 5432.
   # Este servicio es para una instalación desde cero: docker compose --profile standalone up -d
-  # y DB_HOST_DOCKER=db. La imagen sigue en postgres:13-alpine; no restaura el dump 1.16.
-  # Ver db_init/README.md. No borrar el volumen postgres_data para reintentar la carga.
+  # y DB_HOST_DOCKER=db. Imagen alineada con ese host: PostgreSQL 16 y PostGIS 3.4.
+  # El dump es archive 1.15 (pg_dump 16.2). Ver db_init/README.md.
+  # No borrar el volumen postgres_data para reintentar la carga.
   db:
     profiles: ["standalone"]
-    image: postgres:13-alpine
+    image: postgis/postgis:16-3.4-alpine
     container_name: radb-qa
     ports:
       - "5433:5432" # Exponer puerto de la BD al host (5433) para evitar conflicto con local 5432
@@ -81,8 +82,8 @@ services:
       - POSTGRES_DB=${DB_NAME:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # El script solo corre en un volumen vacío. Lee el dump fechado, no generalbelgrano.dump.
-      - ./db_init/generalbelgrano-20261014.dump:/docker-entrypoint-initdb.d/generalbelgrano-20261014.dump:ro
+      # El script solo corre en un volumen vacío. La imagen crea PostGIS antes, en 10_postgis.sh.
+      - ./db_init/generalbelgrano-20261117.dump:/docker-entrypoint-initdb.d/generalbelgrano-20261117.dump:ro
       - ./db_init/restore_dump.sh:/docker-entrypoint-initdb.d/restore_dump.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-postgres}"]

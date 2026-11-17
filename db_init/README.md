@@ -54,24 +54,25 @@ Desde Windows, ese PostgreSQL queda publicado en el puerto **5433** para no
 pisar el 5432 del host.
 
 `db_init/restore_dump.sh` se monta en `/docker-entrypoint-initdb.d` y restaura
-`generalbelgrano-20261014.dump` solo cuando el volumen `postgres_data` está
-vacío. No borrar ese volumen para reintentar la carga.
+`generalbelgrano-20261117.dump` solo cuando el volumen `postgres_data` está
+vacío. No borrar ese volumen para reintentar la carga. Un volumen inicializado
+con otra versión mayor de PostgreSQL no sirve para esta imagen: hay que usar
+un volumen nuevo.
 
 ## Dump y versión
 
-No modificar `generalbelgrano-20261014.dump`. Es la fuente de una instalación
-limpia futura.
+`generalbelgrano-20261117.dump` es la fuente de la instalación standalone.
+Salió del host con `pg_dump` 16.2.
 
 | Dato | Valor |
 | --- | --- |
-| Base original | PostgreSQL 16.2 |
-| Dump | `pg_dump` 17.0, archive custom 1.16 |
-| Imagen actual de `db` | `postgres:13-alpine` |
+| Base original | PostgreSQL 16.2, PostGIS 3.4 |
+| Dump | `pg_dump` 16.2, archive custom 1.15 |
+| Imagen de `db` | `postgis/postgis:16-3.4-alpine` (PostgreSQL 16.4, PostGIS 3.4.3) |
 
-`postgres:13` no restaura un archive 1.16. Esa incompatibilidad no afecta al
-DEV habitual, que no usa este contenedor.
+La imagen crea la extensión PostGIS en `10_postgis.sh` antes de
+`restore_dump.sh`. Para regenerar el dump, usar el `pg_dump` de PostgreSQL 16,
+no un cliente 17: el archive 1.16 no lo abre el `pg_restore` de esta imagen.
 
-La dirección para dejar usable la instalación standalone, en una tarea aparte,
-es alinear la imagen Docker con PostgreSQL 16 y generar o restaurar dumps
-compatibles con esa versión. Hasta entonces el script de restore no completa
-la carga sobre `postgres:13-alpine`.
+`generalbelgrano-20261014.dump` quedó de un `pg_dump` 17 (archive 1.16) y este
+servicio no lo monta.

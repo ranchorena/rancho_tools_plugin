@@ -1,0 +1,22 @@
+<layer>
+  <name>plazas</name>
+  <id>LayerInfoImpl-61a392c0:1a12cb4f65c:-7ff8</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl-61a392c0:1a12cb4f65c:-7ff7</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl-61a392c0:1a12cb4f65c:-7ff7</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl-61a392c0:1a12cb4f65c:-7ff9</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2026-10-11 21:49:03.469 UTC</dateCreated>
+  <dateModified>2026-10-11 21:51:22.877 UTC</dateModified>
+</layer>

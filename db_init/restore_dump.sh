@@ -1,19 +1,14 @@
 #!/bin/sh
 # Perfil Compose "standalone", solo en un volumen vacío.
-# generalbelgrano-20261014.dump es archive 1.16 (pg_dump 17, origen PostgreSQL 16.2).
-# postgres:13-alpine no puede restaurarlo. Ver README.md de esta carpeta.
+# generalbelgrano-20261117.dump es archive 1.15 (pg_dump 16.2, origen PostgreSQL 16.2, PostGIS 3.4).
+# postgis/postgis:16-3.4-alpine ejecuta antes 10_postgis.sh y deja creada la extensión.
 set -e
 
-echo "Restaurando generalbelgrano-20261014.dump a la base de datos '$POSTGRES_DB' con el usuario '$POSTGRES_USER'..."
+echo "Restaurando generalbelgrano-20261117.dump a la base de datos '$POSTGRES_DB' con el usuario '$POSTGRES_USER'..."
 
 # El entrypoint de postgres ya crea la base de datos $POSTGRES_DB.
-# El dump fue creado desde la base de datos 'postgres' para el esquema 'generalbelgrano'.
-# Se asume que POSTGRES_DB en el entorno es 'postgres' (o la base de datos destino correcta).
-# y POSTGRES_USER es 'postgres' (o el usuario correcto con permisos).
+# El dump incluye el esquema generalbelgrano. 10_postgis.sh ya creó la extensión.
 
-# Crear el esquema 'generalbelgrano' si no existe
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "CREATE SCHEMA IF NOT EXISTS generalbelgrano;"
+pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --verbose --no-owner --no-privileges --schema="generalbelgrano" /docker-entrypoint-initdb.d/generalbelgrano-20261117.dump
 
-pg_restore --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --verbose --no-owner --no-privileges --schema="generalbelgrano" /docker-entrypoint-initdb.d/generalbelgrano-20261014.dump
-
-echo "Restauración de generalbelgrano-20261014.dump completada."
+echo "Restauración de generalbelgrano-20261117.dump completada."
