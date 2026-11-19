@@ -3,6 +3,7 @@
   import Map from 'ol/Map.js';
   import View from 'ol/View.js';
   import TileLayer from 'ol/layer/Tile.js';
+  import TileWMS from 'ol/source/TileWMS.js';
   import OSM from 'ol/source/OSM.js';
   import XYZ from 'ol/source/XYZ.js'; // Para Google Satellite
   import { fromLonLat, toLonLat } from 'ol/proj.js';
@@ -118,6 +119,7 @@
   let barriosLayer; // VectorLayer con WFS
   let subbarriosLayer; // VectorLayer con WFS
   let plazasLayer; // VectorLayer con WFS
+  let parcelasLayer; // TileLayer WMS público de ARBA, debajo de plazas
   let tramosLayer; // VectorLayer con WFS, solo la línea
   let tramosSentidoLayer; // VectorLayer con WFS, solo la flecha
   let tramosNombreLayer; // VectorLayer con WFS, solo el nombre
@@ -135,6 +137,7 @@
   let showBarriosLayer = false; // Por defecto: Barrios APAGADA
   let showSubbarriosLayer = false; // Por defecto: Subbarrios APAGADA
   let showPlazasLayer = false; // Por defecto: Plazas APAGADA
+  let showParcelasLayer = false; // Por defecto: Parcelas APAGADA
 
   // Estado para el toolbar de capas
   let showLayerToolbar = false;
@@ -176,6 +179,7 @@
   $: if (barriosLayer) barriosLayer.setVisible(showBarriosLayer);
   $: if (subbarriosLayer) subbarriosLayer.setVisible(showSubbarriosLayer);
   $: if (plazasLayer) plazasLayer.setVisible(showPlazasLayer);
+  $: if (parcelasLayer) parcelasLayer.setVisible(showParcelasLayer);
   $: if (tramosLayer) tramosLayer.setVisible(showTramosLayer);
   $: if (tramosSentidoLayer) tramosSentidoLayer.setVisible(showTramosSentidoLayer);
   $: if (tramosNombreLayer) tramosNombreLayer.setVisible(showTramosNombreLayer);
@@ -698,6 +702,24 @@
       visible: showSubbarriosLayer
     });
 
+    // WMS público de ARBA. Debajo de plazas. Apagada hasta que el usuario la enciende.
+    // ARBA no dibuja Parcela por encima de ~1:137000 (zoom menor a 13).
+    parcelasLayer = new TileLayer({
+      source: new TileWMS({
+        url: 'http://geo.arba.gov.ar/geoserver/idera/wms',
+        params: {
+          LAYERS: 'Parcela',
+          STYLES: '',
+          FORMAT: 'image/png',
+          TRANSPARENT: true,
+          VERSION: '1.1.1'
+        },
+        serverType: 'geoserver',
+        transition: 0
+      }),
+      visible: showParcelasLayer
+    });
+
     plazasLayer = new VectorLayer({
       source: new VectorSource({
         url: function(extent) {
@@ -773,6 +795,7 @@
         satelliteLayer, // Capa base Satelital
         barriosLayer,
         subbarriosLayer,
+        parcelasLayer,
         plazasLayer,
         tramosLayer,
         tramosSentidoLayer,
@@ -1959,6 +1982,10 @@
             <label class="layer-item">
               <input class="ds-choice" type="checkbox" bind:checked={showPlazasLayer} />
               <span class="layer-name">▣ Plazas</span>
+            </label>
+            <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showParcelasLayer} />
+              <span class="layer-name">▣ Parcelas</span>
             </label>
             <label class="layer-item">
               <input class="ds-choice" type="checkbox" bind:checked={showSubbarriosLayer} />
