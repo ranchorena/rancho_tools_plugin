@@ -18,7 +18,7 @@
   import {defaults as defaultControls} from 'ol/control.js'; // Para controles personalizados
 
   // Importar configuración
-  import { API_BASE_URL, INITIAL_COORDINATES, GEOSERVER_BASE_URL } from './config.js';
+  import { API_BASE_URL, INITIAL_COORDINATES, GEOSERVER_BASE_URL, MARCADOR_ICONO } from './config.js';
 
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
@@ -32,7 +32,7 @@
   } from './historico-timeline.mjs';
   import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
   import ComoLlegarDialog from './ComoLlegarDialog.svelte';
-  import { formatDistance } from './route-planner.mjs';
+  import { formatCoordinates, formatDistance } from './route-planner.mjs';
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
   import AccountMenu from './AccountMenu.svelte';
   import UiIcon from './design-system/Icon.svelte';
@@ -112,6 +112,7 @@
 
   // Variables para las capas
   let pedidosLayer; // VectorLayer con WFS
+  let pedidosCompletadosLayer; // VectorLayer con WFS, pedidos activos completados
   let clientesLayer; // VectorLayer con WFS
   let barriosLayer; // VectorLayer con WFS
   let subbarriosLayer; // VectorLayer con WFS
@@ -124,6 +125,7 @@
   let showOSMLayer = true; // Por defecto: OpenStreetMap ENCENDIDA
   let showSatelliteLayer = false; // Por defecto: Satelital APAGADA
   let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
+  let showPedidosCompletadosLayer = true; // Por defecto: Pedidos completados ENCENDIDA
   let showPedidosNombre = false; // Por defecto: nombre de pedidos APAGADO
   let showClientesLayer = false;  // Por defecto: Clientes APAGADA
   let showTramosLayer = false; // Por defecto: Tramos APAGADA
@@ -159,10 +161,15 @@
   $: if (osmLayer) osmLayer.setVisible(showOSMLayer);
   $: if (satelliteLayer) satelliteLayer.setVisible(showSatelliteLayer);
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer && !historicoActivo);
+  $: if (pedidosCompletadosLayer) pedidosCompletadosLayer.setVisible(showPedidosCompletadosLayer && !historicoActivo);
   $: if (historicoLayer) historicoLayer.setVisible(historicoActivo);
   $: if (pedidosLayer) {
     showPedidosNombre;
     pedidosLayer.setStyle(pedidoStyle);
+  }
+  $: if (pedidosCompletadosLayer) {
+    showPedidosNombre;
+    pedidosCompletadosLayer.setStyle(pedidoCompletadoStyle);
   }
   $: if (clientesLayer) clientesLayer.setVisible(showClientesLayer);
   $: if (barriosLayer) barriosLayer.setVisible(showBarriosLayer);
@@ -181,6 +188,8 @@
   let selectedFeatureData = null;
   let tooltipPosition = { x: 0, y: 0 }; // Posición en píxeles
   let tooltipType = null; // 'pedido' o 'cliente'
+  let mapContextMenu = null;
+  let mapContextMenuElement;
 
   function handleShowGlobalNotification(event) {
     globalNotificationMessage = event.detail.message;
@@ -196,13 +205,187 @@
 
   let pedidosSourceVersion = 0;
 
-  function refreshPedidosLayerMap() {
-    if (pedidosLayer) {
-      const source = pedidosLayer.getSource();
-      if (source && typeof source.refresh === 'function') {
-        pedidosSourceVersion += 1;
-        source.refresh();
+  let actualizandoCompletado = false;
+
+  function notificar(message, type = "success") {
+    globalNotificationMessage = message;
+    globalNotificationType = type;
+    setTimeout(() => {
+      globalNotificationMessage = "";
+    }, 3500);
+  }
+
+  function cerrarMenuContextual() {
+    mapContextMenu = null;
+  }
+
+  function posicionMenuContextual(x, y, ancho, alto) {
+    const margen = 8;
+    const maxX = Math.max(margen, window.innerWidth - ancho - margen);
+    const maxY = Math.max(margen, window.innerHeight - alto - margen);
+    return {
+      x: Math.min(Math.max(margen, x), maxX),
+      y: Math.min(Math.max(margen, y), maxY)
+    };
+  }
+
+  function cerrarMenuContextualSiCorresponde(event) {
+    if (!mapContextMenu) return;
+    if (mapContextMenuElement?.contains(event.target)) return;
+    cerrarMenuContextual();
+  }
+
+  function cerrarMenuContextualConTecla(event) {
+    if (event.key === 'Escape') cerrarMenuContextual();
+  }
+
+  async function abrirMenuContextual(event) {
+    if (!(event.target instanceof HTMLCanvasElement) || !map) {
+      cerrarMenuContextual();
+      return;
+    }
+    event.preventDefault();
+    const [lon, lat] = toLonLat(map.getEventCoordinate(event));
+    mapContextMenu = {
+      x: event.clientX,
+      y: event.clientY,
+      texto: formatCoordinates({ lat, lon })
+    };
+    closeFeatureTooltip();
+    await tick();
+    if (!mapContextMenuElement || !mapContextMenu) return;
+    const rect = mapContextMenuElement.getBoundingClientRect();
+    mapContextMenu = {
+      ...mapContextMenu,
+      ...posicionMenuContextual(event.clientX, event.clientY, rect.width, rect.height)
+    };
+    await tick();
+    mapContextMenuElement?.querySelector('button')?.focus();
+  }
+
+  async function copiarTexto(texto) {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(texto);
+        return true;
+      } catch {
+        // Si el navegador rechaza el permiso, se intenta el respaldo.
       }
+    }
+    const area = document.createElement('textarea');
+    area.value = texto;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.left = '-9999px';
+    document.body.appendChild(area);
+    area.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch {
+      ok = false;
+    }
+    area.remove();
+    return ok;
+  }
+
+  async function copiarCoordenadasMenu() {
+    const texto = mapContextMenu?.texto;
+    if (!texto) return;
+    const copiado = copiarTexto(texto);
+    cerrarMenuContextual();
+    const ok = await copiado;
+    notificar(ok ? 'Coordenadas copiadas' : 'No se pudieron copiar las coordenadas', ok ? 'success' : 'error');
+  }
+
+  function lienzoMapa() {
+    const canvas = map?.getViewport()?.querySelector('canvas');
+    return canvas instanceof HTMLCanvasElement ? canvas : null;
+  }
+
+  function guardarImagenMapa() {
+    const canvas = lienzoMapa();
+    cerrarMenuContextual();
+    if (!canvas) {
+      notificar('No se pudo guardar la imagen', 'error');
+      return;
+    }
+    try {
+      const enlace = document.createElement('a');
+      enlace.href = canvas.toDataURL('image/png');
+      enlace.download = 'mapa.png';
+      enlace.click();
+    } catch {
+      notificar('No se pudo guardar la imagen', 'error');
+    }
+  }
+
+  function blobDelLienzo(canvas) {
+    return new Promise((resolve, reject) => {
+      try {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('sin imagen'));
+        }, 'image/png');
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async function copiarImagenMapa() {
+    const canvas = lienzoMapa();
+    if (!canvas || !navigator.clipboard?.write) {
+      cerrarMenuContextual();
+      notificar('No se pudo copiar la imagen', 'error');
+      return;
+    }
+    const escritura = navigator.clipboard.write([
+      new ClipboardItem({ 'image/png': blobDelLienzo(canvas) })
+    ]);
+    cerrarMenuContextual();
+    try {
+      await escritura;
+      notificar('Imagen copiada');
+    } catch {
+      notificar('No se pudo copiar la imagen', 'error');
+    }
+  }
+
+  async function marcarCompletadoTooltip(event) {
+    if (!selectedFeatureData?.idPedido || actualizandoCompletado) return;
+    const idPedido = selectedFeatureData.idPedido;
+    const completado = event.currentTarget.checked ? 1 : 0;
+    const anterior = selectedFeatureData.completado === true;
+    selectedFeatureData = { ...selectedFeatureData, completado: completado === 1 };
+    actualizandoCompletado = true;
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/pedidos/completado`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_pedido: idPedido, completado })
+      });
+      const body = await response.json().catch(() => ({ error: "Error desconocido" }));
+      if (!response.ok) {
+        throw new Error(body.error || `Error ${response.status}`);
+      }
+      refreshPedidosLayerMap();
+    } catch (err) {
+      selectedFeatureData = selectedFeatureData
+        ? { ...selectedFeatureData, completado: anterior }
+        : selectedFeatureData;
+      notificar(err.message, "error");
+    } finally {
+      actualizandoCompletado = false;
+    }
+  }
+
+  function refreshPedidosLayerMap() {
+    if (!pedidosLayer && !pedidosCompletadosLayer) return;
+    pedidosSourceVersion += 1;
+    for (const layer of [pedidosLayer, pedidosCompletadosLayer]) {
+      const source = layer && layer.getSource();
+      if (source && typeof source.refresh === 'function') source.refresh();
     }
   }
 
@@ -320,13 +503,13 @@
     return fid != null && String(fid).endsWith('.' + pedidoCercanoId);
   }
 
-  function pedidoStyle(feature) {
+  function estiloPedido(feature, color) {
     const marcado = esPedidoCercano(feature);
     return new Style({
       image: new Circle({
         radius: marcado ? 10 : 6,
         fill: new Fill({
-          color: marcado ? '#f59e0b' : '#ff6b6b'
+          color: marcado ? '#f59e0b' : color
         }),
         stroke: new Stroke({
           color: '#ffffff',
@@ -344,6 +527,14 @@
           })
         : undefined
     });
+  }
+
+  function pedidoStyle(feature) {
+    return estiloPedido(feature, '#ff6b6b');
+  }
+
+  function pedidoCompletadoStyle(feature) {
+    return estiloPedido(feature, '#16a34a');
   }
 
   function areaNombreStyle(fillColor, strokeColor) {
@@ -438,10 +629,22 @@
       visible: showPedidosLayer
     });
 
+    pedidosCompletadosLayer = new VectorLayer({
+      source: new VectorSource({
+        url: function(extent) {
+          return GEOSERVER_BASE_URL + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:PedidosCompletados&outputFormat=application/json&srsname=EPSG:3857&bbox=' + extent.join(',') + ',EPSG:3857&_=' + pedidosSourceVersion;
+        },
+        format: new GeoJSON(),
+        strategy: bboxStrategy
+      }),
+      style: pedidoCompletadoStyle,
+      visible: showPedidosCompletadosLayer
+    });
+
     historicoSource = new VectorSource();
     historicoLayer = new VectorLayer({
       source: historicoSource,
-      style: new Style({ image: medialunaIcon() }),
+      style: new Style({ image: iconoMarcador() }),
       visible: false
     });
 
@@ -575,6 +778,7 @@
         tramosNombreLayer,
         clientesLayer,
         pedidosLayer, // Los pedidos ahora van encima de los clientes
+        pedidosCompletadosLayer,
         historicoLayer,
         markerLayer, // Capa para los marcadores (debe estar encima de las WMS)
         rutaLayer,
@@ -585,6 +789,28 @@
         zoom: 15 // Nivel de zoom inicial
       })
     });
+
+    // Mismo encuadre con el que abre el mapa de General Belgrano, centrado en el pueblo.
+    const vistaGeneralBelgrano = {
+      lon: -58.494599,
+      lat: -35.768666,
+      zoom: 14
+    };
+    const botonExtension = document.createElement('button');
+    botonExtension.type = 'button';
+    botonExtension.className = 'ol-zoom-extent';
+    botonExtension.title = 'Ver General Belgrano';
+    botonExtension.setAttribute('aria-label', 'Ver General Belgrano');
+    botonExtension.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg>';
+    const irAGeneralBelgrano = () => {
+      map?.getView().animate({
+        center: fromLonLat([vistaGeneralBelgrano.lon, vistaGeneralBelgrano.lat]),
+        zoom: vistaGeneralBelgrano.zoom,
+        duration: 300
+      });
+    };
+    botonExtension.addEventListener('click', irAGeneralBelgrano);
+    map.getTargetElement().querySelector('.ol-zoom')?.appendChild(botonExtension);
 
     // Evento de click para mostrar información de pedidos y clientes (WFS)
     map.on('singleclick', function(evt) {
@@ -624,7 +850,7 @@
       // Buscar features de pedidos, la capa temporal o clientes en el pixel clickeado
       map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
         const esCapaTemporal = temporaryLayers.includes(layer) || layer === historicoLayer;
-        if (esCapaTemporal || layer === pedidosLayer || layer === clientesLayer) {
+        if (esCapaTemporal || layer === pedidosLayer || layer === pedidosCompletadosLayer || layer === clientesLayer) {
           foundFeature = feature;
           foundLayer = layer;
           return true; // Parar la búsqueda al encontrar la primera feature
@@ -635,10 +861,14 @@
         const properties = foundFeature.getProperties();
         
         // Determinar el tipo de feature
-        const isPedido = foundLayer === pedidosLayer || temporaryLayers.includes(foundLayer) || foundLayer === historicoLayer;
+        const isPedido = foundLayer === pedidosLayer || foundLayer === pedidosCompletadosLayer || temporaryLayers.includes(foundLayer) || foundLayer === historicoLayer;
         
+        const esCapaPedidoActivo = foundLayer === pedidosLayer || foundLayer === pedidosCompletadosLayer;
+        const idPedido = Number(properties.id_pedido);
         selectedFeatureData = {
-          id: properties.id_pedido || properties.id || 'N/A',
+          id: esCapaPedidoActivo ? (properties.id ?? 'N/A') : (properties.id_pedido || properties.id || 'N/A'),
+          idPedido: esCapaPedidoActivo && Number.isInteger(idPedido) && idPedido > 0 ? idPedido : null,
+          completado: Number(properties.completado) === 1,
           nombre: properties.nombre || 'N/A',
           direccion: properties.direccion || 'N/A',
           cantidad: properties.cantidad || 'N/A',
@@ -699,11 +929,19 @@
     };
     window.addEventListener('resize', handleResize);
 
+    // El canvas abre el menú nativo del navegador (Guardar imagen / Copiar imagen).
+    // Ese menú no admite ítems propios, así que se reemplaza en el viewport.
+    const viewport = map.getViewport();
+    viewport.addEventListener('contextmenu', abrirMenuContextual);
+    map.on('movestart', cerrarMenuContextual);
+
     // Limpiar el mapa al desmontar el componente
     return () => {
       detenerReproduccionHistorica();
       detenerUbicacion();
       window.removeEventListener('resize', handleResize);
+      viewport.removeEventListener('contextmenu', abrirMenuContextual);
+      botonExtension.removeEventListener('click', irAGeneralBelgrano);
       if (map) {
         map.setTarget(undefined);
         map = undefined;
@@ -1054,13 +1292,26 @@
     }
   }
 
-  function medialunaIcon() {
+  function medialunaIcon(tamano = 16) {
     return new Icon({
       src: '/imagenes/medialuna.svg?v=2',
-      width: 16,
-      height: 16,
+      width: tamano,
+      height: tamano,
       anchor: [0.5, 0.5]
     });
+  }
+
+  function limonIcon(tamano = 16) {
+    return new Icon({
+      src: '/imagenes/limon.svg?v=3',
+      width: tamano,
+      height: tamano,
+      anchor: [0.5, 0.5]
+    });
+  }
+
+  function iconoMarcador(tamano = 18) {
+    return MARCADOR_ICONO === 'limon' ? limonIcon(tamano) : medialunaIcon(tamano);
   }
 
   function colorUbicacion() {
@@ -1142,6 +1393,7 @@
     if (pedidoCercanoId == null) return;
     pedidoCercanoId = null;
     if (pedidosLayer) pedidosLayer.changed();
+    if (pedidosCompletadosLayer) pedidosCompletadosLayer.changed();
     closeFeatureTooltip();
   }
 
@@ -1170,7 +1422,9 @@
     if (!map || !Number.isFinite(lon) || !Number.isFinite(lat)) return;
     pedidoCercanoId = pedido.id;
     showPedidosLayer = true;
+    showPedidosCompletadosLayer = true;
     if (pedidosLayer) pedidosLayer.changed();
+    if (pedidosCompletadosLayer) pedidosCompletadosLayer.changed();
     const coordinate = fromLonLat([lon, lat]);
     selectedFeatureData = {
       id: pedido.id_pedido || pedido.id || 'N/A',
@@ -1273,7 +1527,7 @@
     });
     if (marker === 'medialuna') {
       feature.setStyle(new Style({
-        image: medialunaIcon()
+        image: iconoMarcador()
       }));
     }
     markerSource.addFeature(feature);
@@ -1449,17 +1703,18 @@
     )];
     if (!ids.length) return;
 
-    const cql = `id IN (${ids.join(',')})`;
+    const filtro = `id IN (${ids.join(',')})`;
+    const cql = `${filtro};${filtro}`;
     const source = new VectorSource({
       format: new GeoJSON(),
       url: GEOSERVER_BASE_URL
-        + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos&outputFormat=application/json&srsname=EPSG:3857&CQL_FILTER='
+        + '/ows?service=WFS&version=1.1.0&request=GetFeature&typename=GeneralBelgrano:Pedidos,GeneralBelgrano:PedidosCompletados&outputFormat=application/json&srsname=EPSG:3857&CQL_FILTER='
         + encodeURIComponent(cql)
     });
     const layer = new VectorLayer({
       source,
       style: new Style({
-        image: medialunaIcon()
+        image: iconoMarcador()
       })
     });
     map.addLayer(layer);
@@ -1533,6 +1788,11 @@
   // Funciones relacionadas con el tooltip de pedidos se manejan con closePedidoTooltip()
 
 </script>
+
+<svelte:window
+  on:pointerdown={cerrarMenuContextualSiCorresponde}
+  on:keydown={cerrarMenuContextualConTecla}
+/>
 
 {#if !authReady}
 <main class="auth-gate auth-gate-pending" aria-busy="true">
@@ -1644,8 +1904,12 @@
               <input class="ds-choice" type="checkbox" bind:checked={showPedidosLayer} />
               <span class="layer-name">▪ Pedidos</span>
             </label>
+            <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showPedidosCompletadosLayer} />
+              <span class="layer-name">▪ Pedidos completados</span>
+            </label>
             <label class="layer-item layer-subitem">
-              <input class="ds-choice" type="checkbox" bind:checked={showPedidosNombre} disabled={!showPedidosLayer} />
+              <input class="ds-choice" type="checkbox" bind:checked={showPedidosNombre} disabled={!showPedidosLayer && !showPedidosCompletadosLayer} />
               <span class="layer-name">Nombre</span>
             </label>
             <div class="layer-subgroup" role="group" aria-labelledby="layer-group-tramos">
@@ -1876,7 +2140,44 @@
         {#if selectedFeatureData.observaciones !== 'N/A'}
           <div class="feature-tooltip-data">{selectedFeatureData.observaciones}</div>
         {/if}
+        {#if selectedFeatureData.idPedido}
+          <label class="feature-tooltip-completado">
+            <input
+              class="ds-choice"
+              type="checkbox"
+              checked={selectedFeatureData.completado}
+              disabled={actualizandoCompletado}
+              on:click|stopPropagation
+              on:change={marcarCompletadoTooltip}
+            />
+            Completado
+          </label>
+        {/if}
       </div>
+    </div>
+  {/if}
+
+  {#if mapContextMenu}
+    <div
+      class="map-context-menu"
+      style="left: {mapContextMenu.x}px; top: {mapContextMenu.y}px;"
+      bind:this={mapContextMenuElement}
+      role="menu"
+      tabindex="-1"
+      aria-label="Mapa"
+      on:contextmenu|preventDefault|stopPropagation
+      on:pointerdown|stopPropagation
+    >
+      <button
+        type="button"
+        role="menuitem"
+        aria-label={`Copiar coordenadas ${mapContextMenu.texto}`}
+        on:click={copiarCoordenadasMenu}
+      >
+        {mapContextMenu.texto}
+      </button>
+      <button type="button" role="menuitem" on:click={guardarImagenMapa}>Guardar imagen</button>
+      <button type="button" role="menuitem" on:click={copiarImagenMapa}>Copiar imagen</button>
     </div>
   {/if}
 
@@ -2504,6 +2805,14 @@
     border-radius: 0 !important;
   }
 
+  :global(.ol-zoom-extent) {
+    border-top: 1px solid var(--ds-divider) !important;
+  }
+
+  :global(.ol-zoom-extent svg) {
+    display: block;
+  }
+
   :global(.ol-zoom button:hover) {
     background: var(--ds-secondary-hover) !important;
     transform: none !important;
@@ -2719,6 +3028,57 @@
 
 
 
+  .map-context-menu {
+    position: fixed;
+    z-index: 10001;
+    min-width: 15rem;
+    margin: 0;
+    padding: var(--ds-space-1);
+    display: flex;
+    flex-direction: column;
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-medium);
+    box-shadow: var(--ds-shadow-panel);
+  }
+
+  .map-context-menu button {
+    font-family: var(--ds-font-family);
+    font-size: var(--ds-type-body);
+    font-weight: var(--ds-weight-medium);
+    line-height: var(--ds-line-heading);
+    text-align: left;
+    min-height: 36px;
+    padding: 0.4rem 0.7rem;
+    border: 0;
+    border-radius: var(--ds-radius-small);
+    background: transparent;
+    color: var(--ds-text);
+    cursor: pointer;
+  }
+
+  .map-context-menu button:first-child {
+    font-family: var(--ds-font-mono);
+    font-weight: var(--ds-weight-normal);
+    color: var(--ds-primary);
+  }
+
+  .map-context-menu button:nth-child(2) {
+    margin-top: var(--ds-space-1);
+    border-top: 1px solid var(--ds-divider);
+  }
+
+  .map-context-menu button:hover {
+    background: var(--ds-secondary-hover);
+  }
+
+  .map-context-menu button:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: -2px;
+    background: var(--ds-secondary-hover);
+  }
+
   /* Estilos para el tooltip de información de pedidos y clientes */
   .feature-tooltip {
     position: fixed;
@@ -2754,6 +3114,24 @@
 
   .feature-tooltip-data:last-child {
     margin-bottom: 0;
+  }
+
+  .feature-tooltip-completado {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    width: auto;
+    margin: 0.6rem 0 0;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .feature-tooltip-completado input {
+    width: auto;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
   }
 
   /* Estilos responsive para el tooltip */

@@ -32,8 +32,12 @@ def _mensaje_validacion(request: Request, exc: RequestValidationError) -> str:
             return "Las coordenadas (latitud y longitud) son requeridas."
         if path.endswith("/pedidos/eliminar") and (campo == "id_pedido" or campo == "body"):
             return "Indicá el id_pedido a eliminar."
+        if path.endswith("/pedidos/completado") and (campo in ("id_pedido", "completado", "body")):
+            return "Indicá el id_pedido y si el pedido está completado."
     if path.endswith("/pedidos/eliminar"):
         return "Indicá el id_pedido a eliminar."
+    if path.endswith("/pedidos/completado"):
+        return "Indicá el id_pedido y si el pedido está completado."
     return "Los datos enviados no son válidos."
 
 

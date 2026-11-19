@@ -22,9 +22,15 @@
 # http://192.168.1.91:8787/geoserver/web/
 
 ---
-# Deberia correr esto 
+# Imagen local, una sola vez por máquina. Compose no la construye ni la descarga.
 # docker build -t k8sgeosystems/rageoserver:2.26.2 .
-# docker run -d --restart=always -p 8087:8080 --name rageoserver-qa -v /c/docker/volumes/geoserver_data:/opt/geoserver_data k8sgeosystems/rageoserver:2.26.2
-# Copiar el workspace a mano
-# Resetear pwd
-# Entrar a geoserver y conectar al data store para que se setee la pwd
+
+# El data dir es GEOSERVER_DATA_DIR del .env de la raíz (en esta PC, /c/docker/volumes/geoserver_data).
+# Si rageoserver-qa ya existe por un docker run, pararlo y borrarlo antes. No borrar el data dir.
+# docker compose --profile geoserver up -d geoserver
+
+# Con el directorio vacío, el primer arranque genera la clave de cifrado de ese servidor.
+# Copiar a mano rageoserver/workspaces/GeneralBelgrano dentro de workspaces/ del data dir.
+# En la UI, guardar el datastore: host.docker.internal:5432 con la PostgreSQL del host,
+# o db:5432 si la base es la del perfil standalone. Ahí se cifra la clave con la de este servidor.
+# Los arranques siguientes reutilizan el volumen. No montar el workspace del repo como data dir.

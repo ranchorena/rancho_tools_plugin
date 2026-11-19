@@ -92,6 +92,7 @@ class PedidoRepository:
                 Cliente.es_regalo,
                 Pedido.precio_unitario,
                 Pedido.observaciones.label("observacion"),
+                Pedido.completado,
                 func.ST_X(func.ST_Transform(Pedido.geometry, 4326)).label("longitud"),
                 func.ST_Y(func.ST_Transform(Pedido.geometry, 4326)).label("latitud"),
             )

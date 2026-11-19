@@ -62,7 +62,7 @@ un volumen nuevo.
 ## Dump y versión
 
 `generalbelgrano-20261117.dump` es la fuente de la instalación standalone.
-Salió del host con `pg_dump` 16.2.
+Salió del host con `pg_dump` 16.2 e incluye `pedido.completado` (`integer NOT NULL DEFAULT 0`) y la vista `v_pedidos_activos`.
 
 | Dato | Valor |
 | --- | --- |

@@ -80,6 +80,12 @@ class EliminarPedidoIn(BaseModel):
     id_pedido: Any = None
 
 
+class CompletarPedidoIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id_pedido: Any = None
+    completado: Any = None
+
+
 class MensajeOut(BaseModel):
     mensaje: str
 
@@ -205,6 +211,7 @@ class PedidoHistoricoOut(BaseModel):
     observacion: str | None = None
     longitud: float | None = None
     latitud: float | None = None
+    completado: int | None = None
 
 
 class HistoricoOut(BaseModel):

@@ -20,11 +20,13 @@ COPY scripts scripts/
 ARG API_URL
 ARG GEOSERVER_URL
 ARG KEYCLOAK_URL
+ARG MARCADOR_ICONO=medialuna
 
 # Establecer las variables de entorno para que estén disponibles durante el build
 ENV API_URL=${API_URL}
 ENV GEOSERVER_URL=${GEOSERVER_URL}
 ENV KEYCLOAK_URL=${KEYCLOAK_URL}
+ENV MARCADOR_ICONO=${MARCADOR_ICONO}
 
 # Construir la aplicación
 RUN npm run build

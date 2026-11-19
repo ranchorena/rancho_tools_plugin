@@ -117,6 +117,39 @@
 
   let eliminandoId = null;
   let pedidoAEliminar = null;
+  let completandoId = null;
+
+  function actualizarCompletadoLocal(id, completado) {
+    pedidos = pedidos.map((item) => item.id === id ? { ...item, completado } : item);
+  }
+
+  async function marcarCompletado(pedido, checked) {
+    if (completandoId !== null) return;
+    const anterior = pedido.completado === 1 ? 1 : 0;
+    const completado = checked ? 1 : 0;
+    if (anterior === completado) return;
+    actualizarCompletadoLocal(pedido.id, completado);
+    completandoId = pedido.id;
+    errorMessage = "";
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/pedidos/completado`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_pedido: pedido.id, completado })
+      });
+      const body = await response.json().catch(() => ({ error: "Error desconocido" }));
+      if (!response.ok) {
+        throw new Error(body.error || `Error ${response.status}: ${response.statusText}`);
+      }
+      dispatch('refreshPedidosLayer');
+    } catch (err) {
+      actualizarCompletadoLocal(pedido.id, anterior);
+      errorMessage = err.message;
+      console.error("Error al actualizar el pedido:", err);
+    } finally {
+      completandoId = null;
+    }
+  }
 
   function pedirEliminar(pedido) {
     if (eliminandoId !== null) return;
@@ -501,6 +534,12 @@
     background-color: var(--ds-selected) !important;
   }
 
+  .completado-cell {
+    text-align: center;
+    width: 1%;
+    white-space: nowrap;
+  }
+
   .eliminar-btn {
     color: var(--ds-text-muted);
   }
@@ -698,6 +737,7 @@
                   <th>Regalo</th>
                   <th>Precio unitario</th>
                   <th>Observaciones</th>
+                  <th>Completado</th>
                   <th></th>
                 </tr>
               </thead>
@@ -720,6 +760,17 @@
                     <td>{pedido.es_regalo === 1 ? 'Sí' : 'No'}</td>
                     <td>{formatearPrecio(pedido.precio_unitario)}</td>
                     <td>{pedido.observacion || 'N/A'}</td>
+                    <td class="completado-cell" on:click|stopPropagation>
+                      <input
+                        class="ds-choice"
+                        type="checkbox"
+                        aria-label="Pedido completado"
+                        checked={pedido.completado === 1}
+                        disabled={completandoId === pedido.id}
+                        on:click|stopPropagation
+                        on:change={(event) => marcarCompletado(pedido, event.currentTarget.checked)}
+                      />
+                    </td>
                     <td>
                       <button
                         type="button"

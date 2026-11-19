@@ -54,6 +54,7 @@ class Pedido(Base):
     observaciones: Mapped[str | None] = mapped_column(String(30))
     precio_unitario: Mapped[float | None] = mapped_column(Float)
     nro_pao: Mapped[int | None] = mapped_column(Integer)
+    completado: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
 
 class Precio(Base):

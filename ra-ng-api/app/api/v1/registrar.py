@@ -14,6 +14,7 @@ from app.api.contratos import (
     CalcularRutaIn,
     ClienteBusquedaOut,
     ClientePedidoOut,
+    CompletarPedidoIn,
     EliminarPedidoIn,
     ErrorOut,
     HistoricoOut,
@@ -28,6 +29,7 @@ from app.application.clientes.actualizar_cliente import actualizar_cliente
 from app.application.clientes.agregar_cliente import agregar_cliente
 from app.application.clientes.buscar_clientes import buscar_clientes
 from app.application.direcciones.buscar_direccion import buscar_direccion
+from app.application.pedidos.completar_pedido import completar_pedido
 from app.application.pedidos.eliminar_pedido import eliminar_pedido
 from app.application.pedidos.iniciar_pedidos import iniciar_pedidos
 from app.application.pedidos.listar_con_pedido import listar_clientes_con_pedido
@@ -201,5 +203,20 @@ def construir_router(version: str) -> APIRouter:
     )
     def post_iniciar_pedidos(uow: UnitOfWork = UowDep, _identidad: dict = RolEscritura):
         return iniciar_pedidos(uow)
+
+    @router.post(
+        "/pedidos/completado",
+        operation_id=f"completar_pedido_{version}",
+        tags=["Pedidos"],
+        summary="Marca un pedido como completado o pendiente",
+        response_model=MensajeOut,
+        responses=_ERRORES,
+    )
+    def post_completar_pedido(
+        datos: CompletarPedidoIn,
+        uow: UnitOfWork = UowDep,
+        _identidad: dict = RolEscritura,
+    ):
+        return completar_pedido(uow, datos.model_dump(exclude_unset=True))
 
     return router

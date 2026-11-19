@@ -10,6 +10,9 @@ export const API_BASE_URL = '__API_URL__';
 export const GEOSERVER_BASE_URL = '__GEOSERVER_URL__';
 
 export const KEYCLOAK_URL = '__KEYCLOAK_URL__';
+
+// medialuna o limon. Se graba en el bundle al compilar.
+export const MARCADOR_ICONO = '__MARCADOR_ICONO__';
 export const KEYCLOAK_REALM = 'rancho';
 export const KEYCLOAK_CLIENT_ID = 'raweb';
 

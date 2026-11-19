@@ -30,5 +30,5 @@ export function swapPoints(origin, destination) {
 }
 
 export function formatCoordinates({ lat, lon }) {
-  return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+  return `${lat.toFixed(6)},${lon.toFixed(6)}`;
 }
