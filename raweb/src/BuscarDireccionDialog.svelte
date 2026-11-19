@@ -10,7 +10,7 @@
 
   function handleBuscar() {
     if (direccionInput.trim() === '') {
-      alert('Por favor, ingrese una dirección.');
+      alert('Por favor, ingrese una dirección o latitud,longitud.');
       return;
     }
     dispatch('buscar', { direccion: direccionInput.trim() });
@@ -56,14 +56,14 @@
 
     <div class="modal-body">
       <div class="input-group">
-        <label for="direccion-input">Ingrese la dirección a buscar:</label>
+        <label for="direccion-input">Ingrese la dirección o latitud,longitud:</label>
         <input
           id="direccion-input"
           data-dialog-initial-focus
           class="ds-field"
           type="text"
           bind:value={direccionInput}
-          placeholder="Ej: SARMIENTO 550"
+          placeholder="Ej: SARMIENTO 550 o -35.72,-58.49"
           on:keydown={handleKeydown}
         />
       </div>

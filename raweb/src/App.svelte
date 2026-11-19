@@ -33,6 +33,7 @@
   import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
   import ComoLlegarDialog from './ComoLlegarDialog.svelte';
   import { formatCoordinates, formatDistance } from './route-planner.mjs';
+  import { interpretAddressQuery } from './address-query.mjs';
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
   import AccountMenu from './AccountMenu.svelte';
   import UiIcon from './design-system/Icon.svelte';
@@ -1253,8 +1254,27 @@
     closeDialogs();
   }
 
+  function centrarBusqueda(lon, lat) {
+    addMarker(lon, lat);
+    map.getView().animate({
+      center: fromLonLat([lon, lat]),
+      zoom: 17,
+      duration: 1000
+    });
+  }
+
   async function handleBuscarDireccion(event) {
     const direccion = event.detail.direccion;
+    const consulta = interpretAddressQuery(direccion);
+    if (consulta.kind === "coordinates") {
+      centrarBusqueda(consulta.lon, consulta.lat);
+      await closeDialogs();
+      return;
+    }
+    if (consulta.kind === "invalid_coordinates") {
+      alert("Las coordenadas están fuera de rango. Ingrese latitud,longitud, por ejemplo -35.72,-58.49.");
+      return;
+    }
     console.log("Buscando dirección:", direccion);
 
     try {
@@ -1275,12 +1295,7 @@
       console.log("Respuesta del backend:", data);
 
       if (data.latitud && data.longitud) {
-        addMarker(data.longitud, data.latitud);
-        map.getView().animate({
-            center: fromLonLat([data.longitud, data.latitud]),
-            zoom: 17,
-            duration: 1000
-        });
+        centrarBusqueda(data.longitud, data.latitud);
         await closeDialogs();
       } else {
         alert("No se recibieron coordenadas válidas del backend.");
