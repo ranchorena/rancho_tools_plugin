@@ -62,7 +62,8 @@ export default {
 				'__API_URL__': process.env.API_URL || "http://localhost:5001/api/v1",
 				'__GEOSERVER_URL__': process.env.GEOSERVER_URL || "http://localhost:8087/geoserver",
 				'__KEYCLOAK_URL__': process.env.KEYCLOAK_URL || "http://localhost:8081",
-				'__MARCADOR_ICONO__': process.env.MARCADOR_ICONO === 'limon' ? 'limon' : 'medialuna'
+				'__MARCADOR_ICONO__': process.env.MARCADOR_ICONO === 'limon' ? 'limon' : 'medialuna',
+				'__GOOGLE_MAPS_API_KEY__': process.env.GOOGLE_MAPS_API_KEY || ''
 			}
 		}),
 

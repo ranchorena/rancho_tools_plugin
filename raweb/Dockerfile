@@ -21,12 +21,14 @@ ARG API_URL
 ARG GEOSERVER_URL
 ARG KEYCLOAK_URL
 ARG MARCADOR_ICONO=medialuna
+ARG GOOGLE_MAPS_API_KEY=
 
 # Establecer las variables de entorno para que estén disponibles durante el build
 ENV API_URL=${API_URL}
 ENV GEOSERVER_URL=${GEOSERVER_URL}
 ENV KEYCLOAK_URL=${KEYCLOAK_URL}
 ENV MARCADOR_ICONO=${MARCADOR_ICONO}
+ENV GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
 
 # Construir la aplicación
 RUN npm run build

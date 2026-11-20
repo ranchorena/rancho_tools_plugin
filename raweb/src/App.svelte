@@ -19,7 +19,7 @@
   import {defaults as defaultControls} from 'ol/control.js'; // Para controles personalizados
 
   // Importar configuración
-  import { API_BASE_URL, INITIAL_COORDINATES, GEOSERVER_BASE_URL, MARCADOR_ICONO } from './config.js';
+  import { API_BASE_URL, INITIAL_COORDINATES, GEOSERVER_BASE_URL, MARCADOR_ICONO, GOOGLE_MAPS_API_KEY } from './config.js';
 
   // Componente de diálogo (lo crearemos después)
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
@@ -33,6 +33,8 @@
   } from './historico-timeline.mjs';
   import AgregarCliente from './AgregarCliente.svelte'; // Importar componente para agregar clientes
   import ComoLlegarDialog from './ComoLlegarDialog.svelte';
+  import StreetViewDialog from './StreetViewDialog.svelte';
+  import { hasStreetViewKey, streetViewExternalUrl } from './street-view.mjs';
   import { formatCoordinates, formatDistance } from './route-planner.mjs';
   import { interpretAddressQuery } from './address-query.mjs';
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
@@ -195,6 +197,7 @@
   let tooltipType = null; // 'pedido' o 'cliente'
   let mapContextMenu = null;
   let mapContextMenuElement;
+  let streetViewPoint = null;
 
   function handleShowGlobalNotification(event) {
     globalNotificationMessage = event.detail.message;
@@ -254,6 +257,8 @@
     mapContextMenu = {
       x: event.clientX,
       y: event.clientY,
+      lat,
+      lon,
       texto: formatCoordinates({ lat, lon })
     };
     closeFeatureTooltip();
@@ -901,7 +906,8 @@
           horario: properties.horario || 'N/A',
           observaciones: properties.observaciones || 'N/A',
           calle: properties.calle || 'N/A',
-          altura: properties.altura || 'N/A'
+          altura: properties.altura || 'N/A',
+          ...coordinatesFromFeature(foundFeature)
         };
         
         tooltipType = isPedido ? 'pedido' : 'cliente';
@@ -915,7 +921,7 @@
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         const tooltipWidth = 300; // max-width del tooltip
-        const tooltipHeight = 200; // altura estimada del tooltip
+        const tooltipHeight = 260; // altura estimada del tooltip
         
         let x = pixel[0] + 15; // 15px a la derecha del click
         let y = pixel[1] - 15; // 15px arriba del click
@@ -1441,7 +1447,7 @@
     if (!pixel) return;
     const mapa = mapElement.getBoundingClientRect();
     const tooltipWidth = 250;
-    const tooltipHeight = 200;
+    const tooltipHeight = 260;
     let x = mapa.left + pixel[0] + 15;
     let y = mapa.top + pixel[1] - 15;
     if (x + tooltipWidth > window.innerWidth) x = mapa.left + pixel[0] - tooltipWidth - 15;
@@ -1474,7 +1480,9 @@
       horario: pedido.horario || 'N/A',
       observaciones: pedido.observaciones || 'N/A',
       calle: pedido.calle || 'N/A',
-      altura: pedido.altura ?? 'N/A'
+      altura: pedido.altura ?? 'N/A',
+      lat,
+      lon
     };
     tooltipType = 'pedido';
     showFeatureTooltip = true;
@@ -1821,6 +1829,26 @@
     selectedFeatureData = null;
     tooltipPosition = { x: 0, y: 0 };
     tooltipType = null;
+  }
+
+  function coordinatesFromFeature(feature) {
+    const coordinates = feature?.getGeometry?.()?.getCoordinates?.();
+    if (!Array.isArray(coordinates) || typeof coordinates[0] !== 'number' || typeof coordinates[1] !== 'number') return {};
+    const [lon, lat] = toLonLat(coordinates);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return {};
+    return { lat, lon };
+  }
+
+  function openStreetView(lat, lon) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    closeFeatureTooltip();
+    cerrarMenuContextual();
+    if (!hasStreetViewKey(GOOGLE_MAPS_API_KEY)) {
+      const opened = window.open(streetViewExternalUrl({ lat, lon }), '_blank', 'noopener,noreferrer');
+      if (!opened) notificar('El navegador bloqueó Street View', 'error');
+      return;
+    }
+    streetViewPoint = { lat, lon };
   }
 
   // Funciones relacionadas con el tooltip de pedidos se manejan con closePedidoTooltip()
@@ -2195,8 +2223,28 @@
             Completado
           </label>
         {/if}
+        {#if Number.isFinite(selectedFeatureData.lat) && Number.isFinite(selectedFeatureData.lon)}
+          <button
+            type="button"
+            class="feature-tooltip-calle ds-button ds-button--ghost"
+            on:click|stopPropagation={() => openStreetView(selectedFeatureData.lat, selectedFeatureData.lon)}
+          >
+            <UiIcon name="person" size={16} />
+            Ver calle
+          </button>
+        {/if}
       </div>
     </div>
+  {/if}
+
+  {#if streetViewPoint}
+    {#key `${streetViewPoint.lat},${streetViewPoint.lon}`}
+      <StreetViewDialog
+        lat={streetViewPoint.lat}
+        lon={streetViewPoint.lon}
+        on:close={() => streetViewPoint = null}
+      />
+    {/key}
   {/if}
 
   {#if mapContextMenu}
@@ -2218,6 +2266,7 @@
       >
         {mapContextMenu.texto}
       </button>
+      <button type="button" role="menuitem" on:click={() => openStreetView(mapContextMenu.lat, mapContextMenu.lon)}>Ver calle</button>
       <button type="button" role="menuitem" on:click={guardarImagenMapa}>Guardar imagen</button>
       <button type="button" role="menuitem" on:click={copiarImagenMapa}>Copiar imagen</button>
     </div>
@@ -3176,6 +3225,14 @@
     padding: 0;
   }
 
+  .feature-tooltip-calle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.7rem;
+    min-height: 2rem;
+  }
+
   /* Estilos responsive para el tooltip */
   @media (max-width: 768px) {
     .feature-tooltip {
@@ -3192,6 +3249,10 @@
       margin-bottom: 0.5rem;
       font-size: 1rem;
       line-height: 1.4;
+    }
+
+    .feature-tooltip-calle {
+      min-height: 44px;
     }
   }
 

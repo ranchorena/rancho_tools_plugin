@@ -13,6 +13,9 @@ export const KEYCLOAK_URL = '__KEYCLOAK_URL__';
 
 // medialuna o limon. Se graba en el bundle al compilar.
 export const MARCADOR_ICONO = '__MARCADOR_ICONO__';
+
+// Vacía si no hay clave: Ver calle abre Google Maps en otra pestaña.
+export const GOOGLE_MAPS_API_KEY = '__GOOGLE_MAPS_API_KEY__';
 export const KEYCLOAK_REALM = 'rancho';
 export const KEYCLOAK_CLIENT_ID = 'raweb';
 

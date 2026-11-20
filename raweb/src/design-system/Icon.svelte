@@ -80,6 +80,10 @@
 	{:else if name === 'swap'}
 		<path d="M8 4v16M4.5 7.5 8 4l3.5 3.5" />
 		<path d="M16 20V4M12.5 16.5 16 20l3.5-3.5" />
+	{:else if name === 'person'}
+		<circle cx="12" cy="6.2" r="2.1" />
+		<path d="M8.2 20.2v-2.4a3.8 3.8 0 0 1 7.6 0v2.4" />
+		<path d="M8.6 12.4h6.8" />
 	{/if}
 </svg>
 

@@ -13,6 +13,8 @@ services:
         KEYCLOAK_URL: ${PUBLIC_URL:-http://localhost:8088}
         # medialuna o limon. También se graba al compilar: hay que reconstruir el frontend.
         MARCADOR_ICONO: ${MARCADOR_ICONO:-medialuna}
+        # Se graba en el bundle. Vacía: Ver calle abre Google Maps en otra pestaña.
+        GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
     image: raweb:qa
     # Las URLs se graban en el bundle al compilar: `docker compose up -d` debe reconstruir siempre.
     # Con la capa de npm install en caché, si nada cambió el build es casi inmediato.
