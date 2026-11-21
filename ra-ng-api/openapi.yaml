@@ -118,6 +118,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/mapa/buscar:
+    get:
+      tags:
+      - Mapa
+      summary: Busca pedidos activos y clientes para la caja del mapa
+      operationId: buscar_en_mapa_v1
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Q
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuscarMapaOut'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/clientes/actualizar/{cliente_id}:
     put:
       tags:
@@ -833,6 +889,50 @@ components:
           - type: 'null'
       type: object
       title: CalcularRutaIn
+    ResultadoMapaOut:
+      properties:
+        id:
+          type: integer
+          title: Id
+        nombre:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre
+        direccion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direccion
+        longitud:
+          type: number
+          title: Longitud
+        latitud:
+          type: number
+          title: Latitud
+      type: object
+      required:
+      - id
+      - longitud
+      - latitud
+      title: ResultadoMapaOut
+    BuscarMapaOut:
+      properties:
+        pedidos:
+          items:
+            $ref: '#/components/schemas/ResultadoMapaOut'
+          type: array
+          title: Pedidos
+        clientes:
+          items:
+            $ref: '#/components/schemas/ResultadoMapaOut'
+          type: array
+          title: Clientes
+      type: object
+      required:
+      - pedidos
+      - clientes
+      title: BuscarMapaOut
     ClienteBusquedaOut:
       properties:
         id:

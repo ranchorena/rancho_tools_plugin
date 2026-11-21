@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.infrastructure.persistence.models import Cliente, Pedido
+from app.infrastructure.persistence.plegado import sql_plegado
 from app.infrastructure.serialization import fila_a_dict
 
 
@@ -64,6 +65,30 @@ class PedidoRepository:
         if isinstance(pedido.get("fecha"), str):
             pedido["fecha"] = pedido["fecha"][:10]
         return pedido
+
+    def buscar_en_mapa(self, patron: str, tope: int = 8) -> list[dict]:
+        consulta = text(
+            f"""
+            SELECT id_pedido AS id,
+                   nombre,
+                   direccion,
+                   ST_X(ST_Transform(geometria, 4326)) AS longitud,
+                   ST_Y(ST_Transform(geometria, 4326)) AS latitud
+            FROM {settings.db_schema}.v_pedidos_activos
+            WHERE completado = 0
+              AND geometria IS NOT NULL
+              AND id_pedido IS NOT NULL
+              AND (
+                    {sql_plegado("nombre")} LIKE :patron ESCAPE '\\'
+                 OR {sql_plegado("direccion")} LIKE :patron ESCAPE '\\'
+                 OR {sql_plegado("calle")} LIKE :patron ESCAPE '\\'
+              )
+            ORDER BY nombre NULLS LAST, id_pedido
+            LIMIT :tope
+            """
+        )
+        filas = self._session.execute(consulta, {"patron": patron, "tope": tope}).all()
+        return [fila_a_dict(fila) for fila in filas]
 
     def reciente_para_cercano(self, cliente_id: int) -> tuple[int, str] | None:
         hoy = datetime.datetime.combine(datetime.date.today(), datetime.time.min)

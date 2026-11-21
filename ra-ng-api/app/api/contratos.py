@@ -119,6 +119,19 @@ class BuscarDireccionOut(BaseModel):
     tramo_info: TramoInfoOut
 
 
+class ResultadoMapaOut(BaseModel):
+    id: int
+    nombre: str | None = None
+    direccion: str | None = None
+    longitud: float
+    latitud: float
+
+
+class BuscarMapaOut(BaseModel):
+    pedidos: list[ResultadoMapaOut]
+    clientes: list[ResultadoMapaOut]
+
+
 class ClienteBusquedaOut(BaseModel):
     id: int
     nombre: str | None = None

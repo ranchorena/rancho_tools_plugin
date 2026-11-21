@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.infrastructure.persistence.models import Cliente
+from app.infrastructure.persistence.plegado import columna_plegada
 from app.infrastructure.serialization import fila_a_dict
 
 _COLUMNAS_BUSQUEDA = (
@@ -58,6 +59,26 @@ class ClienteRepository:
             except (TypeError, ValueError):
                 pass
         consulta = select(*_COLUMNAS_BUSQUEDA).where(and_(*filtros))
+        return [fila_a_dict(fila) for fila in self._session.execute(consulta).all()]
+
+    def buscar_en_mapa(self, patron: str, tope: int = 8) -> list[dict]:
+        coincidencia = or_(
+            columna_plegada(Cliente.nombre).like(patron, escape="\\"),
+            columna_plegada(Cliente.direccion).like(patron, escape="\\"),
+            columna_plegada(Cliente.calle).like(patron, escape="\\"),
+        )
+        consulta = (
+            select(
+                Cliente.id,
+                Cliente.nombre,
+                Cliente.direccion,
+                func.ST_X(func.ST_Transform(Cliente.geometria, 4326)).label("longitud"),
+                func.ST_Y(func.ST_Transform(Cliente.geometria, 4326)).label("latitud"),
+            )
+            .where(and_(Cliente.geometria.isnot(None), coincidencia))
+            .order_by(Cliente.nombre.asc().nulls_last(), Cliente.id)
+            .limit(tope)
+        )
         return [fila_a_dict(fila) for fila in self._session.execute(consulta).all()]
 
     def obtener(self, cliente_id: int) -> Cliente | None:

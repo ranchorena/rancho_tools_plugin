@@ -11,6 +11,7 @@ from app.api.contratos import (
     BuscarClientesIn,
     BuscarDireccionIn,
     BuscarDireccionOut,
+    BuscarMapaOut,
     CalcularRutaIn,
     ClienteBusquedaOut,
     ClientePedidoOut,
@@ -29,6 +30,7 @@ from app.application.clientes.actualizar_cliente import actualizar_cliente
 from app.application.clientes.agregar_cliente import agregar_cliente
 from app.application.clientes.buscar_clientes import buscar_clientes
 from app.application.direcciones.buscar_direccion import buscar_direccion
+from app.application.mapa.buscar_en_mapa import buscar_en_mapa
 from app.application.pedidos.completar_pedido import completar_pedido
 from app.application.pedidos.eliminar_pedido import eliminar_pedido
 from app.application.pedidos.iniciar_pedidos import iniciar_pedidos
@@ -76,6 +78,21 @@ def construir_router(version: str) -> APIRouter:
         _identidad: dict = RolLectura,
     ):
         return buscar_clientes(uow, datos.model_dump(exclude_unset=True))
+
+    @router.get(
+        "/mapa/buscar",
+        operation_id=f"buscar_en_mapa_{version}",
+        tags=["Mapa"],
+        summary="Busca pedidos activos y clientes para la caja del mapa",
+        response_model=BuscarMapaOut,
+        responses=_ERRORES,
+    )
+    def get_buscar_en_mapa(
+        q: str,
+        uow: UnitOfWork = UowDep,
+        _identidad: dict = RolLectura,
+    ):
+        return buscar_en_mapa(uow, q)
 
     @router.put(
         "/clientes/actualizar/{cliente_id}",

@@ -22,6 +22,7 @@
   import { API_BASE_URL, INITIAL_COORDINATES, GEOSERVER_BASE_URL, MARCADOR_ICONO, GOOGLE_MAPS_API_KEY } from './config.js';
 
   // Componente de diálogo (lo crearemos después)
+  import BuscarMapa from './BuscarMapa.svelte';
   import BuscarDireccionDialog from './BuscarDireccionDialog.svelte';
   import BuscarCliente from './BuscarCliente.svelte'; // Importar el nuevo componente
   import PedidosHistorico from './PedidosHistorico.svelte';
@@ -2087,6 +2088,7 @@
   </nav>
 
   <div class="map-container" class:historico-abierto={historicoActivo} bind:this={mapElement}>
+    <BuscarMapa on:zoom={handleZoomToLocation} />
     <!-- El mapa siempre está presente en el DOM -->
     
     <!-- Toolbar de capas flotante -->
