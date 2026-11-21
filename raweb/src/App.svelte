@@ -98,6 +98,11 @@
   let showAgregarClienteDialog = false;
   let showAgregarPedidoDialog = false;
   let agregarClienteInicial = null;
+  let clienteEnEdicion = null;
+  let clienteFormKey = 0;
+  let pedidoEnEdicion = null;
+  let clienteDelPedido = null;
+  let pedidoFormKey = 0;
   let showComoLlegarDialog = false;
 
   // Variables para Cómo llegar
@@ -112,6 +117,7 @@
 
   // Variables para las capas base
   let osmLayer;
+  let googleMapsLayer;
   let satelliteLayer;
 
   // Variables para las capas
@@ -128,6 +134,7 @@
 
   // Estado para los checkboxes del Layer Switcher
   let showOSMLayer = true; // Por defecto: OpenStreetMap ENCENDIDA
+  let showGoogleMapsLayer = false; // Por defecto: Google Maps APAGADA
   let showSatelliteLayer = false; // Por defecto: Satelital APAGADA
   let showPedidosLayer = true; // Por defecto: Pedidos ENCENDIDA
   let showPedidosCompletadosLayer = true; // Por defecto: Pedidos completados ENCENDIDA
@@ -165,6 +172,7 @@
 
   // Reacciones para actualizar la visibilidad de las capas cuando cambian los checkboxes
   $: if (osmLayer) osmLayer.setVisible(showOSMLayer);
+  $: if (googleMapsLayer) googleMapsLayer.setVisible(showGoogleMapsLayer);
   $: if (satelliteLayer) satelliteLayer.setVisible(showSatelliteLayer);
   $: if (pedidosLayer) pedidosLayer.setVisible(showPedidosLayer && !historicoActivo);
   $: if (pedidosCompletadosLayer) pedidosCompletadosLayer.setVisible(showPedidosCompletadosLayer && !historicoActivo);
@@ -618,6 +626,14 @@
       visible: showOSMLayer
     });
 
+    googleMapsLayer = new TileLayer({
+      source: new XYZ({
+        url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        maxZoom: 20
+      }),
+      visible: showGoogleMapsLayer
+    });
+
     satelliteLayer = new TileLayer({
       source: new XYZ({
         url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
@@ -797,6 +813,7 @@
       }),
       layers: [
         osmLayer, // Capa base OSM
+        googleMapsLayer, // Capa base Google Maps, encima de OSM y debajo de la satelital
         satelliteLayer, // Capa base Satelital
         barriosLayer,
         subbarriosLayer,
@@ -904,9 +921,11 @@
           fecha: properties.fecha || 'N/A',
           telefono: properties.telefono || 'N/A',
           horario: properties.horario || 'N/A',
-          observaciones: properties.observaciones || 'N/A',
+          observaciones: properties.observaciones || properties.observacion || 'N/A',
           calle: properties.calle || 'N/A',
           altura: properties.altura || 'N/A',
+          nroPao: properties.nro_pao ?? null,
+          esRegalo: properties.es_regalo ?? null,
           ...coordinatesFromFeature(foundFeature)
         };
         
@@ -1080,6 +1099,8 @@
   function openAgregarCliente(event) {
     captureDialogTrigger(event);
     agregarClienteInicial = null;
+    clienteEnEdicion = null;
+    clienteFormKey += 1;
     showAgregarClienteDialog = true;
     showBuscarDireccionDialog = false; // Asegurar que los otros diálogos estén cerrados
     showBuscarClienteDialog = false;
@@ -1091,6 +1112,8 @@
 
   function openAgregarClienteFromSearch(event) {
     agregarClienteInicial = event.detail;
+    clienteEnEdicion = null;
+    clienteFormKey += 1;
     showAgregarClienteDialog = true;
     showBuscarClienteDialog = false;
     showBuscarDireccionDialog = false;
@@ -1106,7 +1129,10 @@
     showBuscarClienteDialog = false;
     showPedidosDialog = false;
     showAgregarClienteDialog = false;
+    clienteEnEdicion = null;
     showAgregarPedidoDialog = false;
+    pedidoEnEdicion = null;
+    clienteDelPedido = null;
     showComoLlegarDialog = false;
     modoSeleccionPunto = false;
     coordenadasSeleccionadas = null;
@@ -1142,6 +1168,9 @@
   function openAgregarPedido(event) {
     captureDialogTrigger(event);
     modoSeleccionPunto = false;
+    pedidoEnEdicion = null;
+    clienteDelPedido = null;
+    pedidoFormKey += 1;
     showAgregarPedidoDialog = true;
     showBuscarDireccionDialog = false;
     showBuscarClienteDialog = false;
@@ -1247,6 +1276,117 @@
     mostrarAviso(`Recorrido: ${formatDistance(ruta.distancia_m)}`, 'success');
     await closeDialogs();
     encuadrarRuta();
+  }
+
+  function puntoCliente(latitud, longitud) {
+    if (latitud == null || longitud == null || latitud === '' || longitud === '') return null;
+    const lat = Number(latitud);
+    const lon = Number(longitud);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    return { lat, lon };
+  }
+
+  function textoTooltip(valor) {
+    if (valor == null || valor === 'N/A') return '';
+    return String(valor);
+  }
+
+  function editarClienteEnMapa() {
+    const datos = selectedFeatureData;
+    if (!datos) return;
+    const id = Number(datos.id);
+    if (!Number.isInteger(id) || id <= 0) return;
+    const punto = puntoCliente(datos.lat, datos.lon);
+    clienteEnEdicion = {
+      id,
+      nombre: textoTooltip(datos.nombre),
+      direccion: textoTooltip(datos.direccion),
+      calle: textoTooltip(datos.calle),
+      altura: datos.altura == null || datos.altura === 'N/A' ? '' : datos.altura,
+      telefono: textoTooltip(datos.telefono),
+      latitud: punto ? punto.lat : null,
+      longitud: punto ? punto.lon : null
+    };
+    agregarClienteInicial = null;
+    coordenadasSeleccionadas = punto;
+    clienteFormKey += 1;
+    showAgregarClienteDialog = true;
+    closeFeatureTooltip();
+  }
+
+  function valorTooltip(valor) {
+    if (valor == null || valor === 'N/A' || valor === '') return '';
+    return valor;
+  }
+
+  function editarPedidoEnMapa() {
+    const datos = selectedFeatureData;
+    if (!datos?.idPedido) return;
+    const id = Number(datos.id);
+    if (!Number.isInteger(id) || id <= 0) return;
+    const punto = puntoCliente(datos.lat, datos.lon);
+    clienteDelPedido = {
+      id,
+      nombre: textoTooltip(datos.nombre),
+      direccion: textoTooltip(datos.direccion),
+      telefono: textoTooltip(datos.telefono),
+      calle: textoTooltip(datos.calle),
+      altura: valorTooltip(datos.altura),
+      latitud: punto ? punto.lat : null,
+      longitud: punto ? punto.lon : null
+    };
+    pedidoEnEdicion = {
+      cantidad: valorTooltip(datos.cantidad),
+      horario: textoTooltip(datos.horario),
+      nro_pao: datos.nroPao ?? '',
+      observacion: textoTooltip(datos.observaciones),
+      es_regalo: Number(datos.esRegalo) === 1,
+      direccion: textoTooltip(datos.direccion),
+      latitud: punto ? punto.lat : null,
+      longitud: punto ? punto.lon : null
+    };
+    coordenadasSeleccionadas = punto;
+    pedidoFormKey += 1;
+    showAgregarPedidoDialog = true;
+    closeFeatureTooltip();
+  }
+
+  function cerrarEdicionPedido() {
+    showAgregarPedidoDialog = false;
+    pedidoEnEdicion = null;
+    clienteDelPedido = null;
+    salirDeSeleccion();
+  }
+
+  function salirDeSeleccion() {
+    modoSeleccionPunto = false;
+    coordenadasSeleccionadas = null;
+    if (map) map.getViewport().style.cursor = '';
+  }
+
+  function cerrarEdicionCliente() {
+    showAgregarClienteDialog = false;
+    clienteEnEdicion = null;
+    salirDeSeleccion();
+  }
+
+  function handleFijarCoordenadas(event) {
+    coordenadasSeleccionadas = puntoCliente(event.detail?.lat, event.detail?.lon);
+  }
+
+  function handleClienteActualizado(event) {
+    handleShowGlobalNotification({
+      detail: {
+        message: event.detail?.message || 'Cliente actualizado correctamente.',
+        type: 'success'
+      }
+    });
+    if (clientesLayer) clientesLayer.getSource().refresh();
+    if (showAgregarClienteDialog && clienteEnEdicion) {
+      cerrarEdicionCliente();
+      return;
+    }
+    salirDeSeleccion();
   }
 
   function handleClienteAgregado(event) {
@@ -2032,6 +2172,10 @@
               <span class="layer-name">○ OpenStreetMap</span>
             </label>
             <label class="layer-item">
+              <input class="ds-choice" type="checkbox" bind:checked={showGoogleMapsLayer} />
+              <span class="layer-name">○ Google Maps</span>
+            </label>
+            <label class="layer-item">
               <input class="ds-choice" type="checkbox" bind:checked={showSatelliteLayer} />
               <span class="layer-name">◉ Satelital</span>
             </label>
@@ -2120,6 +2264,9 @@
       on:zoomToLocation={handleZoomToLocation}
       on:seleccionarUbicacion={handleSeleccionarUbicacion}
       on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
+      on:fijarCoordenadas={handleFijarCoordenadas}
+      on:edicionCerrada={salirDeSeleccion}
+      on:clienteActualizado={handleClienteActualizado}
     />
   {/if}
 
@@ -2138,26 +2285,36 @@
   {/if}
 
   {#if showAgregarPedidoDialog}
+    {#key pedidoFormKey}
     <AgregarPedido
+      cliente={clienteDelPedido}
+      pedidoInicial={pedidoEnEdicion}
+      modo={pedidoEnEdicion ? 'edicion' : 'alta'}
       coordenadas={coordenadasSeleccionadas}
       seleccionandoUbicacion={modoSeleccionPunto}
-      on:close={closeDialogs}
+      on:close={pedidoEnEdicion ? cerrarEdicionPedido : closeDialogs}
       on:guardado={handlePedidoGuardado}
       on:seleccionarUbicacion={handleSeleccionarUbicacion}
       on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
     />
+    {/key}
   {/if}
 
   {#if showAgregarClienteDialog}
+    {#key clienteFormKey}
     <AgregarCliente
       coordenadas={coordenadasSeleccionadas}
       seleccionandoUbicacion={modoSeleccionPunto}
       valoresIniciales={agregarClienteInicial}
-      on:close={closeDialogs}
+      modo={clienteEnEdicion ? 'edicion' : 'alta'}
+      cliente={clienteEnEdicion}
+      on:close={clienteEnEdicion ? cerrarEdicionCliente : closeDialogs}
       on:seleccionarUbicacion={handleSeleccionarUbicacion}
       on:ubicacionGeorreferenciada={handleUbicacionGeorreferenciada}
       on:clienteAgregado={handleClienteAgregado}
+      on:clienteActualizado={handleClienteActualizado}
     />
+    {/key}
   {/if}
 
   {#if showComoLlegarDialog}
@@ -2176,13 +2333,40 @@
   <!-- Tooltip de información de pedidos y clientes -->
   {#if showFeatureTooltip && selectedFeatureData}
     <div class="feature-tooltip" 
+         class:feature-tooltip--cliente={tooltipType === 'cliente'}
          style="left: {tooltipPosition.x}px; top: {tooltipPosition.y}px;" 
          on:click|stopPropagation
          on:keydown|stopPropagation
          role="dialog"
          aria-label="Información del elemento seleccionado">
       <div class="feature-tooltip-content">
-        <div class="feature-tooltip-data">{selectedFeatureData.id}</div>
+        <div class="feature-tooltip-id">
+          <div class="feature-tooltip-data">Id: {selectedFeatureData.id}</div>
+          {#if tooltipType === 'cliente' || selectedFeatureData.idPedido}
+            <div class="feature-tooltip-acciones">
+              <button
+                type="button"
+                class="feature-tooltip-accion ds-button ds-button--icon"
+                title="Editar cliente"
+                aria-label="Editar cliente"
+                on:click|stopPropagation={editarClienteEnMapa}
+              >
+                <UiIcon name="pencil" size={16} />
+              </button>
+              {#if tooltipType === 'pedido'}
+                <button
+                  type="button"
+                  class="feature-tooltip-accion ds-button ds-button--icon"
+                  title="Editar pedido"
+                  aria-label="Editar pedido"
+                  on:click|stopPropagation={editarPedidoEnMapa}
+                >
+                  <UiIcon name="box" size={16} />
+                </button>
+              {/if}
+            </div>
+          {/if}
+        </div>
         <div class="feature-tooltip-data">{selectedFeatureData.nombre}</div>
         <div class="feature-tooltip-data">{selectedFeatureData.direccion}</div>
         {#if tooltipType === 'cliente'}
@@ -3194,6 +3378,44 @@
     font-size: 0.9em;
   }
 
+  .feature-tooltip-id {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .feature-tooltip-id .feature-tooltip-data {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  .feature-tooltip-acciones {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    gap: 0.25rem;
+  }
+
+  .feature-tooltip-accion {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    min-height: 2rem;
+    margin: 0;
+    padding: 0;
+    color: var(--ds-text);
+    background: var(--ds-secondary);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius-small);
+  }
+
   .feature-tooltip-data {
     margin-bottom: 0.4rem;
     font-size: 0.9rem;
@@ -3243,6 +3465,12 @@
 
     .feature-tooltip-content {
       padding: 1rem;
+    }
+
+    .feature-tooltip-accion {
+      width: 2.75rem;
+      height: 2.75rem;
+      min-height: 2.75rem;
     }
 
     .feature-tooltip-data {

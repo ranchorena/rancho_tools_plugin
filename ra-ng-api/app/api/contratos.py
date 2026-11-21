@@ -36,6 +36,7 @@ class ActualizarClienteIn(BaseModel):
     observaciones: str | None = None
     horario: str | None = None
     fecha: str | None = None
+    nombre: str | None = None
     direccion: str | None = None
     calle: str | None = None
     altura: Any = None

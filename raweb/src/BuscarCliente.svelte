@@ -7,6 +7,7 @@
   import { dialogFocus } from './design-system/dialog-focus.mjs';
   import { resolveClientSearch } from './client-search.mjs';
   import AgregarPedido from './AgregarPedido.svelte';
+  import AgregarCliente from './AgregarCliente.svelte';
   const dispatch = createEventDispatcher(); // Inicializar dispatcher
 
   export let coordenadas = null;
@@ -21,17 +22,10 @@
   // Resultados de la búsqueda
   let searchResults = []; // Array de objetos cliente: { id, nombre, direccion, calle, altura }
 
-  // Cliente seleccionado de la grilla
-  let selectedClient = null;
+  // Cliente en edición y pedido abierto desde la grilla
+  let clienteEnEdicion = null;
   let pedidoCliente = null;
   let minimizado = false;
-
-  let editableFields = {
-    direccion: '',
-    calle: '',
-    altura: '',
-    telefono: ''
-  };
 
   let isLoading = false;
   let errorMessage = "";
@@ -76,7 +70,7 @@
     });
     if (results) {
       searchResults = results;
-      selectedClient = null;
+      clienteEnEdicion = null;
       pedidoCliente = null;
       if (results.length === 0) {
         errorMessage = decision.emptyMessage;
@@ -129,21 +123,26 @@
     pedidoCliente = client;
   }
 
-  async function editarCliente(client, event) {
+  function editarCliente(client, event) {
     event.stopPropagation();
-    selectedClient = client;
-    editableFields = {
-      direccion: client.direccion || '',
-      calle: client.calle || '',
-      altura: client.altura ?? '',
-      telefono: client.telefono || ''
-    };
+    clienteEnEdicion = client;
     errorMessage = '';
-    await tick();
-    const selectedClientSection = document.getElementById('selected-client-details');
-    if (selectedClientSection) {
-      selectedClientSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    dispatch('fijarCoordenadas', {
+      lat: client.latitud,
+      lon: client.longitud
+    });
+  }
+
+  function cerrarEdicion() {
+    clienteEnEdicion = null;
+    dispatch('edicionCerrada');
+  }
+
+  function handleClienteEditado(event) {
+    const actualizado = event.detail.cliente;
+    searchResults = searchResults.map((client) => client.id === actualizado.id ? { ...client, ...actualizado } : client);
+    clienteEnEdicion = null;
+    dispatch('clienteActualizado', event.detail);
   }
 
   function handlePedidoGuardado(event) {
@@ -172,36 +171,6 @@
     }
   }
 
-  async function saveChanges() {
-    if (!selectedClient) {
-      errorMessage = "No hay un cliente seleccionado para guardar.";
-      return;
-    }
-    if (!editableFields.direccion.trim()) {
-      errorMessage = "La dirección del cliente es requerida.";
-      return;
-    }
-
-    const payload = {
-      direccion: editableFields.direccion.trim(),
-      calle: editableFields.calle.trim() || null,
-      altura: editableFields.altura !== '' && editableFields.altura != null ? parseInt(editableFields.altura, 10) : null,
-      telefono: editableFields.telefono.trim() || null
-    };
-
-    const result = await fetchData(`${API_BASE_URL}/clientes/actualizar/${selectedClient.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (result && result.mensaje) {
-      const actualizado = { ...selectedClient, ...payload };
-      selectedClient = actualizado;
-      searchResults = searchResults.map((client) => client.id === actualizado.id ? { ...client, ...actualizado } : client);
-      dispatch('showGlobalNotification', { message: result.mensaje || 'Cliente actualizado correctamente.', type: 'success' });
-    }
-  }
 </script>
 
 <style>
@@ -350,7 +319,6 @@
     border: none;
   }
 
-  .selected-client-section,
   .results-grid.search-section {
     margin-bottom: 1.25rem;
     background-color: var(--ds-background);
@@ -360,7 +328,7 @@
     border: 1px solid var(--ds-border);
   }
 
-  .search-section:last-child, .selected-client-section:last-child {
+  .search-section:last-child {
     margin-bottom: 0;
   }
 
@@ -381,7 +349,7 @@
     font-size: var(--ds-type-label);
   }
 
-  input[type="text"], input[type="number"] {
+  input[type="text"] {
     width: 100%;
     min-height: 2.625rem;
     padding: 0.5rem 0.7rem;
@@ -395,25 +363,15 @@
     margin-bottom: 0;
   }
 
-  input[type="number"].narrow-number {
-    max-width: 120px;
-  }
-
-  input[type="text"]:hover, input[type="number"]:hover {
+  input[type="text"]:hover {
     border-color: var(--ds-text-muted);
   }
 
-  input[type="text"]:focus-visible, input[type="number"]:focus-visible {
+  input[type="text"]:focus-visible {
     outline: 2px solid var(--ds-focus);
     outline-offset: 1px;
     border-color: var(--ds-focus);
     box-shadow: none;
-  }
-
-  input[readonly] {
-    background-color: var(--ds-background);
-    color: var(--ds-text-muted);
-    cursor: not-allowed;
   }
 
   .input-group {
@@ -483,22 +441,19 @@
   }
 
   button.primary,
-  .search-actions button.ds-button--primary,
-  .selected-client-section button {
+  .search-actions button.ds-button--primary {
     background-color: var(--ds-primary);
     color: var(--ds-on-primary);
     border-color: var(--ds-primary);
   }
 
   button.primary:hover,
-  .search-actions button.ds-button--primary:hover,
-  .selected-client-section button:hover {
+  .search-actions button.ds-button--primary:hover {
     background-color: var(--ds-primary-hover);
     border-color: var(--ds-primary-hover);
     transform: translateY(-1px);
   }
 
-  .form-actions,
   .search-actions {
     display: flex;
     justify-content: flex-end;
@@ -507,8 +462,7 @@
     gap: 0.5rem;
   }
 
-  .search-actions button,
-  .form-actions button {
+  .search-actions button {
     width: auto;
     margin-bottom: 0;
   }
@@ -633,19 +587,6 @@
     margin: 1rem 0;
   }
 
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .form-column {
-    min-width: 0; /* Importante para que funcione el grid */
-  }
-
-  /* Responsive breakpoints */
-  
   /* Tablet y móvil grande */
   @media (max-width: 768px) {
     .modal-backdrop {
@@ -674,7 +615,6 @@
       margin-bottom: 1rem;
     }
 
-    .selected-client-section,
     .results-grid.search-section {
       padding: 0.75rem;
       margin-bottom: 1rem;
@@ -713,18 +653,11 @@
       flex: 1;
     }
 
-    .form-row {
-      grid-template-columns: 1fr;
-      gap: 1rem;
-    }
-
-    .form-actions,
     .search-actions {
       flex-direction: column-reverse;
       gap: 0.5rem;
     }
 
-    .form-actions button,
     .search-actions button {
       width: 100%;
     }
@@ -735,13 +668,9 @@
       min-height: 48px;
     }
 
-    input[type="text"], input[type="number"] {
+    input[type="text"] {
       padding: 1rem;
       font-size: 16px; /* Evita zoom en iOS */
-    }
-
-    input[type="number"].narrow-number {
-      max-width: none;
     }
 
     .table-container {
@@ -777,7 +706,6 @@
       padding: 0;
     }
 
-    .selected-client-section,
     .results-grid.search-section {
       padding: 0.65rem;
     }
@@ -822,17 +750,11 @@
       max-height: calc(100vh - 1rem);
     }
 
-    .form-row {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .form-actions,
     .search-actions {
       flex-direction: row;
       justify-content: flex-end;
     }
 
-    .form-actions button,
     .search-actions button {
       width: auto;
       min-width: 120px;
@@ -949,7 +871,7 @@
                   <tr
                     on:dblclick={() => verEnMapa(client)}
                     class:con-pedido={client.tiene_pedido === 1 || client.tiene_pedido === true}
-                    class:selected={selectedClient && selectedClient.id === client.id}
+                    class:selected={clienteEnEdicion && clienteEnEdicion.id === client.id}
                   >
                     <td>{client.id}</td>
                     <td>{client.nombre}</td>
@@ -979,63 +901,22 @@
           </p>
         </div>
       {/if}
-
-      {#if selectedClient}
-        <div class="selected-client-section" id="selected-client-details">
-          <h3>✏️ Editar Cliente Seleccionado</h3>
-
-          <div class="form-row">
-            <div class="form-column">
-              <div class="form-group">
-                <label for="selected-client-id">ID Cliente:</label>
-                <input type="text" class="ds-field" id="selected-client-id" value={selectedClient.id} readonly>
-              </div>
-            </div>
-            <div class="form-column">
-              <div class="form-group">
-                <label for="selected-client-nombre">Nombre:</label>
-                <input type="text" class="ds-field" id="selected-client-nombre" value={selectedClient.nombre} readonly>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-column">
-              <div class="form-group">
-                <label for="selected-client-direccion">Dirección:</label>
-                <input type="text" class="ds-field" id="selected-client-direccion" bind:value={editableFields.direccion} maxlength="50">
-              </div>
-            </div>
-            <div class="form-column">
-              <div class="form-group">
-                <label for="selected-client-telefono">Teléfono:</label>
-                <input type="text" class="ds-field" id="selected-client-telefono" bind:value={editableFields.telefono} maxlength="30">
-              </div>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-column">
-              <div class="form-group">
-                <label for="selected-client-calle">Calle:</label>
-                <input type="text" class="ds-field" id="selected-client-calle" bind:value={editableFields.calle} maxlength="50">
-              </div>
-            </div>
-            <div class="form-column">
-              <div class="form-group">
-                <label for="selected-client-altura">Altura:</label>
-                <input type="number" class="ds-field narrow-number" id="selected-client-altura" bind:value={editableFields.altura}>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="ds-button ds-button--primary primary" on:click={saveChanges}>Guardar cambios</button>
-          </div>
-        </div>
-      {/if}
     </div>
   </div>
+  {#if clienteEnEdicion}
+    {#key clienteEnEdicion.id}
+    <AgregarCliente
+      modo="edicion"
+      cliente={clienteEnEdicion}
+      {coordenadas}
+      {seleccionandoUbicacion}
+      on:close={cerrarEdicion}
+      on:clienteActualizado={handleClienteEditado}
+      on:seleccionarUbicacion
+      on:ubicacionGeorreferenciada
+    />
+    {/key}
+  {/if}
   {#if pedidoCliente}
     <AgregarPedido
       cliente={pedidoCliente}

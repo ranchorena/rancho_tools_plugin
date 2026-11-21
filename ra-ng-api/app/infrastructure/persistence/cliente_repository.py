@@ -73,6 +73,19 @@ class ClienteRepository:
         )
         return resultado.rowcount or 0
 
+    def mover_geometria(self, cliente_id: int, longitud: float, latitud: float) -> int:
+        consulta = text(
+            f"""
+            UPDATE {settings.db_schema}.clientes
+            SET geometria = ST_Transform(ST_SetSRID(ST_MakePoint(:longitud, :latitud), 4326), 5347)
+            WHERE id = :id
+            """
+        )
+        resultado = self._session.execute(
+            consulta, {"id": cliente_id, "longitud": longitud, "latitud": latitud}
+        )
+        return resultado.rowcount or 0
+
     def insertar(self, datos: dict) -> dict | None:
         consulta = text(
             f"""

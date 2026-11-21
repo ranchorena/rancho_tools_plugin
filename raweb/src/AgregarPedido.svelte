@@ -11,9 +11,12 @@
   export let cliente = null;
   export let coordenadas = null;
   export let seleccionandoUbicacion = false;
+  export let modo = 'alta';
+  export let pedidoInicial = null;
 
   let clienteActivo = cliente;
   const buscarCliente = cliente == null;
+  const enEdicion = modo === 'edicion';
 
   const dispatch = createEventDispatcher();
 
@@ -55,18 +58,40 @@
     return { lat, lon };
   }
 
-  let formData = {
-    tiene_pedido: true,
-    es_regalo: false,
-    cantidad: 1,
-    fecha: fechaManana(),
-    horario: '',
-    nro_pao: '',
-    observacion: '',
-    direccion: clienteActivo?.direccion || ''
-  };
+  function horarioCampo(valor) {
+    const texto = String(valor || '').trim();
+    const partes = /^(\d{2}):(\d{2})/.exec(texto);
+    return partes ? `${partes[1]}:${partes[2]}` : '';
+  }
 
-  let punto = puntoInicial(clienteActivo);
+  function formularioInicial() {
+    if (enEdicion && pedidoInicial) {
+      return {
+        tiene_pedido: true,
+        es_regalo: Number(pedidoInicial.es_regalo) === 1 || pedidoInicial.es_regalo === true,
+        cantidad: pedidoInicial.cantidad ?? 1,
+        fecha: '',
+        horario: horarioCampo(pedidoInicial.horario),
+        nro_pao: pedidoInicial.nro_pao ?? '',
+        observacion: pedidoInicial.observacion || '',
+        direccion: pedidoInicial.direccion || clienteActivo?.direccion || ''
+      };
+    }
+    return {
+      tiene_pedido: true,
+      es_regalo: false,
+      cantidad: 1,
+      fecha: fechaManana(),
+      horario: '',
+      nro_pao: '',
+      observacion: '',
+      direccion: clienteActivo?.direccion || ''
+    };
+  }
+
+  let formData = formularioInicial();
+
+  let punto = enEdicion ? (puntoInicial(pedidoInicial) || puntoInicial(clienteActivo)) : puntoInicial(clienteActivo);
   let searchTermCliente = '';
   let searchTermDireccion = '';
   let searchTermCalle = '';
@@ -140,8 +165,34 @@
     }
   }
 
+  async function ubicarFechaDelPedido() {
+    if (!clienteActivo?.id) return;
+    try {
+      const response = await authorizedFetch(
+        `${API_BASE_URL}/clientes/${clienteActivo.id}/pedido?ultimo=true`
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        errorMessage = data.error || 'No se pudo consultar el pedido.';
+        return;
+      }
+      const fecha = String(data.pedido?.fecha || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return;
+      formData.fecha = fecha;
+      fechaTexto = isoATexto(fecha);
+    } catch (error) {
+      console.error('Error al consultar el pedido:', error);
+      errorMessage = 'No se pudo consultar el pedido.';
+    }
+  }
+
   onMount(() => {
-    if (clienteActivo) cargarPedidoDeLaFecha(formData.fecha);
+    if (!clienteActivo) return;
+    if (enEdicion) {
+      ubicarFechaDelPedido();
+      return;
+    }
+    cargarPedidoDeLaFecha(formData.fecha);
   });
 
   function volverABuscar() {
@@ -404,8 +455,8 @@
   >
     <div class="modal-header">
       <DialogHeader titleId="agregar-pedido-title">
-        <Icon name="plus" size={18} />
-        Agregar pedido
+        <Icon name={enEdicion ? 'box' : 'plus'} size={18} />
+        {enEdicion ? 'Editar pedido' : 'Agregar pedido'}
         <button slot="close" type="button" class="close-button ds-button ds-button--icon" on:click={cerrar} aria-label="Cerrar">
           <Icon name="close" size={16} />
         </button>
@@ -557,7 +608,7 @@
     <div class="modal-footer">
       <button type="button" class="ds-button" on:click={cerrar} disabled={guardando}>Cancelar</button>
       <button type="button" class="ds-button ds-button--primary" on:click={guardar} disabled={guardando || !clienteActivo || !punto || !formData.tiene_pedido}>
-        {guardando ? 'Guardando...' : 'Guardar'}
+        {guardando ? 'Guardando...' : (enEdicion ? 'Guardar cambios' : 'Guardar')}
       </button>
     </div>
   </div>

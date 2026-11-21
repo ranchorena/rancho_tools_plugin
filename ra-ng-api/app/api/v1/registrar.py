@@ -35,7 +35,7 @@ from app.application.pedidos.iniciar_pedidos import iniciar_pedidos
 from app.application.pedidos.listar_con_pedido import listar_clientes_con_pedido
 from app.application.pedidos.listar_historico import listar_historico
 from app.application.pedidos.obtener_pedido_cercano import obtener_pedido_cercano
-from app.application.pedidos.obtener_pedido_de_fecha import obtener_pedido_de_fecha
+from app.application.pedidos.obtener_pedido_de_fecha import obtener_pedido_de_fecha, obtener_ultimo_pedido
 from app.application.rutas.calcular_ruta import calcular_ruta
 from app.infrastructure.unit_of_work import UnitOfWork
 
@@ -128,9 +128,12 @@ def construir_router(version: str) -> APIRouter:
     def get_pedido_de_fecha(
         cliente_id: int,
         fecha: str | None = None,
+        ultimo: bool = False,
         uow: UnitOfWork = UowDep,
         _identidad: dict = RolLectura,
     ):
+        if ultimo:
+            return obtener_ultimo_pedido(uow, cliente_id)
         return obtener_pedido_de_fecha(uow, cliente_id, fecha)
 
     @router.get(

@@ -8,6 +8,15 @@ from app.domain.pedidos.fechas import parse_fecha_query
 from app.infrastructure.unit_of_work import UnitOfWork
 
 
+def obtener_ultimo_pedido(uow: UnitOfWork, cliente_id: int) -> dict:
+    def operacion() -> dict:
+        if not uow.clientes.existe(cliente_id):
+            raise DomainError(404, f"Cliente con ID {cliente_id} no encontrado.")
+        return {"pedido": uow.pedidos.ultimo(cliente_id)}
+
+    return ejecutar(uow, operacion, "Error interno del servidor al obtener el pedido.")
+
+
 def obtener_pedido_de_fecha(uow: UnitOfWork, cliente_id: int, fecha_texto: str | None) -> dict:
     try:
         if fecha_texto is None or fecha_texto.strip() == "":

@@ -35,7 +35,30 @@ class PedidoRepository:
             .where(Pedido.id_cliente == cliente_id, Pedido.fecha >= inicio, Pedido.fecha < fin)
             .order_by(Pedido.id_pedido.desc())
         )
-        pedido = fila_a_dict(self._session.execute(consulta).first())
+        return self._pedido_de_fila(self._session.execute(consulta).first())
+
+    def ultimo(self, cliente_id: int) -> dict | None:
+        consulta = (
+            select(
+                Pedido.id_pedido.label("id"),
+                Pedido.fecha,
+                Pedido.cantidad,
+                Pedido.direccion,
+                Pedido.calle,
+                Pedido.altura,
+                Pedido.nro_pao,
+                Pedido.observaciones.label("observacion"),
+                func.ST_X(func.ST_Transform(Pedido.geometry, 4326)).label("longitud"),
+                func.ST_Y(func.ST_Transform(Pedido.geometry, 4326)).label("latitud"),
+            )
+            .where(Pedido.id_cliente == cliente_id)
+            .order_by(Pedido.fecha.desc(), Pedido.id_pedido.desc())
+            .limit(1)
+        )
+        return self._pedido_de_fila(self._session.execute(consulta).first())
+
+    def _pedido_de_fila(self, fila) -> dict | None:
+        pedido = fila_a_dict(fila)
         if pedido is None:
             return None
         if isinstance(pedido.get("fecha"), str):

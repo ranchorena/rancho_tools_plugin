@@ -12,22 +12,46 @@
   export let coordenadas = null; // { lat, lon } - coordenadas seleccionadas en el mapa
   export let seleccionandoUbicacion = false;
   export let valoresIniciales = null;
+  export let modo = 'alta';
+  export let cliente = null;
+
+  const enEdicion = modo === 'edicion';
+
+  function formularioInicial() {
+    if (enEdicion && cliente) {
+      return {
+        nombre: cliente.nombre || '',
+        direccion: cliente.direccion || '',
+        calle: cliente.calle || '',
+        altura: cliente.altura ?? '',
+        telefono: cliente.telefono || '',
+        tiene_pedido: false,
+        cantidad: '',
+        fecha: '',
+        horario: '',
+        nro_pao: '',
+        observacion: '',
+        es_regalo: false
+      };
+    }
+    return {
+      nombre: valoresIniciales?.nombre || '',
+      direccion: valoresIniciales?.direccion || '',
+      calle: valoresIniciales?.calle || '',
+      altura: valoresIniciales?.altura || '',
+      telefono: '',
+      tiene_pedido: false,
+      cantidad: '',
+      fecha: '',
+      horario: '',
+      nro_pao: '',
+      observacion: '',
+      es_regalo: false
+    };
+  }
 
   // Estado del formulario
-  let formData = {
-    nombre: valoresIniciales?.nombre || '',
-    direccion: valoresIniciales?.direccion || '',
-    calle: valoresIniciales?.calle || '',
-    altura: valoresIniciales?.altura || '',
-    telefono: '',
-    tiene_pedido: false,
-    cantidad: '',
-    fecha: '',
-    horario: '',
-    nro_pao: '',
-    observacion: '',
-    es_regalo: false
-  };
+  let formData = formularioInicial();
 
   // Estado de la interfaz
   let isLoading = false;
@@ -56,6 +80,11 @@
 
     if (!coordenadas) {
       errorMessage = 'Debe seleccionar una ubicación en el mapa.';
+      return;
+    }
+
+    if (enEdicion) {
+      await guardarEdicion();
       return;
     }
 
@@ -119,6 +148,68 @@
     }
   }
 
+  function alturaPayload(valor) {
+    if (valor === '' || valor == null) return null;
+    const numero = parseInt(valor, 10);
+    return Number.isNaN(numero) ? undefined : numero;
+  }
+
+  async function guardarEdicion() {
+    const altura = alturaPayload(formData.altura);
+    if (altura === undefined) {
+      errorMessage = 'La altura no es válida.';
+      return;
+    }
+
+    isLoading = true;
+    errorMessage = '';
+    successMessage = '';
+
+    const payload = {
+      nombre: formData.nombre.trim(),
+      direccion: formData.direccion.trim(),
+      calle: formData.calle.trim() || null,
+      altura,
+      telefono: formData.telefono.trim() || null,
+      latitud: coordenadas.lat,
+      longitud: coordenadas.lon
+    };
+
+    let actualizado = null;
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/clientes/actualizar/${cliente.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        errorMessage = result.error || 'Error al actualizar el cliente.';
+        return;
+      }
+      actualizado = {
+        cliente: {
+          id: cliente.id,
+          nombre: payload.nombre,
+          direccion: payload.direccion,
+          calle: payload.calle,
+          altura: payload.altura,
+          telefono: payload.telefono,
+          latitud: payload.latitud,
+          longitud: payload.longitud,
+          tiene_pedido: cliente.tiene_pedido
+        },
+        message: result.mensaje || 'Cliente actualizado correctamente.'
+      };
+    } catch (error) {
+      console.error('Error al actualizar cliente:', error);
+      errorMessage = 'Error de conexión. Verifique su conexión a internet.';
+    } finally {
+      isLoading = false;
+    }
+    if (actualizado) dispatch('clienteActualizado', actualizado);
+  }
+
   function handleCancel() {
     dispatch('close');
   }
@@ -127,10 +218,17 @@
     dispatch('seleccionarUbicacion');
   }
 
+  function consultaGeorreferencia() {
+    const calle = formData.calle.trim();
+    const altura = String(formData.altura ?? '').trim();
+    if (calle && altura) return `${calle} ${altura}`;
+    return formData.direccion.trim();
+  }
+
   async function handleGeorreferenciar() {
-    const direccion = formData.direccion.trim();
+    const direccion = consultaGeorreferencia();
     if (!direccion) {
-      errorMessage = 'Ingresá una dirección para georreferenciar.';
+      errorMessage = 'Ingresá la dirección completa, o la calle y la altura, para georreferenciar.';
       return;
     }
 
@@ -262,7 +360,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 1100;
     backdrop-filter: blur(2px);
   }
 
@@ -487,17 +585,32 @@
     background: var(--ds-location-active);
   }
 
-  .direccion-row {
+  .calle-altura-row {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 0.5rem;
+    margin-bottom: 1rem;
   }
 
-  .direccion-row input {
+  .calle-altura-row .calle-field {
     flex: 1;
     min-width: 0;
-    width: auto;
+  }
+
+  .calle-altura-row .altura-accion {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+  }
+
+  .calle-altura-row input {
     margin-bottom: 0;
+  }
+
+  .field-altura {
+    width: 6.5rem;
+    max-width: 100%;
   }
 
   .btn-georreferenciar {
@@ -685,13 +798,21 @@
     .form-row {
       grid-template-columns: 1fr;
     }
+
+    .calle-altura-row {
+      flex-wrap: wrap;
+    }
+
+    .calle-altura-row .calle-field {
+      flex: 1 1 100%;
+    }
   }
 </style>
 
 <div class="modal-backdrop"
      class:seleccionando-ubicacion={seleccionandoUbicacion}
-     on:click={handleCancel}
-     on:keydown={(e) => e.key === 'Escape' && handleCancel()}
+     on:click|stopPropagation={handleCancel}
+     on:keydown|stopPropagation={(e) => e.key === 'Escape' && handleCancel()}
      role="button"
      tabindex="0"
      aria-label="Cerrar modal">
@@ -703,8 +824,8 @@
        aria-labelledby="agregar-cliente-title">
     <div class="modal-header">
       <DialogHeader titleId="agregar-cliente-title">
-        <Icon name="plus" size={18} />
-        Agregar nuevo cliente
+        <Icon name={enEdicion ? 'pencil' : 'plus'} size={18} />
+        {enEdicion ? 'Editar cliente' : 'Agregar nuevo cliente'}
         <button slot="close" type="button" class="close-button ds-button ds-button--icon ds-focus" on:click={handleCancel} aria-label="Cerrar">
           <Icon name="close" size={16} />
         </button>
@@ -759,30 +880,19 @@
 
           <div class="form-group full-width">
             <label for="direccion">Dirección *</label>
-            <div class="direccion-row">
-              <input
-                id="direccion"
-                type="text"
-                class="ds-field"
-                bind:value={formData.direccion}
-                placeholder="Dirección completa"
-                maxlength="50"
-                required
-              />
-              <button
-                type="button"
-                class="btn-georreferenciar ds-button ds-button--location"
-                on:click={handleGeorreferenciar}
-                disabled={georreferenciando}
-              >
-                <Icon name="pin" size={16} />
-                {georreferenciando ? 'Buscando...' : 'Georreferenciar'}
-              </button>
-            </div>
+            <input
+              id="direccion"
+              type="text"
+              class="ds-field"
+              bind:value={formData.direccion}
+              placeholder="Dirección completa"
+              maxlength="50"
+              required
+            />
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
+          <div class="calle-altura-row">
+            <div class="form-group calle-field">
               <label for="calle">Calle</label>
               <input
                 id="calle"
@@ -793,16 +903,27 @@
                 maxlength="50"
               />
             </div>
-            
-            <div class="form-group">
-              <label for="altura">Altura</label>
-              <input
-                id="altura"
-                type="number"
-                class="ds-field"
-                bind:value={formData.altura}
-                placeholder="Número de altura"
-              />
+
+            <div class="altura-accion">
+              <div class="form-group">
+                <label for="altura">Altura</label>
+                <input
+                  id="altura"
+                  type="number"
+                  class="ds-field field-altura"
+                  bind:value={formData.altura}
+                  placeholder="150"
+                />
+              </div>
+              <button
+                type="button"
+                class="btn-georreferenciar ds-button ds-button--location"
+                on:click={handleGeorreferenciar}
+                disabled={georreferenciando}
+              >
+                <Icon name="pin" size={16} />
+                {georreferenciando ? 'Buscando...' : 'Georreferenciar'}
+              </button>
             </div>
           </div>
         </div>
@@ -825,6 +946,7 @@
         </div>
 
         <!-- Información del Pedido -->
+        {#if !enEdicion}
         <div class="form-section">
           <div class="section-title">Información del pedido</div>
 
@@ -910,6 +1032,7 @@
             ></textarea>
           </div>
         </div>
+        {/if}
       </form>
     </div>
 
@@ -932,7 +1055,7 @@
         {#if isLoading}
           <span class="loading-spinner"></span>
         {/if}
-        {isLoading ? 'Guardando...' : 'Guardar Cliente'}
+        {isLoading ? 'Guardando...' : (enEdicion ? 'Guardar cambios' : 'Guardar Cliente')}
       </button>
     </div>
   </div>

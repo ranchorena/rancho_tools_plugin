@@ -22,6 +22,7 @@ _MAPA_CAMPOS = {
     "es_regalo": "es_regalo",
     "observaciones": "observacion",
     "horario": "horario",
+    "nombre": "nombre",
     "direccion": "direccion",
     "calle": "calle",
     "altura": "altura",
@@ -29,12 +30,32 @@ _MAPA_CAMPOS = {
 }
 
 
+def _punto_cliente(datos: dict) -> tuple[float, float] | None:
+    """Latitud y longitud del cliente. None si no vinieron. El pedido no usa esta vía."""
+    if "latitud" not in datos and "longitud" not in datos:
+        return None
+    latitud = datos.get("latitud")
+    longitud = datos.get("longitud")
+    if latitud in (None, "") and longitud in (None, ""):
+        return None
+    try:
+        lat = float(latitud)
+        lon = float(longitud)
+    except (TypeError, ValueError) as error:
+        raise DomainError(400, "La ubicación del cliente no es válida.") from error
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise DomainError(400, "La ubicación del cliente no es válida.")
+    return lat, lon
+
+
 def actualizar_cliente(uow: UnitOfWork, cliente_id: int, datos: dict, identidad: dict | None) -> dict:
     def operacion() -> dict:
         if not datos:
             raise DomainError(400, "No se proporcionaron datos para actualizar.")
+        # Con tiene_pedido, latitud y longitud siguen siendo el punto del pedido.
+        punto_cliente = None if "tiene_pedido" in datos else _punto_cliente(datos)
         filtrados = {clave: valor for clave, valor in datos.items() if clave in _MAPA_CAMPOS}
-        if not filtrados:
+        if not filtrados and punto_cliente is None:
             raise DomainError(400, "No se proporcionaron campos válidos para actualizar.")
         if not uow.clientes.existe(cliente_id):
             raise DomainError(404, f"Cliente con ID {cliente_id} no encontrado.")
@@ -50,6 +71,13 @@ def actualizar_cliente(uow: UnitOfWork, cliente_id: int, datos: dict, identidad:
                 valores[columna] = float(valor) if valor is not None else None
             elif clave == "nro_pao":
                 valores[columna] = int(valor) if valor is not None else None
+            elif clave == "nombre":
+                texto = str(valor).strip() if valor is not None else ""
+                if not texto:
+                    raise DomainError(400, "El nombre del cliente es requerido.")
+                if len(texto) > 60:
+                    raise DomainError(400, "El nombre del cliente no puede superar 60 caracteres.")
+                valores[columna] = texto
             elif clave == "direccion":
                 texto = str(valor).strip() if valor is not None else ""
                 if not texto:
@@ -109,8 +137,12 @@ def actualizar_cliente(uow: UnitOfWork, cliente_id: int, datos: dict, identidad:
                 datos_pedido["lon"] = float(datos["longitud"])
                 datos_pedido["lat"] = float(datos["latitud"])
 
-        if uow.clientes.actualizar(cliente_id, valores) <= 0:
+        if valores and uow.clientes.actualizar(cliente_id, valores) <= 0:
             raise DomainError(400, "No se pudo actualizar el cliente.")
+        if punto_cliente is not None:
+            latitud, longitud = punto_cliente
+            if uow.clientes.mover_geometria(cliente_id, longitud, latitud) <= 0:
+                raise DomainError(400, "No se pudo actualizar el cliente.")
         if datos_pedido is not None:
             mensaje = uow.pedidos.guardar(datos_pedido)
         else:
