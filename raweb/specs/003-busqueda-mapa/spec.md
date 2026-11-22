@@ -32,6 +32,8 @@ Quien reparte o planifica necesita ubicar un cliente o un pedido sin abrir un di
 - RF-11: MIENTRAS la lista está abierta, EL SISTEMA permite mover la fila resaltada con las flechas arriba y abajo.
 - RF-12: SI la búsqueda falla, ENTONCES EL SISTEMA muestra que no se pudo buscar y no mueve el mapa.
 - RF-13: EL SISTEMA mantiene las búsquedas de cliente y de dirección que ya existen en los diálogos.
+- RF-14: CUANDO el usuario pulsa la lupa con la caja visible, EL SISTEMA oculta el campo y la lista, cancela la consulta en curso y deja solo la lupa junto al zoom.
+- RF-15: CUANDO el usuario pulsa la lupa con la caja oculta, EL SISTEMA vuelve a mostrar el campo con el texto que ya estaba, sin abrir la lista, y deja el cursor en el campo.
 
 ## Requisitos no funcionales
 - RNF-1: La caja y la lista usan los tokens de superficie, borde, radio, sombra y foco del design system, en tema claro y oscuro.

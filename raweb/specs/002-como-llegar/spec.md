@@ -40,6 +40,9 @@ Quien reparte necesita saber por qué calles ir desde donde está, o desde un pu
 - RF-17: CUANDO el usuario pulsa «Marcar el pedido más cercano» con la posición del móvil activa, EL SISTEMA elige el pedido activo con el recorrido más corto en metros por las calles respetando el sentido, no el más cercano en línea recta.
 - RF-18: CUANDO encuentra ese pedido, EL SISTEMA lo resalta como hasta ahora, dibuja en rojo el recorrido desde la posición actual, encuadra el recorrido y muestra la distancia.
 - RF-19: SI ningún pedido activo es alcanzable por el callejero o la posición está a más de 300 m de la red, ENTONCES EL SISTEMA avisa y no marca ningún pedido.
+- RF-20: CUANDO el usuario pulsa «Cómo llegar» en el tooltip de un pedido o de un cliente, EL SISTEMA calcula y dibuja el recorrido desde la posición actual hasta ese punto, con el mismo resultado que «Ver recorrido».
+- RF-21: CUANDO el usuario pulsa «Cómo llegar» en el menú contextual del mapa, EL SISTEMA calcula y dibuja el recorrido desde la posición actual hasta el pedido o cliente bajo el puntero, o hasta la coordenada del clic si no hay ninguno.
+- RF-22: MIENTRAS la posición del móvil no esté activa o todavía no se haya recibido, EL SISTEMA mantiene deshabilitada «Cómo llegar» en el tooltip y en el menú contextual.
 
 ## Requisitos no funcionales
 - RNF-1: El diálogo usa los componentes y tokens del design system de raweb (cabecera, campos, botones, foco, temas claro y oscuro).
@@ -47,7 +50,7 @@ Quien reparte necesita saber por qué calles ir desde donde está, o desde un pu
 - RNF-3: Las coordenadas viajan en EPSG:4326 entre web y API.
 
 ## Casos límite
-- Ubicación activada pero sin posición recibida todavía: «Mi ubicación» deshabilitado.
+- Ubicación activada pero sin posición recibida todavía: «Mi ubicación» y «Cómo llegar» deshabilitados.
 - Grafo con tramos sin salida por sentido: sin recorrido (RF-11).
 - Coordenadas fuera de rango: error de validación.
 - El usuario cierra el diálogo mientras elige en el mapa: se cancela la elección.
@@ -62,4 +65,4 @@ Quien reparte necesita saber por qué calles ir desde donde está, o desde un pu
 - Flujo verificado en navegador en escritorio y en 360 px, o requisitos faltantes informados.
 
 ## Dudas abiertas
-- Ninguna. Enmienda 2026-10-27 a pedido del usuario: el pedido más cercano se mide por recorrido y marca la ruta (RF-17 a RF-19). Costo en metros decidido por el usuario. Enmienda 2026-10-27 a pedido del usuario («la línea debería empezar en el punto de origen»): conexión al punto más cercano del tramo en lugar del cruce (RF-13 y RF-16).
+- Ninguna. Enmienda 2026-10-27 a pedido del usuario: el pedido más cercano se mide por recorrido y marca la ruta (RF-17 a RF-19). Costo en metros decidido por el usuario. Enmienda 2026-10-27 a pedido del usuario («la línea debería empezar en el punto de origen»): conexión al punto más cercano del tramo en lugar del cruce (RF-13 y RF-16). Enmienda 2026-11-21: «Cómo llegar» en el tooltip de pedido y de cliente y en el menú contextual, deshabilitada sin posición actual (RF-20 a RF-22).

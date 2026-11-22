@@ -1,5 +1,5 @@
 <script>
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { API_BASE_URL } from './config.js';
   import { authorizedFetch } from './auth/session.mjs';
   import { mapSearchPath, SEARCH_DEBOUNCE_MS } from './map-search.mjs';
@@ -8,6 +8,8 @@
 
   const dispatch = createEventDispatcher();
 
+  let barraVisible = true;
+  let campo;
   let texto = '';
   let pedidos = [];
   let clientes = [];
@@ -109,6 +111,20 @@
     dispatch('zoom', { longitude: longitud, latitude: latitud, marker: 'medialuna' });
   }
 
+  async function alternarBarra() {
+    if (barraVisible) {
+      secuencia += 1;
+      cancelarConsulta();
+      buscando = false;
+      cerrarLista();
+      barraVisible = false;
+      return;
+    }
+    barraVisible = true;
+    await tick();
+    campo?.focus();
+  }
+
   function limpiar() {
     secuencia += 1;
     cancelarConsulta();
@@ -158,11 +174,18 @@
   });
 </script>
 
-<div class="mapa-buscar" bind:this={raiz}>
+<div class="mapa-buscar" class:colapsada={!barraVisible} bind:this={raiz}>
   <div class="mapa-buscar-caja">
-    <span class="mapa-buscar-icono" aria-hidden="true">
+    <button
+      type="button"
+      class="mapa-buscar-lupa"
+      aria-label={barraVisible ? 'Ocultar búsqueda' : 'Buscar cliente o pedido'}
+      aria-expanded={barraVisible}
+      on:click={alternarBarra}
+    >
       <UiIcon name="search" size={18} />
-    </span>
+    </button>
+    {#if barraVisible}
     <input
       type="text"
       class="mapa-buscar-input"
@@ -173,18 +196,20 @@
       aria-expanded={abierta}
       aria-controls="mapa-buscar-lista"
       aria-activedescendant={abierta && indice >= 0 ? `mapa-opcion-${indice}` : undefined}
+      bind:this={campo}
       bind:value={texto}
       on:input={programar}
       on:keydown={alTeclado}
     />
-    {#if texto}
+    {/if}
+    {#if barraVisible && texto}
       <button type="button" class="mapa-buscar-limpiar" aria-label="Limpiar búsqueda" on:click={limpiar}>
         <UiIcon name="close" size={16} />
       </button>
     {/if}
   </div>
 
-  {#if abierta}
+  {#if barraVisible && abierta}
     <div class="mapa-buscar-lista" id="mapa-buscar-lista" role="listbox" aria-label="Resultados">
       {#if error}
         <p class="mapa-buscar-aviso">{error}</p>
@@ -248,7 +273,7 @@
     top: 0.75rem;
     /* Zoom: 0.75rem + 30px de botón + 2px de borde, y un hueco de 0.75rem. */
     left: calc(0.75rem + 32px + 0.75rem);
-    width: min(32rem, calc(100% - 3rem - 76px));
+    width: min(24rem, calc(100% - 3rem - 76px));
     pointer-events: auto;
   }
 
@@ -271,10 +296,52 @@
     outline-offset: 1px;
   }
 
-  .mapa-buscar-icono {
+  .mapa-buscar.colapsada {
+    width: auto;
+  }
+
+  .mapa-buscar.colapsada .mapa-buscar-caja {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .mapa-buscar-lupa {
     display: flex;
-    color: var(--ds-text-muted);
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ds-text-muted);
+  }
+
+  .mapa-buscar-lupa:hover:not(:disabled) {
+    background: var(--ds-secondary-hover);
+    color: var(--ds-text);
+  }
+
+  .mapa-buscar.colapsada .mapa-buscar-lupa {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--ds-text);
+  }
+
+  .mapa-buscar-lupa:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 1px;
   }
 
   .mapa-buscar-input {
@@ -400,7 +467,7 @@
     .mapa-buscar {
       top: 0.25rem;
       left: calc(0.25rem + 30px + 0.65rem);
-      width: min(32rem, calc(100% - 0.25rem - 30px - 0.65rem - 44px - 1rem));
+      width: min(24rem, calc(100% - 0.25rem - 30px - 0.65rem - 44px - 1rem));
     }
 
     .mapa-buscar-input {
@@ -409,9 +476,11 @@
       font-size: 16px;
     }
 
+    .mapa-buscar-lupa,
     .mapa-buscar-limpiar,
     .mapa-buscar-fila {
       margin: 0;
+      padding: 0;
     }
   }
 </style>

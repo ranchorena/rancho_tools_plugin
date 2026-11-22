@@ -36,7 +36,7 @@
   import ComoLlegarDialog from './ComoLlegarDialog.svelte';
   import StreetViewDialog from './StreetViewDialog.svelte';
   import { hasStreetViewKey, streetViewExternalUrl } from './street-view.mjs';
-  import { formatCoordinates, formatDistance } from './route-planner.mjs';
+  import { buildRoutePayload, formatCoordinates, formatDistance } from './route-planner.mjs';
   import { interpretAddressQuery } from './address-query.mjs';
   import GlobalNotification from './GlobalNotification.svelte'; // Importar GlobalNotification
   import AccountMenu from './AccountMenu.svelte';
@@ -111,6 +111,8 @@
   let modoSeleccionRuta = null; // 'origen' | 'destino' | null
   let puntoSeleccionadoRuta = null;
   let rutaPuntos = null;
+  let calculandoRuta = false;
+  $: hayUbicacion = ubicacionActiva && Boolean(ubicacionActual);
 
   // Variables para agregar cliente
   let modoSeleccionPunto = false;
@@ -263,12 +265,14 @@
     }
     event.preventDefault();
     const [lon, lat] = toLonLat(map.getEventCoordinate(event));
+    const pixel = map.getEventPixel(event);
     mapContextMenu = {
       x: event.clientX,
       y: event.clientY,
       lat,
       lon,
-      texto: formatCoordinates({ lat, lon })
+      texto: formatCoordinates({ lat, lon }),
+      destino: destinoEnPixel(pixel, lat, lon)
     };
     closeFeatureTooltip();
     await tick();
@@ -859,6 +863,12 @@
     botonExtension.addEventListener('click', irAGeneralBelgrano);
     map.getTargetElement().querySelector('.ol-zoom')?.appendChild(botonExtension);
 
+    // El panel de capas se cierra al hacer click en el mapa. Los controles
+    // (zoom, el propio panel) están fuera del viewport y no disparan este evento.
+    map.on('click', () => {
+      if (showLayerToolbar) showLayerToolbar = false;
+    });
+
     // Evento de click para mostrar información de pedidos y clientes (WFS)
     map.on('singleclick', function(evt) {
       if (modoSeleccionRuta) {
@@ -940,8 +950,8 @@
         // Calcular posición con ajustes para evitar que se salga de la pantalla
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        const tooltipWidth = 300; // max-width del tooltip
-        const tooltipHeight = 260; // altura estimada del tooltip
+        const tooltipWidth = 188; // max-width del tooltip
+        const tooltipHeight = 310; // altura estimada del tooltip
         
         let x = pixel[0] + 15; // 15px a la derecha del click
         let y = pixel[1] - 15; // 15px arriba del click
@@ -1279,6 +1289,81 @@
     encuadrarRuta();
   }
 
+  function destinoEnPixel(pixel, lat, lon) {
+    let destino = { lat, lon, label: formatCoordinates({ lat, lon }) };
+    if (!map) return destino;
+    map.forEachFeatureAtPixel(pixel, (feature, layer) => {
+      const esPedido = layer === pedidosLayer
+        || layer === pedidosCompletadosLayer
+        || temporaryLayers.includes(layer)
+        || layer === historicoLayer;
+      const esCliente = layer === clientesLayer;
+      if (!esPedido && !esCliente) return;
+      const coords = coordinatesFromFeature(feature);
+      if (!Number.isFinite(coords.lat) || !Number.isFinite(coords.lon)) return;
+      const props = feature.getProperties();
+      destino = {
+        lat: coords.lat,
+        lon: coords.lon,
+        label: textoTooltip(props.direccion) || textoTooltip(props.nombre) || formatCoordinates(coords)
+      };
+      return true;
+    });
+    return destino;
+  }
+
+  function destinoDelTooltip() {
+    const datos = selectedFeatureData;
+    if (!datos || !Number.isFinite(datos.lat) || !Number.isFinite(datos.lon)) return null;
+    return {
+      lat: datos.lat,
+      lon: datos.lon,
+      label: textoTooltip(datos.direccion) || textoTooltip(datos.nombre) || formatCoordinates({ lat: datos.lat, lon: datos.lon })
+    };
+  }
+
+  function tituloComoLlegar() {
+    if (!hayUbicacion) return 'Activá la posición del móvil para calcular el recorrido';
+    if (calculandoRuta) return 'Calculando el recorrido…';
+    return 'Cómo llegar desde la posición actual';
+  }
+
+  async function irHasta(destino) {
+    if (!hayUbicacion || calculandoRuta || !destino) return;
+    const origen = {
+      lat: ubicacionActual.lat,
+      lon: ubicacionActual.lon,
+      label: 'Mi ubicación',
+      actual: true
+    };
+    const request = buildRoutePayload(origen, destino);
+    if (!request.ok) {
+      mostrarAviso(request.message, 'warning');
+      return;
+    }
+    calculandoRuta = true;
+    try {
+      const response = await authorizedFetch(`${API_BASE_URL}/rutas/calcular`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request.payload)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.geometria) {
+        mostrarAviso(data.error || 'No se pudo calcular el recorrido.', response.ok ? 'warning' : 'error');
+        return;
+      }
+      closeFeatureTooltip();
+      cerrarMenuContextual();
+      await handleMostrarRuta({ detail: { ruta: data, origen, destino } });
+    } catch (error) {
+      console.error('Error al calcular el recorrido:', error);
+      mostrarAviso('No se pudo calcular el recorrido.', 'error');
+    } finally {
+      calculandoRuta = false;
+    }
+  }
+
   function puntoCliente(latitud, longitud) {
     if (latitud == null || longitud == null || latitud === '' || longitud === '') return null;
     const lat = Number(latitud);
@@ -1587,8 +1672,8 @@
     const pixel = map.getPixelFromCoordinate(coordinate);
     if (!pixel) return;
     const mapa = mapElement.getBoundingClientRect();
-    const tooltipWidth = 250;
-    const tooltipHeight = 260;
+    const tooltipWidth = 188;
+    const tooltipHeight = 310;
     let x = mapa.left + pixel[0] + 15;
     let y = mapa.top + pixel[1] - 15;
     if (x + tooltipWidth > window.innerWidth) x = mapa.left + pixel[0] - tooltipWidth - 15;
@@ -2413,6 +2498,16 @@
           <button
             type="button"
             class="feature-tooltip-calle ds-button ds-button--ghost"
+            disabled={!hayUbicacion || calculandoRuta}
+            title={tituloComoLlegar()}
+            on:click|stopPropagation={() => irHasta(destinoDelTooltip())}
+          >
+            <UiIcon name="route" size={16} />
+            Cómo llegar
+          </button>
+          <button
+            type="button"
+            class="feature-tooltip-calle ds-button ds-button--ghost"
             on:click|stopPropagation={() => openStreetView(selectedFeatureData.lat, selectedFeatureData.lon)}
           >
             <UiIcon name="person" size={16} />
@@ -2453,6 +2548,13 @@
         {mapContextMenu.texto}
       </button>
       <button type="button" role="menuitem" on:click={() => openStreetView(mapContextMenu.lat, mapContextMenu.lon)}>Ver calle</button>
+      <button
+        type="button"
+        role="menuitem"
+        disabled={!hayUbicacion || calculandoRuta}
+        title={tituloComoLlegar()}
+        on:click={() => irHasta(mapContextMenu.destino)}
+      >Cómo llegar</button>
       <button type="button" role="menuitem" on:click={guardarImagenMapa}>Guardar imagen</button>
       <button type="button" role="menuitem" on:click={copiarImagenMapa}>Copiar imagen</button>
     </div>
@@ -3346,8 +3448,14 @@
     border-top: 1px solid var(--ds-divider);
   }
 
-  .map-context-menu button:hover {
+  .map-context-menu button:hover:not(:disabled) {
     background: var(--ds-secondary-hover);
+  }
+
+  .map-context-menu button:disabled {
+    color: var(--ds-text-muted);
+    background: transparent;
+    cursor: not-allowed;
   }
 
   .map-context-menu button:focus-visible {
@@ -3367,8 +3475,8 @@
     pointer-events: auto; /* Permitir que el tooltip pueda ser clickeado */
     display: block; /* Mostrar siempre */
     box-shadow: var(--ds-shadow-panel);
-    min-width: 180px;
-    max-width: 250px;
+    min-width: 135px;
+    max-width: 188px;
     max-height: calc(100vh - 20px);
     overflow-y: auto;
     backdrop-filter: blur(5px);
@@ -3460,8 +3568,8 @@
   /* Estilos responsive para el tooltip */
   @media (max-width: 768px) {
     .feature-tooltip {
-      min-width: 200px;
-      max-width: calc(100vw - 20px);
+      min-width: 150px;
+      max-width: calc(75vw - 15px);
       font-size: 0.9em;
     }
 
@@ -3488,8 +3596,8 @@
 
   @media (max-width: 480px) {
     .feature-tooltip {
-      min-width: 180px;
-      max-width: calc(100vw - 16px);
+      min-width: 135px;
+      max-width: calc(75vw - 12px);
       font-size: 0.85em;
     }
 
